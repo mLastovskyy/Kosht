@@ -90,7 +90,7 @@ class HomeViewModel(
             } else {
                 0L
             }
-            account to (own + legacy)
+            account to (own + legacy + account.adjustmentMinor)
         }
     }
 
@@ -105,8 +105,11 @@ class HomeViewModel(
 
     val uiState: StateFlow<HomeUiState> = combine(totals, context) { t, ctx ->
         val settings = ctx.settings
+        // Manual balance corrections are part of the total.
+        val totalBalance = t.balance +
+            ctx.accountBalances.sumOf { it.first.adjustmentMinor }
         val bynEquivalent = if (settings.currencyCode != "BYN") {
-            RatesRepository.toBynMinor(t.balance, settings.currencyCode, ctx.rates)
+            RatesRepository.toBynMinor(totalBalance, settings.currencyCode, ctx.rates)
         } else {
             null
         }
@@ -114,7 +117,7 @@ class HomeViewModel(
             ?: Streak.autoDailyBudget(t.spendByDay)
         HomeUiState(
             loaded = true,
-            balanceMinor = t.balance,
+            balanceMinor = totalBalance,
             balanceBynMinor = bynEquivalent,
             monthIncomeMinor = t.income,
             monthExpenseMinor = t.expense,
@@ -124,7 +127,11 @@ class HomeViewModel(
             streakDays = Streak.budgetStreak(t.spendByDay, budget, t.firstRecordDay),
             showGreeting = settings.showGreeting,
             showStreak = settings.showStreak,
-            accountBalances = if (ctx.accountBalances.size > 1) ctx.accountBalances else emptyList()
+            accountBalances = if (settings.multiAccount && ctx.accountBalances.size > 1) {
+                ctx.accountBalances
+            } else {
+                emptyList()
+            }
         )
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), HomeUiState())
 

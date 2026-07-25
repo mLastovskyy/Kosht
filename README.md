@@ -22,7 +22,7 @@ Kosht is a beautifully crafted personal finance app for Android that turns money
   <tr>
     <td align="center"><img src="screenshots/07_achievements.png" width="260"/><br/><b>Streaks, challenges, badges</b></td>
     <td align="center"><img src="screenshots/08_wallet.png" width="260"/><br/><b>Debts, savings & live FX</b></td>
-    <td align="center"></td>
+    <td align="center"><img src="screenshots/09_settings.png" width="260"/><br/><b>Make it truly yours</b></td>
   </tr>
 </table>
 
@@ -33,6 +33,12 @@ Kosht is a beautifully crafted personal finance app for Android that turns money
 ### ⚡ Lightning-fast expense tracking
 A custom keypad, smart category carousel and haptic feedback make adding a transaction take literal seconds. Attach a photo of the receipt to any expense.
 
+### 🧮 Calculator built into the keypad
+Type `12,50+3,90+8` right in the amount field — the ÷ × − + column and the smart **=** button sum up a basket on the fly, with proper operator precedence.
+
+### 💳 Multiple accounts
+Cards, cash, whatever you use. One account by default keeps the app dead simple; add more and Kosht unlocks per-account balances on Home, an account picker in the editor and an account filter in Statistics.
+
 ### 📸 Receipt scanning — fully offline
 Snap a photo of a receipt and Kosht reads the total, date and store name for you, then attaches the photo to the record. Recognition runs 100% on your device — receipts never leave your phone. Review and correct anything before saving.
 
@@ -41,8 +47,12 @@ Snap a photo of a receipt and Kosht reads the total, date and store name for you
 - **Calendar heatmap** — instantly spot your expensive days
 - **Monthly report** — spending vs last month, top category, no-spend days, and personalized rule-based tips ("Groceries take 45% of spending — try a weekly limit challenge")
 
-### 💱 Live exchange rates
-Official National Bank rates refresh automatically (or by hand). Amounts in foreign currency show their BYN equivalent everywhere — and every expense freezes the rate at the moment you paid, so history never drifts.
+### 💱 Multi-currency done right
+- **Live official rates** from the National Bank, refreshed automatically or by hand — with the update time always visible
+- Amounts in foreign currency show their **BYN equivalent everywhere**: debts, savings, recurring charges
+- Every expense **freezes the rate at the moment you paid**, so history never drifts when rates move
+- **Switch the app currency** and every stored amount is converted at the live rate in one tap (or turn auto-convert off — your choice)
+- Foreign-currency recurring payments let you set the **exact rate you were charged**
 
 ### 👛 The Wallet
 - **Debts** — who owes whom, in any currency, with partial repayments
@@ -59,7 +69,10 @@ Official National Bank rates refresh automatically (or by hand). Amounts in fore
 An evening nudge only if nothing is logged, recurring payments awaiting confirmation, and a Monday money digest.
 
 ### 🎨 Made for you
-Light & dark themes, Material You dynamic colors, English & Russian interface, your profile with photo and nickname — and your data stays on your device. Always.
+Light & dark themes, Material You dynamic colors, English & Russian interface, a profile with photo or built-in avatars — and interface toggles to hide anything you don't need. Your data stays on your device. Always.
+
+### 📖 Learn it in minutes
+An illustrated **guide lives right inside Settings**, and a full **PDF manual** with screenshots is one tap away (also in [`docs/MANUAL.pdf`](docs/MANUAL.pdf)).
 
 ---
 

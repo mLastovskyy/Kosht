@@ -17,6 +17,20 @@ class AccountRepository(
 
     fun observeBalances(): Flow<List<AccountBalance>> = accountDao.observeBalances()
 
+    /**
+     * Sets the shown balance of an account by tuning its adjustment:
+     * adjustment = target − transaction sum.
+     */
+    suspend fun setAccountBalance(account: AccountEntity, targetMinor: Long) {
+        val balances = accountDao.observeBalances().first()
+        val primaryId = observeAccounts().first().firstOrNull()?.id
+        var txSum = balances.firstOrNull { it.accountId == account.id }?.balance ?: 0L
+        if (account.id == primaryId) {
+            txSum += balances.firstOrNull { it.accountId == null }?.balance ?: 0L
+        }
+        accountDao.setAdjustment(account.id, targetMinor - txSum)
+    }
+
     suspend fun addAccount(name: String, iconKey: String, colorArgb: Long): Long =
         accountDao.insert(
             AccountEntity(

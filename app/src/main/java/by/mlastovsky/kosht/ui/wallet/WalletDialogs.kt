@@ -1,5 +1,6 @@
 package by.mlastovsky.kosht.ui.wallet
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -486,6 +487,134 @@ fun AddRecurringDialog(
             DatePicker(state = pickerState, showModeToggle = false)
         }
     }
+}
+
+/** New money source: name, icon, color. */
+@Composable
+fun AddAccountDialog(
+    onConfirm: (name: String, iconKey: String, colorArgb: Long) -> Unit,
+    onDismiss: () -> Unit
+) {
+    var name by remember { mutableStateOf("") }
+    var iconKey by remember {
+        mutableStateOf(by.mlastovsky.kosht.ui.AccountVisuals.pickableIconKeys.first())
+    }
+    var colorArgb by remember {
+        androidx.compose.runtime.mutableLongStateOf(CategoryVisuals.pickableColors.first())
+    }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(stringResource(R.string.account_new)) },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                OutlinedTextField(
+                    value = name,
+                    onValueChange = { name = it.take(30) },
+                    placeholder = { Text(stringResource(R.string.category_name_hint)) },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth()
+                )
+                LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    items(by.mlastovsky.kosht.ui.AccountVisuals.pickableIconKeys) { key ->
+                        CategoryBadge(
+                            iconKey = key,
+                            color = Color(colorArgb),
+                            selected = key == iconKey,
+                            size = 40.dp,
+                            modifier = Modifier
+                                .clip(CircleShape)
+                                .clickable { iconKey = key }
+                        )
+                    }
+                }
+                LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    items(CategoryVisuals.pickableColors) { color ->
+                        androidx.compose.foundation.layout.Box(
+                            modifier = Modifier
+                                .size(if (color == colorArgb) 40.dp else 32.dp)
+                                .clip(CircleShape)
+                                .background(Color(color))
+                                .clickable { colorArgb = color }
+                        )
+                    }
+                }
+            }
+        },
+        confirmButton = {
+            TextButton(
+                enabled = name.isNotBlank(),
+                onClick = { onConfirm(name.trim(), iconKey, colorArgb) }
+            ) { Text(stringResource(R.string.action_add)) }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) { Text(stringResource(R.string.action_cancel)) }
+        }
+    )
+}
+
+/** Shows an account's balance; lets the user set the real one or delete. */
+@Composable
+fun AccountBalanceDialog(
+    account: by.mlastovsky.kosht.data.db.AccountEntity,
+    currentBalanceMinor: Long,
+    currencyCode: String,
+    deletable: Boolean,
+    onSetBalance: (targetMinor: Long) -> Unit,
+    onDelete: () -> Unit,
+    onDismiss: () -> Unit
+) {
+    var balanceText by remember {
+        mutableStateOf(
+            Money.format(currentBalanceMinor, currencyCode)
+                .filter { it.isDigit() || it == ',' || it == '-' }
+        )
+    }
+    val target = Money.parseToMinor(balanceText.replace("-", ""), currencyCode)
+        ?.let { if (balanceText.startsWith("-")) -it else it }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(by.mlastovsky.kosht.ui.AccountVisuals.displayName(account)) },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                OutlinedTextField(
+                    value = balanceText,
+                    onValueChange = { balanceText = it.take(13) },
+                    label = { Text(stringResource(R.string.account_balance)) },
+                    singleLine = true,
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+                    modifier = Modifier.fillMaxWidth()
+                )
+                Text(
+                    text = stringResource(R.string.account_balance_hint),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+        },
+        confirmButton = {
+            TextButton(
+                enabled = target != null,
+                onClick = { onSetBalance(target!!) }
+            ) { Text(stringResource(R.string.editor_save)) }
+        },
+        dismissButton = {
+            Row {
+                if (deletable) {
+                    TextButton(onClick = onDelete) {
+                        Text(
+                            stringResource(R.string.editor_delete),
+                            color = MaterialTheme.colorScheme.error
+                        )
+                    }
+                }
+                TextButton(onClick = onDismiss) {
+                    Text(stringResource(R.string.action_cancel))
+                }
+            }
+        }
+    )
 }
 
 /** Edit an existing recurring charge: title, amount, next date, frequency. */

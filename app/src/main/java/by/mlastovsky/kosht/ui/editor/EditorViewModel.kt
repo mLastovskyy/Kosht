@@ -46,7 +46,8 @@ data class EditorUiState(
     val photoPath: String? = null,
     val pendingScan: PendingScan? = null,
     val accounts: List<by.mlastovsky.kosht.data.db.AccountEntity> = emptyList(),
-    val accountId: Long? = null
+    val accountId: Long? = null,
+    val multiAccount: Boolean = false
 ) {
     /** An arithmetic operation is typed but not evaluated yet. */
     val hasPendingOperation: Boolean
@@ -139,7 +140,8 @@ class EditorViewModel(
             photoPath = d.photoPath,
             pendingScan = extras.pending,
             accounts = extras.accounts,
-            accountId = d.accountId ?: extras.accounts.firstOrNull()?.id
+            accountId = d.accountId ?: extras.accounts.firstOrNull()?.id,
+            multiAccount = settings.multiAccount
         )
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), EditorUiState())
 

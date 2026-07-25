@@ -13,6 +13,7 @@ import kotlin.math.roundToLong
 class CurrencyChanger(
     private val transactionDao: TransactionDao,
     private val challengeDao: ChallengeDao,
+    private val accountDao: by.mlastovsky.kosht.data.db.AccountDao,
     private val settingsRepository: SettingsRepository,
     private val ratesRepository: RatesRepository
 ) {
@@ -31,6 +32,7 @@ class CurrencyChanger(
             val factor = (from!!.rate / from.scale) / (to!!.rate / to.scale)
             transactionDao.rescaleAmounts(factor)
             challengeDao.rescaleAmounts(factor)
+            accountDao.rescaleAdjustments(factor)
             if (settings.dailyBudgetMinor > 0) {
                 settingsRepository.setDailyBudgetMinor(
                     (settings.dailyBudgetMinor * factor).roundToLong()

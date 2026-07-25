@@ -53,14 +53,19 @@ data class WalletUiState(
     val goals: List<GoalUi> = emptyList(),
     val recurring: List<RecurringWithCategory> = emptyList(),
     val dueRecurringIds: Set<Long> = emptySet(),
-    val expenseCategories: List<CategoryEntity> = emptyList()
+    val expenseCategories: List<CategoryEntity> = emptyList(),
+    val multiAccount: Boolean = false,
+    /** Accounts with their shown balances (transactions + adjustment). */
+    val accountsWithBalances: List<Pair<by.mlastovsky.kosht.data.db.AccountEntity, Long>> =
+        emptyList()
 )
 
 class WalletViewModel(
     private val walletRepository: WalletRepository,
     transactionRepository: TransactionRepository,
     private val ratesRepository: RatesRepository,
-    settingsRepository: SettingsRepository
+    private val settingsRepository: SettingsRepository,
+    private val accountRepository: by.mlastovsky.kosht.data.AccountRepository
 ) : ViewModel() {
 
     private val refreshingRates = MutableStateFlow(false)
@@ -103,14 +108,31 @@ class WalletViewModel(
         val rates: Map<String, RateEntity>,
         val settings: by.mlastovsky.kosht.data.AppSettings,
         val expenseCategories: List<CategoryEntity>,
-        val refreshing: Boolean
+        val refreshing: Boolean,
+        val accountsWithBalances: List<Pair<by.mlastovsky.kosht.data.db.AccountEntity, Long>>
     )
+
+    private val accountsWithBalances = combine(
+        accountRepository.observeAccounts(),
+        accountRepository.observeBalances()
+    ) { accounts, balances ->
+        val primaryId = accounts.firstOrNull()?.id
+        accounts.map { account ->
+            var sum = (balances.firstOrNull { it.accountId == account.id }?.balance ?: 0L) +
+                account.adjustmentMinor
+            if (account.id == primaryId) {
+                sum += balances.firstOrNull { it.accountId == null }?.balance ?: 0L
+            }
+            account to sum
+        }
+    }
 
     private val context = combine(
         ratesRepository.rates,
         settingsRepository.settings,
         transactionRepository.observeCategories(TransactionType.EXPENSE),
         refreshingRates,
+        accountsWithBalances,
         ::ContextData
     )
 
@@ -123,8 +145,10 @@ class WalletViewModel(
     )
 
     val uiState: StateFlow<WalletUiState> = combine(wallet, context) { data,
-        (rates, settings, expenseCategories, refreshing) ->
+        (rates, settings, expenseCategories, refreshing, accountsWithBalances) ->
         WalletUiState(
+            multiAccount = settings.multiAccount,
+            accountsWithBalances = accountsWithBalances,
             loaded = true,
             currencyCode = settings.currencyCode,
             rates = rates,
@@ -179,6 +203,23 @@ class WalletViewModel(
 
     fun deleteDebt(debt: DebtEntity) {
         viewModelScope.launch { walletRepository.deleteDebt(debt.id) }
+    }
+
+    fun setMultiAccount(enabled: Boolean) {
+        viewModelScope.launch { settingsRepository.setMultiAccount(enabled) }
+    }
+
+    fun addAccount(name: String, iconKey: String, colorArgb: Long) {
+        if (name.isBlank()) return
+        viewModelScope.launch { accountRepository.addAccount(name, iconKey, colorArgb) }
+    }
+
+    fun deleteAccount(account: by.mlastovsky.kosht.data.db.AccountEntity) {
+        viewModelScope.launch { accountRepository.deleteAccount(account) }
+    }
+
+    fun setAccountBalance(account: by.mlastovsky.kosht.data.db.AccountEntity, targetMinor: Long) {
+        viewModelScope.launch { accountRepository.setAccountBalance(account, targetMinor) }
     }
 
     fun addSaving(amountMinor: Long, currencyCode: String, note: String, goalId: Long? = null) {

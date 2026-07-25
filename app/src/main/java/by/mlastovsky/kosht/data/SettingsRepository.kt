@@ -32,7 +32,9 @@ data class AppSettings(
     val showStreak: Boolean,
     val showRates: Boolean,
     /** Recalculate stored amounts by the NBRB rate when switching currency. */
-    val convertOnCurrencyChange: Boolean
+    val convertOnCurrencyChange: Boolean,
+    /** Master switch for multiple money sources (cards/cash). */
+    val multiAccount: Boolean
 )
 
 data class UserProfile(
@@ -62,6 +64,11 @@ class SettingsRepository(private val context: Context) {
         val showStreak = booleanPreferencesKey("show_streak")
         val showRates = booleanPreferencesKey("show_rates")
         val convertOnCurrencyChange = booleanPreferencesKey("convert_on_currency_change")
+        val multiAccount = booleanPreferencesKey("multi_account")
+    }
+
+    suspend fun setMultiAccount(value: Boolean) {
+        context.dataStore.edit { it[Keys.multiAccount] = value }
     }
 
     suspend fun setConvertOnCurrencyChange(value: Boolean) {
@@ -117,7 +124,8 @@ class SettingsRepository(private val context: Context) {
             showGreeting = prefs[Keys.showGreeting] ?: true,
             showStreak = prefs[Keys.showStreak] ?: true,
             showRates = prefs[Keys.showRates] ?: true,
-            convertOnCurrencyChange = prefs[Keys.convertOnCurrencyChange] ?: true
+            convertOnCurrencyChange = prefs[Keys.convertOnCurrencyChange] ?: true,
+            multiAccount = prefs[Keys.multiAccount] ?: false
         )
     }
 

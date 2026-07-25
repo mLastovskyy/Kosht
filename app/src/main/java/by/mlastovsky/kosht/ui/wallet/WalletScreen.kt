@@ -73,6 +73,10 @@ fun WalletScreen(
     var recurringToConfirm by remember { mutableStateOf<RecurringWithCategory?>(null) }
     var recurringToEdit by remember { mutableStateOf<RecurringWithCategory?>(null) }
     var showAddGoal by remember { mutableStateOf(false) }
+    var showAddAccount by remember { mutableStateOf(false) }
+    var accountInAction by remember {
+        mutableStateOf<Pair<by.mlastovsky.kosht.data.db.AccountEntity, Long>?>(null)
+    }
 
     LazyColumn(
         modifier = Modifier
@@ -95,6 +99,69 @@ fun WalletScreen(
                     refreshing = state.refreshingRates,
                     onRefresh = viewModel::refreshRates
                 )
+            }
+        }
+
+        // --- Accounts (money sources) ---
+        item(key = "accounts-header") {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(start = 16.dp, end = 8.dp, top = 12.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = stringResource(R.string.settings_accounts),
+                    style = MaterialTheme.typography.titleMedium,
+                    modifier = Modifier.weight(1f)
+                )
+                if (state.multiAccount) {
+                    IconButton(onClick = { showAddAccount = true }) {
+                        Icon(
+                            Icons.Rounded.Add,
+                            contentDescription = stringResource(R.string.action_add),
+                            tint = MaterialTheme.colorScheme.primary
+                        )
+                    }
+                }
+                Switch(
+                    checked = state.multiAccount,
+                    onCheckedChange = viewModel::setMultiAccount
+                )
+            }
+        }
+        if (state.multiAccount) {
+            items(
+                state.accountsWithBalances,
+                key = { "acc-${it.first.id}" }
+            ) { (account, balance) ->
+                Row(
+                    modifier = Modifier
+                        .animateItem()
+                        .clickable { accountInAction = account to balance }
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp, vertical = 8.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    CategoryBadge(
+                        iconKey = account.iconKey,
+                        color = Color(account.colorArgb),
+                        size = 40.dp
+                    )
+                    Text(
+                        text = by.mlastovsky.kosht.ui.AccountVisuals.displayName(account),
+                        style = MaterialTheme.typography.bodyLarge,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier.weight(1f)
+                    )
+                    Text(
+                        text = Money.format(balance, state.currencyCode),
+                        style = MaterialTheme.typography.titleMedium,
+                        maxLines = 1
+                    )
+                }
             }
         }
 
@@ -269,6 +336,34 @@ fun WalletScreen(
                 savingDialogWithdraw = null
             },
             onDismiss = { savingDialogWithdraw = null }
+        )
+    }
+
+    if (showAddAccount) {
+        AddAccountDialog(
+            onConfirm = { name, iconKey, color ->
+                viewModel.addAccount(name, iconKey, color)
+                showAddAccount = false
+            },
+            onDismiss = { showAddAccount = false }
+        )
+    }
+
+    accountInAction?.let { (account, balance) ->
+        AccountBalanceDialog(
+            account = account,
+            currentBalanceMinor = balance,
+            currencyCode = state.currencyCode,
+            deletable = state.accountsWithBalances.size > 1,
+            onSetBalance = { target ->
+                viewModel.setAccountBalance(account, target)
+                accountInAction = null
+            },
+            onDelete = {
+                viewModel.deleteAccount(account)
+                accountInAction = null
+            },
+            onDismiss = { accountInAction = null }
         )
     }
 

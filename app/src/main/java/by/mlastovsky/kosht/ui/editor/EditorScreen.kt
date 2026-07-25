@@ -232,7 +232,7 @@ fun EditorScreen(
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 16.dp, vertical = 8.dp),
+                .padding(horizontal = 16.dp, vertical = 4.dp),
             horizontalArrangement = Arrangement.spacedBy(8.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
@@ -243,7 +243,7 @@ fun EditorScreen(
                 },
                 label = { Text(relativeDate(state.date)) }
             )
-            if (state.accounts.size > 1) {
+            if (state.multiAccount && state.accounts.size > 1) {
                 val account = state.accounts.firstOrNull { it.id == state.accountId }
                 if (account != null) {
                     AssistChip(
@@ -265,14 +265,7 @@ fun EditorScreen(
                     )
                 }
             }
-            OutlinedTextField(
-                value = state.note,
-                onValueChange = viewModel::setNote,
-                placeholder = { Text(stringResource(R.string.editor_note_hint)) },
-                singleLine = true,
-                shape = MaterialTheme.shapes.small,
-                modifier = Modifier.weight(1f)
-            )
+            Spacer(Modifier.weight(1f))
             if (state.photoPath == null) {
                 IconButton(onClick = { showAttachSource = true }) {
                     Icon(
@@ -308,6 +301,18 @@ fun EditorScreen(
                 }
             }
         }
+
+        OutlinedTextField(
+            value = state.note,
+            onValueChange = viewModel::setNote,
+            placeholder = { Text(stringResource(R.string.editor_note_hint)) },
+            singleLine = true,
+            shape = MaterialTheme.shapes.medium,
+            textStyle = MaterialTheme.typography.bodyMedium,
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp, vertical = 2.dp)
+        )
 
         Keypad(
             onDigit = { digit ->

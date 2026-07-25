@@ -21,6 +21,8 @@
     <string name="settings_accounts">Accounts</string>
     <string name="settings_accounts_desc">Cards, cash and other money sources</string>
     <string name="account_new">New account</string>
+    <string name="account_balance">Current balance</string>
+    <string name="account_balance_hint">Set the real balance — the app adds a correction without touching your history</string>
     <string name="stats_all_accounts">All accounts</string>
     <string name="show_greeting">Greeting on Home</string>
     <string name="show_greeting_desc">Hide if you prefer a cleaner look</string>

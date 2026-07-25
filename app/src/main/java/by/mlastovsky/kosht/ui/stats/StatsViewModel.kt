@@ -158,7 +158,7 @@ class StatsViewModel(
             daily = daily.toList(),
             byDay = relevant.groupBy { Dates.toLocalDate(it.transaction.timestamp) },
             report = buildReport(s.month, byAccount, report),
-            accounts = report.accounts,
+            accounts = if (settings.multiAccount) report.accounts else emptyList(),
             accountFilter = s.accountId,
             currencyCode = settings.currencyCode
         )

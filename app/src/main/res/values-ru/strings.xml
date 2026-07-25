@@ -21,6 +21,8 @@
     <string name="settings_accounts">Счета</string>
     <string name="settings_accounts_desc">Карты, наличные и другие источники денег</string>
     <string name="account_new">Новый счёт</string>
+    <string name="account_balance">Текущий баланс</string>
+    <string name="account_balance_hint">Укажите реальный баланс — приложение добавит корректировку, не трогая историю</string>
     <string name="stats_all_accounts">Все счета</string>
     <string name="show_greeting">Приветствие на главной</string>
     <string name="show_greeting_desc">Отключите для более лаконичного вида</string>

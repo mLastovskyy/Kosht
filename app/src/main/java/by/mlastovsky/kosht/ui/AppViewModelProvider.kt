@@ -50,8 +50,7 @@ object AppViewModelProvider {
             SettingsViewModel(
                 app().container.settingsRepository,
                 app().container.photoStore,
-                app().container.currencyChanger,
-                app().container.accountRepository
+                app().container.currencyChanger
             )
         }
         initializer {
@@ -67,7 +66,8 @@ object AppViewModelProvider {
                 app().container.walletRepository,
                 app().container.transactionRepository,
                 app().container.ratesRepository,
-                app().container.settingsRepository
+                app().container.settingsRepository,
+                app().container.accountRepository
             )
         }
         initializer {

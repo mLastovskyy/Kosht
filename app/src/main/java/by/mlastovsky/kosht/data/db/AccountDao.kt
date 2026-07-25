@@ -28,6 +28,12 @@ interface AccountDao {
     @Query("DELETE FROM accounts WHERE id = :id")
     suspend fun deleteById(id: Long)
 
+    @Query("UPDATE accounts SET adjustmentMinor = :adjustment WHERE id = :id")
+    suspend fun setAdjustment(id: Long, adjustment: Long)
+
+    @Query("UPDATE accounts SET adjustmentMinor = CAST(ROUND(adjustmentMinor * :factor) AS INTEGER)")
+    suspend fun rescaleAdjustments(factor: Double)
+
     /** Per-account balance; transactions without an account fall in the null group. */
     @Query(
         "SELECT accountId, COALESCE(SUM(CASE WHEN type = 'INCOME' THEN amountMinor " +

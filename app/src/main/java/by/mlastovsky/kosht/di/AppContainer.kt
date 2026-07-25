@@ -53,6 +53,7 @@ class AppContainer(context: Context) {
         CurrencyChanger(
             database.transactionDao(),
             database.challengeDao(),
+            database.accountDao(),
             settingsRepository,
             ratesRepository
         )

@@ -1,5 +1,6 @@
 package by.mlastovsky.kosht.data.db
 
+import androidx.room.ColumnInfo
 import androidx.room.Entity
 import androidx.room.PrimaryKey
 
@@ -15,5 +16,11 @@ data class AccountEntity(
     val name: String,
     val iconKey: String,
     val colorArgb: Long,
-    val position: Int
+    val position: Int,
+    /**
+     * Manual balance correction: shown balance = transactions + adjustment.
+     * Lets the user set the real current balance without fake records.
+     */
+    @ColumnInfo(defaultValue = "0")
+    val adjustmentMinor: Long = 0
 )
