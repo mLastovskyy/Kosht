@@ -254,14 +254,21 @@ fun AddSavingDialog(
 fun AddRecurringDialog(
     categories: List<CategoryEntity>,
     currencyCode: String,
-    onConfirm: (title: String, amountMinor: Long, categoryId: Long, dayOfMonth: Int) -> Unit,
+    onConfirm: (
+        title: String,
+        amountMinor: Long,
+        currency: String,
+        categoryId: Long,
+        dayOfMonth: Int
+    ) -> Unit,
     onDismiss: () -> Unit
 ) {
     var title by remember { mutableStateOf("") }
     var amountText by remember { mutableStateOf("") }
     var dayText by remember { mutableStateOf("1") }
+    var currency by remember { mutableStateOf(currencyCode) }
     var categoryId by remember { mutableStateOf(categories.firstOrNull()?.id) }
-    val amountMinor = Money.parseToMinor(amountText, currencyCode) ?: 0L
+    val amountMinor = Money.parseToMinor(amountText, currency) ?: 0L
     val day = dayText.toIntOrNull() ?: 0
 
     AlertDialog(
@@ -294,6 +301,7 @@ fun AddRecurringDialog(
                         modifier = Modifier.weight(1f)
                     )
                 }
+                CurrencyChips(currency) { currency = it }
                 LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     items(categories, key = { it.id }) { category ->
                         Column(
@@ -324,8 +332,73 @@ fun AddRecurringDialog(
             TextButton(
                 enabled = title.isNotBlank() && amountMinor > 0 &&
                     day in 1..31 && categoryId != null,
-                onClick = { onConfirm(title, amountMinor, categoryId!!, day) }
+                onClick = { onConfirm(title, amountMinor, currency, categoryId!!, day) }
             ) { Text(stringResource(R.string.action_add)) }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) { Text(stringResource(R.string.action_cancel)) }
+        }
+    )
+}
+
+@Composable
+fun ConfirmRecurringDialog(
+    title: String,
+    amountMinor: Long,
+    currencyCode: String,
+    appCurrencyCode: String,
+    suggestedRate: Double?,
+    onConfirm: (rate: Double) -> Unit,
+    onDismiss: () -> Unit
+) {
+    var rateText by remember {
+        mutableStateOf(suggestedRate?.let { "%.4f".format(it).replace(',', '.') } ?: "")
+    }
+    val rate = rateText.replace(',', '.').toDoubleOrNull() ?: 0.0
+    val convertedMinor = if (rate > 0) Math.round(amountMinor * rate) else 0L
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(title) },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                Text(
+                    text = Money.format(amountMinor, currencyCode),
+                    style = MaterialTheme.typography.headlineSmall
+                )
+                OutlinedTextField(
+                    value = rateText,
+                    onValueChange = { rateText = it.take(10) },
+                    label = {
+                        Text(
+                            stringResource(
+                                R.string.recurring_rate,
+                                currencyCode,
+                                appCurrencyCode
+                            )
+                        )
+                    },
+                    singleLine = true,
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+                    modifier = Modifier.fillMaxWidth()
+                )
+                if (convertedMinor > 0) {
+                    Text(
+                        text = stringResource(
+                            R.string.recurring_converted,
+                            Money.format(convertedMinor, appCurrencyCode)
+                        ),
+                        style = MaterialTheme.typography.titleMedium,
+                        color = MaterialTheme.colorScheme.primary
+                    )
+                }
+            }
+        },
+        confirmButton = {
+            TextButton(
+                enabled = rate > 0,
+                onClick = { onConfirm(rate) }
+            ) { Text(stringResource(R.string.action_confirm)) }
         },
         dismissButton = {
             TextButton(onClick = onDismiss) { Text(stringResource(R.string.action_cancel)) }

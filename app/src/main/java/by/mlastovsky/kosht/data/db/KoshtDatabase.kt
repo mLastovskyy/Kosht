@@ -17,7 +17,7 @@ import by.mlastovsky.kosht.data.CategorySeed
         SavingEntity::class,
         RecurringEntity::class
     ],
-    version = 4,
+    version = 5,
     exportSchema = false
 )
 abstract class KoshtDatabase : RoomDatabase() {
@@ -39,7 +39,7 @@ abstract class KoshtDatabase : RoomDatabase() {
         fun build(context: Context): KoshtDatabase =
             Room.databaseBuilder(context, KoshtDatabase::class.java, "kosht.db")
                 .addCallback(SeedCallback)
-                .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4)
+                .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5)
                 .build()
 
         private val MIGRATION_1_2 = object : Migration(1, 2) {
@@ -99,6 +99,14 @@ abstract class KoshtDatabase : RoomDatabase() {
             override fun migrate(db: SupportSQLiteDatabase) {
                 db.execSQL("ALTER TABLE transactions ADD COLUMN photoPath TEXT")
                 db.execSQL("ALTER TABLE transactions ADD COLUMN bynMinor INTEGER")
+            }
+        }
+
+        private val MIGRATION_4_5 = object : Migration(4, 5) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL(
+                    "ALTER TABLE recurring ADD COLUMN currencyCode TEXT NOT NULL DEFAULT 'BYN'"
+                )
             }
         }
 

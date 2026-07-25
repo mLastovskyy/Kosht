@@ -68,6 +68,7 @@ fun WalletScreen(
     var showAddRecurring by remember { mutableStateOf(false) }
     var savingDialogWithdraw by remember { mutableStateOf<Boolean?>(null) }
     var debtInAction by remember { mutableStateOf<DebtEntity?>(null) }
+    var recurringToConfirm by remember { mutableStateOf<RecurringWithCategory?>(null) }
 
     LazyColumn(
         modifier = Modifier
@@ -100,8 +101,13 @@ fun WalletScreen(
             items(due, key = { "due-${it.recurring.id}" }) { item ->
                 DueCard(
                     item = item,
-                    currencyCode = state.currencyCode,
-                    onConfirm = { viewModel.confirmRecurring(item) },
+                    onConfirm = {
+                        if (item.recurring.currencyCode == state.currencyCode) {
+                            viewModel.confirmRecurring(item)
+                        } else {
+                            recurringToConfirm = item
+                        }
+                    },
                     modifier = Modifier.animateItem()
                 )
             }
@@ -122,7 +128,6 @@ fun WalletScreen(
         items(state.recurring, key = { "rec-${it.recurring.id}" }) { item ->
             RecurringRow(
                 item = item,
-                currencyCode = state.currencyCode,
                 onToggle = { enabled -> viewModel.setRecurringEnabled(item, enabled) },
                 onDelete = { viewModel.deleteRecurring(item) },
                 modifier = Modifier.animateItem()
@@ -249,11 +254,29 @@ fun WalletScreen(
         AddRecurringDialog(
             categories = state.expenseCategories,
             currencyCode = state.currencyCode,
-            onConfirm = { title, amount, categoryId, day ->
-                viewModel.addRecurring(title, amount, categoryId, day)
+            onConfirm = { title, amount, currency, categoryId, day ->
+                viewModel.addRecurring(title, amount, currency, categoryId, day)
                 showAddRecurring = false
             },
             onDismiss = { showAddRecurring = false }
+        )
+    }
+
+    recurringToConfirm?.let { item ->
+        ConfirmRecurringDialog(
+            title = item.recurring.title,
+            amountMinor = item.recurring.amountMinor,
+            currencyCode = item.recurring.currencyCode,
+            appCurrencyCode = state.currencyCode,
+            suggestedRate = viewModel.suggestedRate(
+                from = item.recurring.currencyCode,
+                to = state.currencyCode
+            ),
+            onConfirm = { rate ->
+                viewModel.confirmRecurringWithRate(item, rate)
+                recurringToConfirm = null
+            },
+            onDismiss = { recurringToConfirm = null }
         )
     }
 }
@@ -390,7 +413,6 @@ private fun EmptyHint(text: String) {
 @Composable
 private fun DueCard(
     item: RecurringWithCategory,
-    currencyCode: String,
     onConfirm: () -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -422,7 +444,7 @@ private fun DueCard(
                     overflow = TextOverflow.Ellipsis
                 )
                 Text(
-                    text = Money.format(item.recurring.amountMinor, currencyCode),
+                    text = Money.format(item.recurring.amountMinor, item.recurring.currencyCode),
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onPrimaryContainer
                 )
@@ -437,7 +459,6 @@ private fun DueCard(
 @Composable
 private fun RecurringRow(
     item: RecurringWithCategory,
-    currencyCode: String,
     onToggle: (Boolean) -> Unit,
     onDelete: () -> Unit,
     modifier: Modifier = Modifier
@@ -463,7 +484,7 @@ private fun RecurringRow(
             )
             Text(
                 text = stringResource(R.string.recurring_day_format, item.recurring.dayOfMonth) +
-                    " · " + Money.format(item.recurring.amountMinor, currencyCode),
+                    " · " + Money.format(item.recurring.amountMinor, item.recurring.currencyCode),
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )

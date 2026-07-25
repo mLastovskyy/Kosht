@@ -103,6 +103,8 @@
     <string name="recurring_title_hint">Название</string>
     <string name="recurring_day">День</string>
     <string name="recurring_day_format">%1$d-го числа</string>
+    <string name="recurring_rate">Курс %1$s → %2$s</string>
+    <string name="recurring_converted">Спишется: %1$s</string>
     <string name="wallet_empty_recurring">Регулярных платежей пока нет</string>
     <string name="section_debts">Долги</string>
     <string name="debt_new">Новый долг</string>

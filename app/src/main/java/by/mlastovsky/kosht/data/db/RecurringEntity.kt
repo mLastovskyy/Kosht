@@ -31,6 +31,8 @@ data class RecurringEntity(
     val id: Long = 0,
     val title: String,
     val amountMinor: Long,
+    /** Currency the charge is defined in; may differ from the app currency. */
+    val currencyCode: String = "BYN",
     val categoryId: Long,
     val dayOfMonth: Int,
     val lastConfirmed: String? = null,

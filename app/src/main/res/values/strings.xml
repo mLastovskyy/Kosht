@@ -103,6 +103,8 @@
     <string name="recurring_title_hint">Title</string>
     <string name="recurring_day">Day</string>
     <string name="recurring_day_format">on day %1$d</string>
+    <string name="recurring_rate">Rate %1$s → %2$s</string>
+    <string name="recurring_converted">Will be charged: %1$s</string>
     <string name="wallet_empty_recurring">No recurring payments yet</string>
     <string name="section_debts">Debts</string>
     <string name="debt_new">New debt</string>

@@ -88,12 +88,14 @@ class WalletRepository(
     suspend fun addRecurring(
         title: String,
         amountMinor: Long,
+        currencyCode: String,
         categoryId: Long,
         dayOfMonth: Int
     ): Long = recurringDao.insert(
         RecurringEntity(
             title = title.trim(),
             amountMinor = amountMinor,
+            currencyCode = currencyCode,
             categoryId = categoryId,
             dayOfMonth = dayOfMonth.coerceIn(1, 31),
             createdAt = System.currentTimeMillis()
@@ -109,19 +111,25 @@ class WalletRepository(
     }
 
     /**
-     * Confirms this month's charge: records the expense transaction and
-     * stamps the current period so it is not asked again until next month.
+     * Confirms this month's charge: records the expense transaction (already
+     * converted to the app currency by the caller when needed) and stamps the
+     * current period so it is not asked again until next month.
      */
-    suspend fun confirmRecurring(recurring: RecurringEntity) {
+    suspend fun confirmRecurring(
+        recurring: RecurringEntity,
+        chargeAmountMinor: Long,
+        bynMinor: Long?
+    ) {
         val now = System.currentTimeMillis()
         transactionDao.insert(
             TransactionEntity(
-                amountMinor = recurring.amountMinor,
+                amountMinor = chargeAmountMinor,
                 type = TransactionType.EXPENSE,
                 categoryId = recurring.categoryId,
                 note = recurring.title,
                 timestamp = now,
-                createdAt = now
+                createdAt = now,
+                bynMinor = bynMinor
             )
         )
         recurringDao.update(recurring.copy(lastConfirmed = YearMonth.now().toString()))

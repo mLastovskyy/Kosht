@@ -156,10 +156,16 @@ class WalletViewModel(
         viewModelScope.launch { walletRepository.deleteSaving(saving.id) }
     }
 
-    fun addRecurring(title: String, amountMinor: Long, categoryId: Long, dayOfMonth: Int) {
+    fun addRecurring(
+        title: String,
+        amountMinor: Long,
+        currencyCode: String,
+        categoryId: Long,
+        dayOfMonth: Int
+    ) {
         if (title.isBlank() || amountMinor <= 0) return
         viewModelScope.launch {
-            walletRepository.addRecurring(title, amountMinor, categoryId, dayOfMonth)
+            walletRepository.addRecurring(title, amountMinor, currencyCode, categoryId, dayOfMonth)
         }
     }
 
@@ -171,8 +177,37 @@ class WalletViewModel(
         viewModelScope.launch { walletRepository.deleteRecurring(item.recurring.id) }
     }
 
+    /** Confirms a charge defined in the app currency (no conversion needed). */
     fun confirmRecurring(item: RecurringWithCategory) {
-        viewModelScope.launch { walletRepository.confirmRecurring(item.recurring) }
+        viewModelScope.launch {
+            val state = uiState.value
+            val amount = item.recurring.amountMinor
+            val byn = RatesRepository.toBynMinor(amount, state.currencyCode, state.rates)
+            walletRepository.confirmRecurring(item.recurring, amount, byn)
+        }
+    }
+
+    /**
+     * Confirms a foreign-currency charge using a manually adjustable rate:
+     * charged amount = recurring amount × [rate], in the app currency.
+     */
+    fun confirmRecurringWithRate(item: RecurringWithCategory, rate: Double) {
+        if (rate <= 0.0) return
+        viewModelScope.launch {
+            val state = uiState.value
+            val converted = Math.round(item.recurring.amountMinor * rate)
+            val byn = RatesRepository.toBynMinor(converted, state.currencyCode, state.rates)
+            walletRepository.confirmRecurring(item.recurring, converted, byn)
+        }
+    }
+
+    /** Official cross rate between the charge currency and the app currency. */
+    fun suggestedRate(from: String, to: String): Double? {
+        val rates = uiState.value.rates
+        val fromRate = rates[from] ?: return null
+        val toRate = rates[to] ?: return null
+        if (fromRate.scale <= 0 || toRate.scale <= 0 || toRate.rate <= 0.0) return null
+        return (fromRate.rate / fromRate.scale) / (toRate.rate / toRate.scale)
     }
 
     private companion object {
