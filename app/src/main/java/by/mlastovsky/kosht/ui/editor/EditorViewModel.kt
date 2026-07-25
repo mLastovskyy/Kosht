@@ -1,5 +1,6 @@
 package by.mlastovsky.kosht.ui.editor
 
+import android.net.Uri
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -7,6 +8,7 @@ import by.mlastovsky.kosht.data.SettingsRepository
 import by.mlastovsky.kosht.data.TransactionRepository
 import by.mlastovsky.kosht.data.db.CategoryEntity
 import by.mlastovsky.kosht.data.db.TransactionEntity
+import by.mlastovsky.kosht.data.receipt.ReceiptScanner
 import by.mlastovsky.kosht.model.TransactionType
 import by.mlastovsky.kosht.ui.navigation.Routes
 import by.mlastovsky.kosht.util.Dates
@@ -36,7 +38,8 @@ data class EditorUiState(
     val date: LocalDate = LocalDate.now(),
     val categoryId: Long? = null,
     val categories: List<CategoryEntity> = emptyList(),
-    val currencyCode: String = SettingsRepository.DEFAULT_CURRENCY
+    val currencyCode: String = SettingsRepository.DEFAULT_CURRENCY,
+    val scanning: Boolean = false
 ) {
     val canSave: Boolean
         get() = categoryId != null &&
@@ -47,7 +50,8 @@ data class EditorUiState(
 class EditorViewModel(
     savedStateHandle: SavedStateHandle,
     private val repository: TransactionRepository,
-    settingsRepository: SettingsRepository
+    settingsRepository: SettingsRepository,
+    private val receiptScanner: ReceiptScanner
 ) : ViewModel() {
 
     private val transactionId: Long = savedStateHandle[Routes.EDITOR_ARG_ID] ?: Routes.NO_ID
@@ -65,6 +69,8 @@ class EditorViewModel(
 
     private val draft = MutableStateFlow(Draft())
 
+    private val scanning = MutableStateFlow(false)
+
     private val categoriesForType = draft
         .map { it.type }
         .distinctUntilChanged()
@@ -73,8 +79,9 @@ class EditorViewModel(
     val uiState: StateFlow<EditorUiState> = combine(
         draft,
         categoriesForType,
-        settingsRepository.settings
-    ) { d, categories, settings ->
+        settingsRepository.settings,
+        scanning
+    ) { d, categories, settings, isScanning ->
         val effectiveCategoryId = when {
             d.categoryId != null && categories.any { it.id == d.categoryId } -> d.categoryId
             else -> categories.firstOrNull()?.id
@@ -88,7 +95,8 @@ class EditorViewModel(
             date = d.date,
             categoryId = effectiveCategoryId,
             categories = categories,
-            currencyCode = settings.currencyCode
+            currencyCode = settings.currencyCode,
+            scanning = isScanning
         )
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), EditorUiState())
 
@@ -161,6 +169,33 @@ class EditorViewModel(
 
     fun onBackspace() {
         draft.update { it.copy(amountInput = it.amountInput.dropLast(1)) }
+    }
+
+    /**
+     * Runs on-device OCR over a receipt photo and prefills the draft with the
+     * recognized total, date and merchant. Reports success via [onResult].
+     */
+    fun scanReceipt(uri: Uri, onResult: (Boolean) -> Unit) {
+        if (scanning.value) return
+        viewModelScope.launch {
+            scanning.value = true
+            val parsed = receiptScanner.scan(uri)
+            scanning.value = false
+            val amount = parsed?.amountMinor
+            if (amount != null) {
+                draft.update { d ->
+                    d.copy(
+                        type = TransactionType.EXPENSE,
+                        amountInput = minorToInput(amount),
+                        date = parsed.date ?: d.date,
+                        note = parsed.merchant ?: d.note
+                    )
+                }
+                onResult(true)
+            } else {
+                onResult(false)
+            }
+        }
     }
 
     fun addCategory(name: String, iconKey: String, colorArgb: Long) {

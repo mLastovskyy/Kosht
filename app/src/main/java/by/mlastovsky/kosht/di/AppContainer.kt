@@ -6,11 +6,14 @@ import by.mlastovsky.kosht.data.SettingsRepository
 import by.mlastovsky.kosht.data.TransactionRepository
 import by.mlastovsky.kosht.data.WalletRepository
 import by.mlastovsky.kosht.data.db.KoshtDatabase
+import by.mlastovsky.kosht.data.receipt.ReceiptScanner
 
 /**
  * Simple manual dependency container scoped to the application lifecycle.
  */
 class AppContainer(context: Context) {
+
+    private val appContext = context.applicationContext
 
     private val database: KoshtDatabase = KoshtDatabase.build(context)
 
@@ -34,6 +37,8 @@ class AppContainer(context: Context) {
             database.transactionDao()
         )
     }
+
+    val receiptScanner: ReceiptScanner by lazy { ReceiptScanner(appContext) }
 
     val settingsRepository: SettingsRepository = SettingsRepository(context)
 }

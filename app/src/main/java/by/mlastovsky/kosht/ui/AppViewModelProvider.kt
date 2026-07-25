@@ -57,7 +57,8 @@ object AppViewModelProvider {
             EditorViewModel(
                 savedStateHandle = createSavedStateHandle(),
                 repository = app().container.transactionRepository,
-                settingsRepository = app().container.settingsRepository
+                settingsRepository = app().container.settingsRepository,
+                receiptScanner = app().container.receiptScanner
             )
         }
     }

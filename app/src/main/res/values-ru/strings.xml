@@ -29,6 +29,10 @@
     <string name="editor_delete">Удалить</string>
     <string name="date_today">Сегодня</string>
     <string name="date_yesterday">Вчера</string>
+    <string name="editor_scan_receipt">Скан чека</string>
+    <string name="scan_from_camera">Сфотографировать</string>
+    <string name="scan_from_gallery">Выбрать из галереи</string>
+    <string name="scan_failed">Не удалось распознать чек. Попробуйте более чёткое фото.</string>
 
     <!-- История -->
     <string name="history_search_hint">Поиск</string>

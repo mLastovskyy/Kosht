@@ -2,6 +2,8 @@ package by.mlastovsky.kosht.ui
 
 import androidx.annotation.StringRes
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.rounded.MenuBook
+import androidx.compose.material.icons.automirrored.rounded.TrendingUp
 import androidx.compose.material.icons.rounded.AccountBalance
 import androidx.compose.material.icons.rounded.AccountBalanceWallet
 import androidx.compose.material.icons.rounded.Build
@@ -18,7 +20,6 @@ import androidx.compose.material.icons.rounded.Flight
 import androidx.compose.material.icons.rounded.Home
 import androidx.compose.material.icons.rounded.Laptop
 import androidx.compose.material.icons.rounded.LocalCafe
-import androidx.compose.material.icons.rounded.MenuBook
 import androidx.compose.material.icons.rounded.Movie
 import androidx.compose.material.icons.rounded.MusicNote
 import androidx.compose.material.icons.rounded.Payments
@@ -31,7 +32,6 @@ import androidx.compose.material.icons.rounded.Smartphone
 import androidx.compose.material.icons.rounded.Spa
 import androidx.compose.material.icons.rounded.SportsEsports
 import androidx.compose.material.icons.rounded.Subscriptions
-import androidx.compose.material.icons.rounded.TrendingUp
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
@@ -59,7 +59,7 @@ object CategoryVisuals {
         "other" to Icons.Rounded.Category,
         "salary" to Icons.Rounded.Payments,
         "freelance" to Icons.Rounded.Laptop,
-        "investments" to Icons.Rounded.TrendingUp,
+        "investments" to Icons.AutoMirrored.Rounded.TrendingUp,
         // Extra icons available when creating custom categories.
         "wallet" to Icons.Rounded.AccountBalanceWallet,
         "card" to Icons.Rounded.CreditCard,
@@ -74,7 +74,7 @@ object CategoryVisuals {
         "phone" to Icons.Rounded.Smartphone,
         "music" to Icons.Rounded.MusicNote,
         "games" to Icons.Rounded.SportsEsports,
-        "books" to Icons.Rounded.MenuBook,
+        "books" to Icons.AutoMirrored.Rounded.MenuBook,
         "tools" to Icons.Rounded.Build
     )
 
