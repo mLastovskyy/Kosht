@@ -66,6 +66,25 @@
     <string name="settings_about">О приложении</string>
     <string name="settings_version">Версия</string>
 
+    <!-- Уведомления -->
+    <string name="settings_notifications">Уведомления</string>
+    <string name="channel_reminders">Напоминания</string>
+    <string name="channel_recurring">Регулярные платежи</string>
+    <string name="channel_summary">Итоги</string>
+    <string name="notif_setting_daily">Ежедневное напоминание</string>
+    <string name="notif_setting_daily_desc">Вечером, если за день ничего не записано</string>
+    <string name="notif_setting_recurring">Платежи ждут подтверждения</string>
+    <string name="notif_setting_recurring_desc">Когда наступает срок ежемесячного платежа</string>
+    <string name="notif_setting_weekly">Итоги недели</string>
+    <string name="notif_setting_weekly_desc">Сводка трат каждый понедельник</string>
+    <string name="notif_daily_title">Не забудьте про расходы</string>
+    <string name="notif_daily_text">Сегодня ничего не записано. Это займёт пару секунд.</string>
+    <string name="notif_recurring_title">Платежи ждут подтверждения</string>
+    <string name="notif_recurring_text">%1$s — всего %2$s. Откройте Кошт, чтобы подтвердить.</string>
+    <string name="notif_weekly_title">Ваша неделя в деньгах</string>
+    <string name="notif_weekly_total">Потрачено за неделю: %1$s.</string>
+    <string name="notif_weekly_top">Больше всего: %1$s.</string>
+
     <!-- Кошелёк -->
     <string name="wallet_rates">Курсы НБРБ</string>
     <string name="section_due">Ждут подтверждения</string>

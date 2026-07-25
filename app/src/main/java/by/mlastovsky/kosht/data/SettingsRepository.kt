@@ -21,7 +21,10 @@ private val Context.dataStore: DataStore<Preferences> by preferencesDataStore(na
 data class AppSettings(
     val currencyCode: String,
     val themeMode: ThemeMode,
-    val dynamicColors: Boolean
+    val dynamicColors: Boolean,
+    val notifyDailyReminder: Boolean,
+    val notifyRecurringDue: Boolean,
+    val notifyWeeklySummary: Boolean
 )
 
 class SettingsRepository(private val context: Context) {
@@ -30,6 +33,9 @@ class SettingsRepository(private val context: Context) {
         val currencyCode = stringPreferencesKey("currency_code")
         val themeMode = stringPreferencesKey("theme_mode")
         val dynamicColors = booleanPreferencesKey("dynamic_colors")
+        val notifyDailyReminder = booleanPreferencesKey("notify_daily_reminder")
+        val notifyRecurringDue = booleanPreferencesKey("notify_recurring_due")
+        val notifyWeeklySummary = booleanPreferencesKey("notify_weekly_summary")
     }
 
     val settings: Flow<AppSettings> = context.dataStore.data.map { prefs ->
@@ -38,8 +44,23 @@ class SettingsRepository(private val context: Context) {
             themeMode = prefs[Keys.themeMode]
                 ?.let { runCatching { ThemeMode.valueOf(it) }.getOrNull() }
                 ?: ThemeMode.SYSTEM,
-            dynamicColors = prefs[Keys.dynamicColors] ?: false
+            dynamicColors = prefs[Keys.dynamicColors] ?: false,
+            notifyDailyReminder = prefs[Keys.notifyDailyReminder] ?: false,
+            notifyRecurringDue = prefs[Keys.notifyRecurringDue] ?: true,
+            notifyWeeklySummary = prefs[Keys.notifyWeeklySummary] ?: false
         )
+    }
+
+    suspend fun setNotifyDailyReminder(enabled: Boolean) {
+        context.dataStore.edit { it[Keys.notifyDailyReminder] = enabled }
+    }
+
+    suspend fun setNotifyRecurringDue(enabled: Boolean) {
+        context.dataStore.edit { it[Keys.notifyRecurringDue] = enabled }
+    }
+
+    suspend fun setNotifyWeeklySummary(enabled: Boolean) {
+        context.dataStore.edit { it[Keys.notifyWeeklySummary] = enabled }
     }
 
     suspend fun setCurrencyCode(code: String) {

@@ -66,6 +66,25 @@
     <string name="settings_about">About</string>
     <string name="settings_version">Version</string>
 
+    <!-- Notifications -->
+    <string name="settings_notifications">Notifications</string>
+    <string name="channel_reminders">Reminders</string>
+    <string name="channel_recurring">Recurring payments</string>
+    <string name="channel_summary">Summaries</string>
+    <string name="notif_setting_daily">Daily reminder</string>
+    <string name="notif_setting_daily_desc">Evening nudge if nothing is logged today</string>
+    <string name="notif_setting_recurring">Payments awaiting confirmation</string>
+    <string name="notif_setting_recurring_desc">When a monthly payment is due</string>
+    <string name="notif_setting_weekly">Weekly summary</string>
+    <string name="notif_setting_weekly_desc">Spending digest every Monday</string>
+    <string name="notif_daily_title">Don\'t forget your expenses</string>
+    <string name="notif_daily_text">Nothing is logged today. It only takes a few seconds.</string>
+    <string name="notif_recurring_title">Payments to confirm</string>
+    <string name="notif_recurring_text">%1$s — total %2$s. Open Kosht to confirm.</string>
+    <string name="notif_weekly_title">Your week in money</string>
+    <string name="notif_weekly_total">Spent this week: %1$s.</string>
+    <string name="notif_weekly_top">Top category: %1$s.</string>
+
     <!-- Wallet -->
     <string name="wallet_rates">NBRB rates</string>
     <string name="section_due">Awaiting confirmation</string>

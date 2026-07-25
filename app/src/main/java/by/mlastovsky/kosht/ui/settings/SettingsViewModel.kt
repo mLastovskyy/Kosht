@@ -36,6 +36,18 @@ class SettingsViewModel(
         viewModelScope.launch { settingsRepository.setCurrencyCode(code) }
     }
 
+    fun setNotifyDailyReminder(enabled: Boolean) {
+        viewModelScope.launch { settingsRepository.setNotifyDailyReminder(enabled) }
+    }
+
+    fun setNotifyRecurringDue(enabled: Boolean) {
+        viewModelScope.launch { settingsRepository.setNotifyRecurringDue(enabled) }
+    }
+
+    fun setNotifyWeeklySummary(enabled: Boolean) {
+        viewModelScope.launch { settingsRepository.setNotifyWeeklySummary(enabled) }
+    }
+
     companion object {
         val SUPPORTED_CURRENCIES = listOf("BYN", "USD", "EUR", "PLN", "UAH", "RUB", "GBP", "KZT")
     }

@@ -1,7 +1,10 @@
 package by.mlastovsky.kosht.ui.settings
 
+import android.Manifest
 import android.os.Build
 import androidx.activity.compose.LocalActivity
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
@@ -15,8 +18,11 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.BrightnessMedium
 import androidx.compose.material.icons.rounded.Info
 import androidx.compose.material.icons.rounded.Language
+import androidx.compose.material.icons.rounded.NotificationsActive
 import androidx.compose.material.icons.rounded.Palette
 import androidx.compose.material.icons.rounded.Payments
+import androidx.compose.material.icons.rounded.Repeat
+import androidx.compose.material.icons.rounded.Summarize
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
@@ -120,6 +126,50 @@ fun SettingsScreen(
 
         HorizontalDivider(Modifier.padding(vertical = 8.dp))
 
+        SectionHeader(stringResource(R.string.settings_notifications))
+
+        val permissionLauncher = rememberLauncherForActivityResult(
+            ActivityResultContracts.RequestPermission()
+        ) { }
+        val requestPermissionIfNeeded = {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                permissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+            }
+        }
+
+        NotificationToggle(
+            titleRes = R.string.notif_setting_daily,
+            descRes = R.string.notif_setting_daily_desc,
+            icon = Icons.Rounded.NotificationsActive,
+            checked = current.notifyDailyReminder,
+            onChange = { enabled ->
+                if (enabled) requestPermissionIfNeeded()
+                viewModel.setNotifyDailyReminder(enabled)
+            }
+        )
+        NotificationToggle(
+            titleRes = R.string.notif_setting_recurring,
+            descRes = R.string.notif_setting_recurring_desc,
+            icon = Icons.Rounded.Repeat,
+            checked = current.notifyRecurringDue,
+            onChange = { enabled ->
+                if (enabled) requestPermissionIfNeeded()
+                viewModel.setNotifyRecurringDue(enabled)
+            }
+        )
+        NotificationToggle(
+            titleRes = R.string.notif_setting_weekly,
+            descRes = R.string.notif_setting_weekly_desc,
+            icon = Icons.Rounded.Summarize,
+            checked = current.notifyWeeklySummary,
+            onChange = { enabled ->
+                if (enabled) requestPermissionIfNeeded()
+                viewModel.setNotifyWeeklySummary(enabled)
+            }
+        )
+
+        HorizontalDivider(Modifier.padding(vertical = 8.dp))
+
         SectionHeader(stringResource(R.string.settings_about))
 
         val versionName = remember {
@@ -215,6 +265,24 @@ private fun LanguageDialog(
         confirmButton = {
             TextButton(onClick = onDismiss) { Text(stringResource(R.string.action_cancel)) }
         }
+    )
+}
+
+@Composable
+private fun NotificationToggle(
+    titleRes: Int,
+    descRes: Int,
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    checked: Boolean,
+    onChange: (Boolean) -> Unit
+) {
+    ListItem(
+        headlineContent = { Text(stringResource(titleRes)) },
+        supportingContent = { Text(stringResource(descRes)) },
+        leadingContent = { Icon(icon, contentDescription = null) },
+        trailingContent = { Switch(checked = checked, onCheckedChange = onChange) },
+        colors = transparentListColors(),
+        modifier = Modifier.clickable { onChange(!checked) }
     )
 }
 

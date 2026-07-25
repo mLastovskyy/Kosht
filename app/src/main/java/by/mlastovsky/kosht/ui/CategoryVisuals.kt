@@ -91,7 +91,7 @@ object CategoryVisuals {
     fun icon(iconKey: String): ImageVector = icons[iconKey] ?: Icons.Rounded.Category
 
     @StringRes
-    private fun nameRes(key: String): Int? = when (key) {
+    fun nameRes(key: String): Int? = when (key) {
         "groceries" -> R.string.category_groceries
         "cafe" -> R.string.category_cafe
         "transport" -> R.string.category_transport
