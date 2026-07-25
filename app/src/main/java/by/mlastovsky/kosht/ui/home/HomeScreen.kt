@@ -71,6 +71,7 @@ fun HomeScreen(
         item(key = "balance") {
             BalanceCard(
                 balanceMinor = state.balanceMinor,
+                balanceBynMinor = state.balanceBynMinor,
                 incomeMinor = state.monthIncomeMinor,
                 expenseMinor = state.monthExpenseMinor,
                 currencyCode = state.currencyCode
@@ -121,6 +122,7 @@ fun HomeScreen(
 @Composable
 private fun BalanceCard(
     balanceMinor: Long,
+    balanceBynMinor: Long?,
     incomeMinor: Long,
     expenseMinor: Long,
     currencyCode: String
@@ -156,6 +158,13 @@ private fun BalanceCard(
                 style = MaterialTheme.typography.displaySmall,
                 color = MaterialTheme.colorScheme.onPrimary
             )
+            if (balanceBynMinor != null) {
+                Text(
+                    text = "≈ " + Money.format(balanceBynMinor, "BYN"),
+                    style = MaterialTheme.typography.titleSmall,
+                    color = MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.8f)
+                )
+            }
             Spacer(Modifier.height(20.dp))
             Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                 MonthStat(

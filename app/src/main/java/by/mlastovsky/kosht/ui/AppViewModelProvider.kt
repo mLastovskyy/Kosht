@@ -25,7 +25,8 @@ object AppViewModelProvider {
         initializer {
             HomeViewModel(
                 app().container.transactionRepository,
-                app().container.settingsRepository
+                app().container.settingsRepository,
+                app().container.ratesRepository
             )
         }
         initializer {
