@@ -2,13 +2,13 @@ package by.mlastovsky.kosht.ui.navigation
 
 import androidx.annotation.StringRes
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.outlined.ReceiptLong
+import androidx.compose.material.icons.automirrored.rounded.ReceiptLong
 import androidx.compose.material.icons.outlined.Home
 import androidx.compose.material.icons.outlined.PieChart
-import androidx.compose.material.icons.outlined.ReceiptLong
 import androidx.compose.material.icons.outlined.Settings
 import androidx.compose.material.icons.rounded.Home
 import androidx.compose.material.icons.rounded.PieChart
-import androidx.compose.material.icons.rounded.ReceiptLong
 import androidx.compose.material.icons.rounded.Settings
 import androidx.compose.ui.graphics.vector.ImageVector
 import by.mlastovsky.kosht.R
@@ -39,8 +39,8 @@ val MainTabs = listOf(
     TabDestination(
         Routes.HISTORY,
         R.string.nav_history,
-        Icons.Rounded.ReceiptLong,
-        Icons.Outlined.ReceiptLong
+        Icons.AutoMirrored.Rounded.ReceiptLong,
+        Icons.AutoMirrored.Outlined.ReceiptLong
     ),
     TabDestination(
         Routes.STATS,

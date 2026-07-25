@@ -35,6 +35,7 @@ import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import by.mlastovsky.kosht.R
+import by.mlastovsky.kosht.ui.editor.EditorScreen
 import by.mlastovsky.kosht.ui.home.HomeScreen
 import by.mlastovsky.kosht.ui.navigation.MainTabs
 import by.mlastovsky.kosht.ui.navigation.Routes
@@ -117,7 +118,7 @@ fun KoshtRoot() {
                     slideOutVertically(tween(250)) { it } + fadeOut(tween(250))
                 }
             ) {
-                PlaceholderScreen(stringResource(R.string.editor_title_new))
+                EditorScreen(onClose = { navController.popBackStack() })
             }
         }
     }

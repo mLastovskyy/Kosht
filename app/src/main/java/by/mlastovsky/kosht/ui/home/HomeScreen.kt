@@ -18,9 +18,9 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.rounded.ReceiptLong
 import androidx.compose.material.icons.rounded.ArrowDownward
 import androidx.compose.material.icons.rounded.ArrowUpward
-import androidx.compose.material.icons.rounded.ReceiptLong
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
@@ -44,12 +44,10 @@ import by.mlastovsky.kosht.ui.AppViewModelProvider
 import by.mlastovsky.kosht.ui.components.AnimatedAmountText
 import by.mlastovsky.kosht.ui.components.EmptyState
 import by.mlastovsky.kosht.ui.components.TransactionRow
+import by.mlastovsky.kosht.ui.relativeDate
 import by.mlastovsky.kosht.ui.theme.KoshtTheme
 import by.mlastovsky.kosht.util.Dates
 import by.mlastovsky.kosht.util.Money
-import java.time.LocalDate
-import java.time.format.DateTimeFormatter
-import java.util.Locale
 
 @Composable
 fun HomeScreen(
@@ -100,7 +98,7 @@ fun HomeScreen(
         if (state.loaded && state.recent.isEmpty()) {
             item(key = "empty") {
                 EmptyState(
-                    icon = Icons.Rounded.ReceiptLong,
+                    icon = Icons.AutoMirrored.Rounded.ReceiptLong,
                     title = stringResource(R.string.home_empty_title),
                     subtitle = stringResource(R.string.home_empty_subtitle)
                 )
@@ -224,17 +222,3 @@ private fun MonthStat(
     }
 }
 
-@Composable
-fun relativeDate(date: LocalDate): String {
-    val today = Dates.today()
-    return when (date) {
-        today -> stringResource(R.string.date_today)
-        today.minusDays(1) -> stringResource(R.string.date_yesterday)
-        else -> date.format(
-            DateTimeFormatter.ofPattern(
-                if (date.year == today.year) "d MMMM" else "d MMMM yyyy",
-                Locale.getDefault()
-            )
-        )
-    }
-}

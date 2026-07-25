@@ -1,11 +1,13 @@
 package by.mlastovsky.kosht.ui
 
 import androidx.lifecycle.ViewModelProvider
+import androidx.lifecycle.createSavedStateHandle
 import androidx.lifecycle.viewmodel.CreationExtras
 import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
 import by.mlastovsky.kosht.KoshtApp
 import by.mlastovsky.kosht.MainViewModel
+import by.mlastovsky.kosht.ui.editor.EditorViewModel
 import by.mlastovsky.kosht.ui.home.HomeViewModel
 
 /**
@@ -21,6 +23,13 @@ object AppViewModelProvider {
             HomeViewModel(
                 app().container.transactionRepository,
                 app().container.settingsRepository
+            )
+        }
+        initializer {
+            EditorViewModel(
+                savedStateHandle = createSavedStateHandle(),
+                repository = app().container.transactionRepository,
+                settingsRepository = app().container.settingsRepository
             )
         }
     }
