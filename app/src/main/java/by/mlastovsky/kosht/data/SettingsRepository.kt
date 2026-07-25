@@ -7,8 +7,13 @@ import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
+import by.mlastovsky.kosht.model.AppLanguage
 import by.mlastovsky.kosht.model.ThemeMode
+import by.mlastovsky.kosht.util.LocaleHelper
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.map
 
 private val Context.dataStore: DataStore<Preferences> by preferencesDataStore(name = "settings")
@@ -47,6 +52,16 @@ class SettingsRepository(private val context: Context) {
 
     suspend fun setDynamicColors(enabled: Boolean) {
         context.dataStore.edit { it[Keys.dynamicColors] = enabled }
+    }
+
+    private val _language = MutableStateFlow(LocaleHelper.getLanguage(context))
+
+    /** In-app language override; SYSTEM follows the device locale. */
+    val language: StateFlow<AppLanguage> = _language.asStateFlow()
+
+    fun setLanguage(language: AppLanguage) {
+        LocaleHelper.setLanguage(context, language)
+        _language.value = language
     }
 
     companion object {

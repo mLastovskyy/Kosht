@@ -52,6 +52,8 @@
     <string name="settings_dynamic_colors">Динамические цвета</string>
     <string name="settings_dynamic_colors_desc">Цвета из обоев системы (Android 12+)</string>
     <string name="settings_general">Общие</string>
+    <string name="settings_language">Язык</string>
+    <string name="lang_system">Как в системе</string>
     <string name="settings_currency">Валюта</string>
     <string name="settings_about">О приложении</string>
     <string name="settings_version">Версия</string>

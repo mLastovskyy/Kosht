@@ -16,10 +16,15 @@ import by.mlastovsky.kosht.ui.AppViewModelProvider
 import by.mlastovsky.kosht.ui.KoshtRoot
 import by.mlastovsky.kosht.ui.theme.KoshtAppTheme
 import by.mlastovsky.kosht.ui.theme.isAppInDarkTheme
+import by.mlastovsky.kosht.util.LocaleHelper
 
 class MainActivity : ComponentActivity() {
 
     private val viewModel: MainViewModel by viewModels { AppViewModelProvider.Factory }
+
+    override fun attachBaseContext(newBase: android.content.Context) {
+        super.attachBaseContext(LocaleHelper.wrap(newBase))
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         val splashScreen = installSplashScreen()

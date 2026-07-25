@@ -1,6 +1,7 @@
 package by.mlastovsky.kosht.ui.settings
 
 import android.os.Build
+import androidx.activity.compose.LocalActivity
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
@@ -13,6 +14,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.BrightnessMedium
 import androidx.compose.material.icons.rounded.Info
+import androidx.compose.material.icons.rounded.Language
 import androidx.compose.material.icons.rounded.Palette
 import androidx.compose.material.icons.rounded.Payments
 import androidx.compose.material3.AlertDialog
@@ -37,6 +39,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import by.mlastovsky.kosht.R
+import by.mlastovsky.kosht.model.AppLanguage
 import by.mlastovsky.kosht.model.ThemeMode
 import by.mlastovsky.kosht.ui.AppViewModelProvider
 import java.util.Currency
@@ -47,10 +50,13 @@ fun SettingsScreen(
     viewModel: SettingsViewModel = viewModel(factory = AppViewModelProvider.Factory)
 ) {
     val settings by viewModel.settings.collectAsStateWithLifecycle()
+    val language by viewModel.language.collectAsStateWithLifecycle()
     val current = settings ?: return
     var showThemeDialog by remember { mutableStateOf(false) }
     var showCurrencyDialog by remember { mutableStateOf(false) }
+    var showLanguageDialog by remember { mutableStateOf(false) }
     val context = LocalContext.current
+    val activity = LocalActivity.current
 
     Column(
         modifier = Modifier
@@ -95,6 +101,14 @@ fun SettingsScreen(
         HorizontalDivider(Modifier.padding(vertical = 8.dp))
 
         SectionHeader(stringResource(R.string.settings_general))
+
+        ListItem(
+            headlineContent = { Text(stringResource(R.string.settings_language)) },
+            supportingContent = { Text(languageLabel(language)) },
+            leadingContent = { Icon(Icons.Rounded.Language, contentDescription = null) },
+            colors = transparentListColors(),
+            modifier = Modifier.clickable { showLanguageDialog = true }
+        )
 
         ListItem(
             headlineContent = { Text(stringResource(R.string.settings_currency)) },
@@ -142,6 +156,66 @@ fun SettingsScreen(
             onDismiss = { showCurrencyDialog = false }
         )
     }
+
+    if (showLanguageDialog) {
+        LanguageDialog(
+            current = language,
+            onSelect = { lang ->
+                showLanguageDialog = false
+                if (lang != language) {
+                    viewModel.setLanguage(lang)
+                    // Re-create the activity so attachBaseContext applies the locale.
+                    activity?.recreate()
+                }
+            },
+            onDismiss = { showLanguageDialog = false }
+        )
+    }
+}
+
+@Composable
+private fun languageLabel(language: AppLanguage): String = when (language) {
+    AppLanguage.SYSTEM -> stringResource(R.string.lang_system)
+    AppLanguage.RUSSIAN -> "Русский"
+    AppLanguage.ENGLISH -> "English"
+}
+
+@Composable
+private fun LanguageDialog(
+    current: AppLanguage,
+    onSelect: (AppLanguage) -> Unit,
+    onDismiss: () -> Unit
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(stringResource(R.string.settings_language)) },
+        text = {
+            Column {
+                AppLanguage.entries.forEach { lang ->
+                    androidx.compose.foundation.layout.Row(
+                        verticalAlignment = androidx.compose.ui.Alignment.CenterVertically,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .selectable(
+                                selected = current == lang,
+                                onClick = { onSelect(lang) }
+                            )
+                            .padding(vertical = 10.dp)
+                    ) {
+                        RadioButton(selected = current == lang, onClick = null)
+                        Text(
+                            text = languageLabel(lang),
+                            style = MaterialTheme.typography.bodyLarge,
+                            modifier = Modifier.padding(start = 12.dp)
+                        )
+                    }
+                }
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = onDismiss) { Text(stringResource(R.string.action_cancel)) }
+        }
+    )
 }
 
 @Composable
