@@ -8,6 +8,7 @@ import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.animateColorAsState
+import androidx.compose.foundation.Image
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
@@ -17,6 +18,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -36,6 +38,7 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.Backspace
 import androidx.compose.material.icons.rounded.Add
+import androidx.compose.material.icons.rounded.AddAPhoto
 import androidx.compose.material.icons.rounded.Close
 import androidx.compose.material.icons.rounded.DeleteOutline
 import androidx.compose.material.icons.rounded.DocumentScanner
@@ -74,6 +77,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.res.stringResource
@@ -91,6 +95,7 @@ import by.mlastovsky.kosht.model.TransactionType
 import by.mlastovsky.kosht.ui.AppViewModelProvider
 import by.mlastovsky.kosht.ui.CategoryVisuals
 import by.mlastovsky.kosht.ui.components.CategoryBadge
+import by.mlastovsky.kosht.ui.components.rememberBitmapFromPath
 import by.mlastovsky.kosht.ui.relativeDate
 import by.mlastovsky.kosht.ui.theme.KoshtTheme
 import java.io.File
@@ -111,6 +116,8 @@ fun EditorScreen(
     var showDatePicker by remember { mutableStateOf(false) }
     var showNewCategory by remember { mutableStateOf(false) }
     var showScanSource by remember { mutableStateOf(false) }
+    var showAttachSource by remember { mutableStateOf(false) }
+    var showPhotoView by remember { mutableStateOf(false) }
     var cameraTarget by remember { mutableStateOf<Uri?>(null) }
     val scanFailedMessage = stringResource(R.string.scan_failed)
 
@@ -127,6 +134,17 @@ fun EditorScreen(
     ) { success ->
         val target = cameraTarget
         if (success && target != null) viewModel.scanReceipt(target, onScanResult)
+    }
+    val attachGalleryLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.PickVisualMedia()
+    ) { uri ->
+        if (uri != null) viewModel.attachPhoto(uri)
+    }
+    val attachCameraLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.TakePicture()
+    ) { success ->
+        val target = cameraTarget
+        if (success && target != null) viewModel.attachPhoto(target)
     }
 
     Column(
@@ -230,6 +248,40 @@ fun EditorScreen(
                 shape = MaterialTheme.shapes.small,
                 modifier = Modifier.weight(1f)
             )
+            if (state.photoPath == null) {
+                IconButton(onClick = { showAttachSource = true }) {
+                    Icon(
+                        Icons.Rounded.AddAPhoto,
+                        contentDescription = stringResource(R.string.attach_photo),
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            } else {
+                val thumbnail = rememberBitmapFromPath(state.photoPath, maxDimension = 128)
+                Box(
+                    modifier = Modifier
+                        .size(44.dp)
+                        .clip(MaterialTheme.shapes.small)
+                        .background(MaterialTheme.colorScheme.surfaceContainerHigh)
+                        .clickable { showPhotoView = true },
+                    contentAlignment = Alignment.Center
+                ) {
+                    if (thumbnail != null) {
+                        Image(
+                            bitmap = thumbnail,
+                            contentDescription = stringResource(R.string.photo_receipt),
+                            contentScale = ContentScale.Crop,
+                            modifier = Modifier.fillMaxSize()
+                        )
+                    } else {
+                        Icon(
+                            Icons.Rounded.PhotoLibrary,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                }
+            }
         }
 
         Keypad(
@@ -303,54 +355,131 @@ fun EditorScreen(
     }
 
     if (showScanSource) {
-        AlertDialog(
-            onDismissRequest = { showScanSource = false },
-            title = { Text(stringResource(R.string.editor_scan_receipt)) },
-            text = {
-                Column {
-                    ListItem(
-                        headlineContent = { Text(stringResource(R.string.scan_from_camera)) },
-                        leadingContent = {
-                            Icon(Icons.Rounded.PhotoCamera, contentDescription = null)
-                        },
-                        colors = ListItemDefaults.colors(containerColor = Color.Transparent),
-                        modifier = Modifier.clickable {
-                            showScanSource = false
-                            val dir = File(context.cacheDir, "receipts").apply { mkdirs() }
-                            val file = File(dir, "receipt_${System.currentTimeMillis()}.jpg")
-                            val uri = FileProvider.getUriForFile(
-                                context,
-                                context.packageName + ".fileprovider",
-                                file
-                            )
-                            cameraTarget = uri
-                            cameraLauncher.launch(uri)
-                        }
-                    )
-                    ListItem(
-                        headlineContent = { Text(stringResource(R.string.scan_from_gallery)) },
-                        leadingContent = {
-                            Icon(Icons.Rounded.PhotoLibrary, contentDescription = null)
-                        },
-                        colors = ListItemDefaults.colors(containerColor = Color.Transparent),
-                        modifier = Modifier.clickable {
-                            showScanSource = false
-                            galleryLauncher.launch(
-                                PickVisualMediaRequest(
-                                    ActivityResultContracts.PickVisualMedia.ImageOnly
-                                )
-                            )
-                        }
-                    )
-                }
+        PhotoSourceDialog(
+            title = stringResource(R.string.editor_scan_receipt),
+            onCamera = {
+                showScanSource = false
+                val uri = newCameraUri(context)
+                cameraTarget = uri
+                cameraLauncher.launch(uri)
             },
-            confirmButton = {
-                TextButton(onClick = { showScanSource = false }) {
-                    Text(stringResource(R.string.action_cancel))
-                }
-            }
+            onGallery = {
+                showScanSource = false
+                galleryLauncher.launch(
+                    PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)
+                )
+            },
+            onDismiss = { showScanSource = false }
         )
     }
+
+    if (showAttachSource) {
+        PhotoSourceDialog(
+            title = stringResource(R.string.attach_photo),
+            onCamera = {
+                showAttachSource = false
+                val uri = newCameraUri(context)
+                cameraTarget = uri
+                attachCameraLauncher.launch(uri)
+            },
+            onGallery = {
+                showAttachSource = false
+                attachGalleryLauncher.launch(
+                    PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)
+                )
+            },
+            onDismiss = { showAttachSource = false }
+        )
+    }
+
+    if (showPhotoView && state.photoPath != null) {
+        PhotoViewDialog(
+            path = state.photoPath!!,
+            onRemove = {
+                viewModel.removePhoto()
+                showPhotoView = false
+            },
+            onDismiss = { showPhotoView = false }
+        )
+    }
+}
+
+private fun newCameraUri(context: android.content.Context): Uri {
+    val dir = File(context.cacheDir, "receipts").apply { mkdirs() }
+    val file = File(dir, "receipt_${System.currentTimeMillis()}.jpg")
+    return FileProvider.getUriForFile(context, context.packageName + ".fileprovider", file)
+}
+
+@Composable
+private fun PhotoSourceDialog(
+    title: String,
+    onCamera: () -> Unit,
+    onGallery: () -> Unit,
+    onDismiss: () -> Unit
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(title) },
+        text = {
+            Column {
+                ListItem(
+                    headlineContent = { Text(stringResource(R.string.scan_from_camera)) },
+                    leadingContent = {
+                        Icon(Icons.Rounded.PhotoCamera, contentDescription = null)
+                    },
+                    colors = ListItemDefaults.colors(containerColor = Color.Transparent),
+                    modifier = Modifier.clickable(onClick = onCamera)
+                )
+                ListItem(
+                    headlineContent = { Text(stringResource(R.string.scan_from_gallery)) },
+                    leadingContent = {
+                        Icon(Icons.Rounded.PhotoLibrary, contentDescription = null)
+                    },
+                    colors = ListItemDefaults.colors(containerColor = Color.Transparent),
+                    modifier = Modifier.clickable(onClick = onGallery)
+                )
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = onDismiss) { Text(stringResource(R.string.action_cancel)) }
+        }
+    )
+}
+
+@Composable
+private fun PhotoViewDialog(
+    path: String,
+    onRemove: () -> Unit,
+    onDismiss: () -> Unit
+) {
+    val bitmap = rememberBitmapFromPath(path)
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(stringResource(R.string.photo_receipt)) },
+        text = {
+            if (bitmap != null) {
+                Image(
+                    bitmap = bitmap,
+                    contentDescription = null,
+                    contentScale = ContentScale.Fit,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(MaterialTheme.shapes.medium)
+                )
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = onDismiss) { Text(stringResource(R.string.action_cancel)) }
+        },
+        dismissButton = {
+            TextButton(onClick = onRemove) {
+                Text(
+                    stringResource(R.string.photo_remove),
+                    color = MaterialTheme.colorScheme.error
+                )
+            }
+        }
+    )
 }
 
 @OptIn(ExperimentalMaterial3Api::class)

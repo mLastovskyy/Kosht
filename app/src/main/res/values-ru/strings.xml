@@ -33,6 +33,9 @@
     <string name="scan_from_camera">Сфотографировать</string>
     <string name="scan_from_gallery">Выбрать из галереи</string>
     <string name="scan_failed">Не удалось распознать чек. Попробуйте более чёткое фото.</string>
+    <string name="attach_photo">Прикрепить фото</string>
+    <string name="photo_receipt">Фото чека</string>
+    <string name="photo_remove">Удалить фото</string>
 
     <!-- История -->
     <string name="history_search_hint">Поиск</string>

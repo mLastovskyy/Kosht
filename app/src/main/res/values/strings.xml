@@ -33,6 +33,9 @@
     <string name="scan_from_camera">Take a photo</string>
     <string name="scan_from_gallery">Choose from gallery</string>
     <string name="scan_failed">Could not read the receipt. Try a sharper photo.</string>
+    <string name="attach_photo">Attach photo</string>
+    <string name="photo_receipt">Receipt photo</string>
+    <string name="photo_remove">Remove photo</string>
 
     <!-- History -->
     <string name="history_search_hint">Search</string>

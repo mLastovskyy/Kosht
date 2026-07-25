@@ -1,6 +1,7 @@
 package by.mlastovsky.kosht.di
 
 import android.content.Context
+import by.mlastovsky.kosht.data.PhotoStore
 import by.mlastovsky.kosht.data.RatesRepository
 import by.mlastovsky.kosht.data.SettingsRepository
 import by.mlastovsky.kosht.data.TransactionRepository
@@ -39,6 +40,8 @@ class AppContainer(context: Context) {
     }
 
     val receiptScanner: ReceiptScanner by lazy { ReceiptScanner(appContext) }
+
+    val photoStore: PhotoStore by lazy { PhotoStore(appContext) }
 
     val settingsRepository: SettingsRepository = SettingsRepository(context)
 }

@@ -35,5 +35,12 @@ data class TransactionEntity(
     /** Moment the transaction happened, epoch millis. */
     val timestamp: Long,
     /** Moment the record was created, epoch millis. */
-    val createdAt: Long
+    val createdAt: Long,
+    /** Attached receipt photo (app-private file path). */
+    val photoPath: String? = null,
+    /**
+     * BYN equivalent frozen at the moment the record was saved, so historical
+     * values do not drift when exchange rates change.
+     */
+    val bynMinor: Long? = null
 )

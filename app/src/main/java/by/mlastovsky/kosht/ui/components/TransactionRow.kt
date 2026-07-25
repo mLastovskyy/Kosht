@@ -64,10 +64,20 @@ fun TransactionRow(
                 )
             }
         }
-        Text(
-            text = amountText,
-            style = MaterialTheme.typography.titleMedium,
-            color = amountColor
-        )
+        Column(horizontalAlignment = Alignment.End) {
+            Text(
+                text = amountText,
+                style = MaterialTheme.typography.titleMedium,
+                color = amountColor
+            )
+            val bynMinor = item.transaction.bynMinor
+            if (currencyCode != "BYN" && bynMinor != null) {
+                Text(
+                    text = "≈ " + Money.format(bynMinor, "BYN"),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+        }
     }
 }

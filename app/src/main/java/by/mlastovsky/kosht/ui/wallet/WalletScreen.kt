@@ -196,6 +196,7 @@ fun WalletScreen(
         items(state.savings, key = { "sav-${it.id}" }) { saving ->
             SavingRow(
                 saving = saving,
+                rates = state.rates,
                 onDelete = { viewModel.deleteSaving(saving) },
                 modifier = Modifier.animateItem()
             )
@@ -638,10 +639,16 @@ private fun SavingsSummary(
 @Composable
 private fun SavingRow(
     saving: SavingEntity,
+    rates: Map<String, RateEntity>,
     onDelete: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     val positive = saving.amountMinor >= 0
+    val bynEquivalent = if (saving.currencyCode != "BYN") {
+        RatesRepository.toBynMinor(saving.amountMinor, saving.currencyCode, rates)
+    } else {
+        null
+    }
     Row(
         modifier = modifier
             .fillMaxWidth()
@@ -686,12 +693,21 @@ private fun SavingRow(
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
         }
-        Text(
-            text = (if (positive) "+" else "") +
-                Money.format(saving.amountMinor, saving.currencyCode),
-            style = MaterialTheme.typography.titleSmall,
-            color = if (positive) KoshtTheme.colors.income else KoshtTheme.colors.expense
-        )
+        Column(horizontalAlignment = Alignment.End) {
+            Text(
+                text = (if (positive) "+" else "") +
+                    Money.format(saving.amountMinor, saving.currencyCode),
+                style = MaterialTheme.typography.titleSmall,
+                color = if (positive) KoshtTheme.colors.income else KoshtTheme.colors.expense
+            )
+            if (bynEquivalent != null) {
+                Text(
+                    text = "≈ " + Money.format(bynEquivalent, "BYN"),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+        }
         IconButton(onClick = onDelete) {
             Icon(
                 Icons.Rounded.DeleteOutline,

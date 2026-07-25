@@ -4,12 +4,15 @@ import android.net.Uri
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import by.mlastovsky.kosht.data.PhotoStore
+import by.mlastovsky.kosht.data.RatesRepository
 import by.mlastovsky.kosht.data.SettingsRepository
 import by.mlastovsky.kosht.data.TransactionRepository
 import by.mlastovsky.kosht.data.db.CategoryEntity
 import by.mlastovsky.kosht.data.db.TransactionEntity
 import by.mlastovsky.kosht.data.receipt.ReceiptScanner
 import by.mlastovsky.kosht.model.TransactionType
+import kotlinx.coroutines.flow.first
 import by.mlastovsky.kosht.ui.navigation.Routes
 import by.mlastovsky.kosht.util.Dates
 import by.mlastovsky.kosht.util.Money
@@ -39,7 +42,8 @@ data class EditorUiState(
     val categoryId: Long? = null,
     val categories: List<CategoryEntity> = emptyList(),
     val currencyCode: String = SettingsRepository.DEFAULT_CURRENCY,
-    val scanning: Boolean = false
+    val scanning: Boolean = false,
+    val photoPath: String? = null
 ) {
     val canSave: Boolean
         get() = categoryId != null &&
@@ -51,7 +55,9 @@ class EditorViewModel(
     savedStateHandle: SavedStateHandle,
     private val repository: TransactionRepository,
     settingsRepository: SettingsRepository,
-    private val receiptScanner: ReceiptScanner
+    private val receiptScanner: ReceiptScanner,
+    private val photoStore: PhotoStore,
+    private val ratesRepository: RatesRepository
 ) : ViewModel() {
 
     private val transactionId: Long = savedStateHandle[Routes.EDITOR_ARG_ID] ?: Routes.NO_ID
@@ -63,6 +69,7 @@ class EditorViewModel(
         val note: String = "",
         val date: LocalDate = LocalDate.now(),
         val categoryId: Long? = null,
+        val photoPath: String? = null,
         /** Original entity when editing, to preserve id/createdAt/time of day. */
         val original: TransactionEntity? = null
     )
@@ -96,7 +103,8 @@ class EditorViewModel(
             categoryId = effectiveCategoryId,
             categories = categories,
             currencyCode = settings.currencyCode,
-            scanning = isScanning
+            scanning = isScanning,
+            photoPath = d.photoPath
         )
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), EditorUiState())
 
@@ -114,6 +122,7 @@ class EditorViewModel(
                             note = tx.note,
                             date = Dates.toLocalDate(tx.timestamp),
                             categoryId = tx.categoryId,
+                            photoPath = tx.photoPath,
                             original = tx
                         )
                     }
@@ -180,21 +189,45 @@ class EditorViewModel(
         viewModelScope.launch {
             scanning.value = true
             val parsed = receiptScanner.scan(uri)
+            // The scanned photo is attached to the transaction either way.
+            val savedPhoto = photoStore.saveFromUri(uri)
             scanning.value = false
             val amount = parsed?.amountMinor
             if (amount != null) {
                 draft.update { d ->
+                    if (savedPhoto != null && d.photoPath != null) {
+                        photoStore.delete(d.photoPath)
+                    }
                     d.copy(
                         type = TransactionType.EXPENSE,
                         amountInput = minorToInput(amount),
                         date = parsed.date ?: d.date,
-                        note = parsed.merchant ?: d.note
+                        note = parsed.merchant ?: d.note,
+                        photoPath = savedPhoto ?: d.photoPath
                     )
                 }
                 onResult(true)
             } else {
+                photoStore.delete(savedPhoto)
                 onResult(false)
             }
+        }
+    }
+
+    fun attachPhoto(uri: Uri) {
+        viewModelScope.launch {
+            val saved = photoStore.saveFromUri(uri) ?: return@launch
+            draft.update { d ->
+                if (d.photoPath != null) photoStore.delete(d.photoPath)
+                d.copy(photoPath = saved)
+            }
+        }
+    }
+
+    fun removePhoto() {
+        draft.update { d ->
+            photoStore.delete(d.photoPath)
+            d.copy(photoPath = null)
         }
     }
 
@@ -215,6 +248,7 @@ class EditorViewModel(
         viewModelScope.launch {
             val original = draft.value.original
             val timestamp = resolveTimestamp(state.date, original)
+            val bynMinor = resolveBynMinor(amountMinor, state.currencyCode, original)
             if (original != null) {
                 repository.updateTransaction(
                     original.copy(
@@ -222,7 +256,9 @@ class EditorViewModel(
                         type = state.type,
                         categoryId = categoryId,
                         note = state.note.trim(),
-                        timestamp = timestamp
+                        timestamp = timestamp,
+                        photoPath = draft.value.photoPath,
+                        bynMinor = bynMinor
                     )
                 )
             } else {
@@ -233,7 +269,9 @@ class EditorViewModel(
                         categoryId = categoryId,
                         note = state.note.trim(),
                         timestamp = timestamp,
-                        createdAt = System.currentTimeMillis()
+                        createdAt = System.currentTimeMillis(),
+                        photoPath = draft.value.photoPath,
+                        bynMinor = bynMinor
                     )
                 )
             }
@@ -241,9 +279,27 @@ class EditorViewModel(
         }
     }
 
+    /**
+     * Freezes the BYN equivalent at save time. An unchanged amount keeps the
+     * originally fixed value so old records never drift with the rate.
+     */
+    private suspend fun resolveBynMinor(
+        amountMinor: Long,
+        currencyCode: String,
+        original: TransactionEntity?
+    ): Long? {
+        if (currencyCode == "BYN") return amountMinor
+        if (original != null && original.amountMinor == amountMinor && original.bynMinor != null) {
+            return original.bynMinor
+        }
+        val rates = ratesRepository.rates.first()
+        return RatesRepository.toBynMinor(amountMinor, currencyCode, rates)
+    }
+
     fun delete(onDone: () -> Unit) {
         val original = draft.value.original ?: return
         viewModelScope.launch {
+            photoStore.delete(original.photoPath)
             repository.deleteTransaction(original)
             onDone()
         }
