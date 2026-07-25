@@ -87,6 +87,8 @@
 
     <!-- Wallet -->
     <string name="wallet_rates">NBRB rates</string>
+    <string name="rates_updated">Updated %1$s</string>
+    <string name="rates_refresh">Refresh rates</string>
     <string name="section_due">Awaiting confirmation</string>
     <string name="action_confirm">Confirm</string>
     <string name="section_recurring">Monthly payments</string>

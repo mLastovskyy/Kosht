@@ -87,6 +87,8 @@
 
     <!-- Кошелёк -->
     <string name="wallet_rates">Курсы НБРБ</string>
+    <string name="rates_updated">Обновлено %1$s</string>
+    <string name="rates_refresh">Обновить курсы</string>
     <string name="section_due">Ждут подтверждения</string>
     <string name="action_confirm">Подтвердить</string>
     <string name="section_recurring">Ежемесячные платежи</string>

@@ -14,6 +14,7 @@ import by.mlastovsky.kosht.data.db.SavingEntity
 import by.mlastovsky.kosht.data.db.SavingTotal
 import by.mlastovsky.kosht.model.DebtDirection
 import by.mlastovsky.kosht.model.TransactionType
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
@@ -25,6 +26,7 @@ data class WalletUiState(
     val currencyCode: String = SettingsRepository.DEFAULT_CURRENCY,
     val rates: Map<String, RateEntity> = emptyMap(),
     val ratesUpdatedAt: Long? = null,
+    val refreshingRates: Boolean = false,
     val debts: List<DebtEntity> = emptyList(),
     val iOweBynMinor: Long = 0,
     val owedToMeBynMinor: Long = 0,
@@ -43,8 +45,19 @@ class WalletViewModel(
     settingsRepository: SettingsRepository
 ) : ViewModel() {
 
+    private val refreshingRates = MutableStateFlow(false)
+
     init {
         viewModelScope.launch { ratesRepository.refreshIfStale() }
+    }
+
+    fun refreshRates() {
+        if (refreshingRates.value) return
+        viewModelScope.launch {
+            refreshingRates.value = true
+            runCatching { ratesRepository.refresh() }
+            refreshingRates.value = false
+        }
     }
 
     private val wallet = combine(
@@ -55,11 +68,19 @@ class WalletViewModel(
         ::WalletData
     )
 
+    private data class ContextData(
+        val rates: Map<String, RateEntity>,
+        val settings: by.mlastovsky.kosht.data.AppSettings,
+        val expenseCategories: List<CategoryEntity>,
+        val refreshing: Boolean
+    )
+
     private val context = combine(
         ratesRepository.rates,
         settingsRepository.settings,
         transactionRepository.observeCategories(TransactionType.EXPENSE),
-        ::Triple
+        refreshingRates,
+        ::ContextData
     )
 
     private data class WalletData(
@@ -70,12 +91,13 @@ class WalletViewModel(
     )
 
     val uiState: StateFlow<WalletUiState> = combine(wallet, context) { data,
-        (rates, settings, expenseCategories) ->
+        (rates, settings, expenseCategories, refreshing) ->
         WalletUiState(
             loaded = true,
             currencyCode = settings.currencyCode,
             rates = rates,
             ratesUpdatedAt = rates.values.maxOfOrNull { it.updatedAt },
+            refreshingRates = refreshing,
             debts = data.debts,
             iOweBynMinor = data.debts.sumInByn(DebtDirection.I_OWE, rates),
             owedToMeBynMinor = data.debts.sumInByn(DebtDirection.OWED_TO_ME, rates),

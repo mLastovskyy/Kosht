@@ -18,10 +18,12 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Add
 import androidx.compose.material.icons.rounded.DeleteOutline
+import androidx.compose.material.icons.rounded.Refresh
 import androidx.compose.material.icons.rounded.Remove
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -74,13 +76,19 @@ fun WalletScreen(
         contentPadding = PaddingValues(bottom = 96.dp)
     ) {
         item(key = "header") {
-            Column(Modifier.padding(horizontal = 16.dp, vertical = 12.dp)) {
-                Text(
-                    text = stringResource(R.string.nav_wallet),
-                    style = MaterialTheme.typography.headlineMedium
-                )
-                RatesLine(state.rates)
-            }
+            Text(
+                text = stringResource(R.string.nav_wallet),
+                style = MaterialTheme.typography.headlineMedium,
+                modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp)
+            )
+        }
+        item(key = "rates") {
+            RatesCard(
+                rates = state.rates,
+                updatedAt = state.ratesUpdatedAt,
+                refreshing = state.refreshingRates,
+                onRefresh = viewModel::refreshRates
+            )
         }
 
         // --- Due recurring charges ---
@@ -250,19 +258,87 @@ fun WalletScreen(
 }
 
 @Composable
-private fun RatesLine(rates: Map<String, RateEntity>) {
-    val interesting = listOf("USD", "EUR", "RUB", "PLN")
-    val parts = interesting.mapNotNull { code ->
-        val rate = rates[code] ?: return@mapNotNull null
-        val prefix = if (rate.scale != 1) "${rate.scale} " else ""
-        "$prefix$code ${"%.2f".format(rate.rate)}"
-    }
-    if (parts.isNotEmpty()) {
-        Text(
-            text = stringResource(R.string.wallet_rates) + ": " + parts.joinToString(" · "),
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
-        )
+private fun RatesCard(
+    rates: Map<String, RateEntity>,
+    updatedAt: Long?,
+    refreshing: Boolean,
+    onRefresh: () -> Unit
+) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp, vertical = 4.dp)
+            .clip(MaterialTheme.shapes.large)
+            .background(MaterialTheme.colorScheme.surfaceContainer)
+            .padding(start = 16.dp, end = 8.dp, top = 8.dp, bottom = 12.dp)
+    ) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Column(Modifier.weight(1f)) {
+                Text(
+                    text = stringResource(R.string.wallet_rates),
+                    style = MaterialTheme.typography.titleSmall
+                )
+                if (updatedAt != null) {
+                    Text(
+                        text = stringResource(
+                            R.string.rates_updated,
+                            java.time.Instant.ofEpochMilli(updatedAt)
+                                .atZone(java.time.ZoneId.systemDefault())
+                                .format(
+                                    java.time.format.DateTimeFormatter
+                                        .ofPattern("d MMMM, HH:mm")
+                                )
+                        ),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            }
+            if (refreshing) {
+                CircularProgressIndicator(
+                    strokeWidth = 2.dp,
+                    modifier = Modifier
+                        .padding(12.dp)
+                        .size(24.dp)
+                )
+            } else {
+                IconButton(onClick = onRefresh) {
+                    Icon(
+                        Icons.Rounded.Refresh,
+                        contentDescription = stringResource(R.string.rates_refresh),
+                        tint = MaterialTheme.colorScheme.primary
+                    )
+                }
+            }
+        }
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(top = 4.dp, end = 8.dp),
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            listOf("USD", "EUR", "RUB", "PLN").forEach { code ->
+                val rate = rates[code] ?: return@forEach
+                Column(
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    modifier = Modifier
+                        .weight(1f)
+                        .clip(MaterialTheme.shapes.small)
+                        .background(MaterialTheme.colorScheme.surfaceContainerHigh)
+                        .padding(vertical = 8.dp)
+                ) {
+                    Text(
+                        text = if (rate.scale != 1) "${rate.scale} $code" else code,
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    Text(
+                        text = "%.2f".format(rate.rate),
+                        style = MaterialTheme.typography.titleSmall
+                    )
+                }
+            }
+        }
     }
 }
 
