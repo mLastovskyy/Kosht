@@ -8,6 +8,7 @@ import androidx.lifecycle.viewmodel.viewModelFactory
 import by.mlastovsky.kosht.KoshtApp
 import by.mlastovsky.kosht.MainViewModel
 import by.mlastovsky.kosht.ui.editor.EditorViewModel
+import by.mlastovsky.kosht.ui.history.HistoryViewModel
 import by.mlastovsky.kosht.ui.home.HomeViewModel
 
 /**
@@ -21,6 +22,12 @@ object AppViewModelProvider {
         }
         initializer {
             HomeViewModel(
+                app().container.transactionRepository,
+                app().container.settingsRepository
+            )
+        }
+        initializer {
+            HistoryViewModel(
                 app().container.transactionRepository,
                 app().container.settingsRepository
             )

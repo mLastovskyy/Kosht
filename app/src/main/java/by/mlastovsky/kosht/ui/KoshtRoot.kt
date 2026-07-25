@@ -36,6 +36,7 @@ import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import by.mlastovsky.kosht.R
 import by.mlastovsky.kosht.ui.editor.EditorScreen
+import by.mlastovsky.kosht.ui.history.HistoryScreen
 import by.mlastovsky.kosht.ui.home.HomeScreen
 import by.mlastovsky.kosht.ui.navigation.MainTabs
 import by.mlastovsky.kosht.ui.navigation.Routes
@@ -94,7 +95,9 @@ fun KoshtRoot() {
                 )
             }
             composable(Routes.HISTORY) {
-                PlaceholderScreen(stringResource(R.string.nav_history))
+                HistoryScreen(
+                    onTransactionClick = { id -> navController.navigate(Routes.editor(id)) }
+                )
             }
             composable(Routes.STATS) {
                 PlaceholderScreen(stringResource(R.string.nav_stats))
