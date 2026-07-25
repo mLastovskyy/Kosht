@@ -1,11 +1,5 @@
 package by.mlastovsky.kosht.ui.history
 
-import androidx.compose.animation.AnimatedContent
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
-import androidx.compose.animation.slideInHorizontally
-import androidx.compose.animation.slideOutHorizontally
-import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -19,8 +13,6 @@ import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.rounded.KeyboardArrowLeft
-import androidx.compose.material.icons.automirrored.rounded.KeyboardArrowRight
 import androidx.compose.material.icons.rounded.Close
 import androidx.compose.material.icons.rounded.DeleteOutline
 import androidx.compose.material.icons.rounded.Search
@@ -53,14 +45,12 @@ import by.mlastovsky.kosht.R
 import by.mlastovsky.kosht.model.TransactionType
 import by.mlastovsky.kosht.ui.AppViewModelProvider
 import by.mlastovsky.kosht.ui.components.EmptyState
+import by.mlastovsky.kosht.ui.components.MonthSelector
 import by.mlastovsky.kosht.ui.components.TransactionRow
 import by.mlastovsky.kosht.ui.relativeDate
 import by.mlastovsky.kosht.ui.theme.KoshtTheme
 import by.mlastovsky.kosht.util.Money
 import kotlinx.coroutines.launch
-import java.time.YearMonth
-import java.time.format.DateTimeFormatter
-import java.util.Locale
 
 @Composable
 fun HistoryScreen(
@@ -186,49 +176,6 @@ fun HistoryScreen(
 }
 
 @Composable
-private fun MonthSelector(
-    month: YearMonth,
-    nextEnabled: Boolean,
-    onPrevious: () -> Unit,
-    onNext: () -> Unit
-) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = 8.dp, vertical = 4.dp),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        IconButton(onClick = onPrevious) {
-            Icon(Icons.AutoMirrored.Rounded.KeyboardArrowLeft, contentDescription = null)
-        }
-        AnimatedContent(
-            targetState = month,
-            transitionSpec = {
-                if (targetState > initialState) {
-                    (slideInHorizontally { it / 2 } + fadeIn()) togetherWith
-                        (slideOutHorizontally { -it / 2 } + fadeOut())
-                } else {
-                    (slideInHorizontally { -it / 2 } + fadeIn()) togetherWith
-                        (slideOutHorizontally { it / 2 } + fadeOut())
-                }
-            },
-            label = "month",
-            modifier = Modifier.weight(1f)
-        ) { value ->
-            Text(
-                text = monthTitle(value),
-                style = MaterialTheme.typography.titleLarge,
-                textAlign = androidx.compose.ui.text.style.TextAlign.Center,
-                modifier = Modifier.fillMaxWidth()
-            )
-        }
-        IconButton(onClick = onNext, enabled = nextEnabled) {
-            Icon(Icons.AutoMirrored.Rounded.KeyboardArrowRight, contentDescription = null)
-        }
-    }
-}
-
-@Composable
 private fun TypeFilterChip(
     value: TransactionType?,
     current: TransactionType?,
@@ -308,7 +255,3 @@ private fun DismissibleRow(
     }
 }
 
-private fun monthTitle(month: YearMonth): String {
-    val formatted = month.format(DateTimeFormatter.ofPattern("LLLL yyyy", Locale.getDefault()))
-    return formatted.replaceFirstChar { it.titlecase(Locale.getDefault()) }
-}

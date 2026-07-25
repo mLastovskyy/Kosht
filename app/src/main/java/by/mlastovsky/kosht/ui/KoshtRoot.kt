@@ -38,6 +38,7 @@ import by.mlastovsky.kosht.R
 import by.mlastovsky.kosht.ui.editor.EditorScreen
 import by.mlastovsky.kosht.ui.history.HistoryScreen
 import by.mlastovsky.kosht.ui.home.HomeScreen
+import by.mlastovsky.kosht.ui.stats.StatsScreen
 import by.mlastovsky.kosht.ui.navigation.MainTabs
 import by.mlastovsky.kosht.ui.navigation.Routes
 
@@ -100,7 +101,7 @@ fun KoshtRoot() {
                 )
             }
             composable(Routes.STATS) {
-                PlaceholderScreen(stringResource(R.string.nav_stats))
+                StatsScreen()
             }
             composable(Routes.SETTINGS) {
                 PlaceholderScreen(stringResource(R.string.nav_settings))
