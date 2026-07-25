@@ -26,7 +26,9 @@ data class HomeUiState(
     val recent: List<TransactionWithCategory> = emptyList(),
     val currencyCode: String = SettingsRepository.DEFAULT_CURRENCY,
     val profile: UserProfile? = null,
-    val streakDays: Int = 0
+    val streakDays: Int = 0,
+    val showGreeting: Boolean = true,
+    val showStreak: Boolean = true
 )
 
 class HomeViewModel(
@@ -97,7 +99,9 @@ class HomeViewModel(
             recent = recent,
             currencyCode = settings.currencyCode,
             profile = profile,
-            streakDays = Streak.budgetStreak(t.spendByDay, budget, t.firstRecordDay)
+            streakDays = Streak.budgetStreak(t.spendByDay, budget, t.firstRecordDay),
+            showGreeting = settings.showGreeting,
+            showStreak = settings.showStreak
         )
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), HomeUiState())
 

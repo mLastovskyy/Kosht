@@ -43,6 +43,7 @@ data class WalletUiState(
     val rates: Map<String, RateEntity> = emptyMap(),
     val ratesUpdatedAt: Long? = null,
     val refreshingRates: Boolean = false,
+    val showRates: Boolean = true,
     val debts: List<DebtEntity> = emptyList(),
     val iOweBynMinor: Long = 0,
     val owedToMeBynMinor: Long = 0,
@@ -129,6 +130,7 @@ class WalletViewModel(
             rates = rates,
             ratesUpdatedAt = rates.values.maxOfOrNull { it.updatedAt },
             refreshingRates = refreshing,
+            showRates = settings.showRates,
             debts = data.debts,
             iOweBynMinor = data.debts.sumInByn(DebtDirection.I_OWE, rates),
             owedToMeBynMinor = data.debts.sumInByn(DebtDirection.OWED_TO_ME, rates),
@@ -215,6 +217,26 @@ class WalletViewModel(
         }
     }
 
+    fun updateRecurringDetails(
+        item: RecurringWithCategory,
+        title: String,
+        amountMinor: Long,
+        nextDue: java.time.LocalDate,
+        frequency: by.mlastovsky.kosht.model.RecurringFrequency
+    ) {
+        if (title.isBlank() || amountMinor <= 0) return
+        viewModelScope.launch {
+            walletRepository.updateRecurring(
+                item.recurring.copy(
+                    title = title.trim(),
+                    amountMinor = amountMinor,
+                    nextDueEpochDay = nextDue.toEpochDay(),
+                    frequency = frequency
+                )
+            )
+        }
+    }
+
     fun setRecurringEnabled(item: RecurringWithCategory, enabled: Boolean) {
         viewModelScope.launch { walletRepository.setRecurringEnabled(item.recurring, enabled) }
     }
@@ -223,25 +245,15 @@ class WalletViewModel(
         viewModelScope.launch { walletRepository.deleteRecurring(item.recurring.id) }
     }
 
-    /** Confirms a charge defined in the app currency (no conversion needed). */
-    fun confirmRecurring(item: RecurringWithCategory) {
-        viewModelScope.launch {
-            val state = uiState.value
-            val amount = item.recurring.amountMinor
-            val byn = RatesRepository.toBynMinor(amount, state.currencyCode, state.rates)
-            walletRepository.confirmRecurring(item.recurring, amount, byn)
-        }
-    }
-
     /**
-     * Confirms a foreign-currency charge using a manually adjustable rate:
-     * charged amount = recurring amount × [rate], in the app currency.
+     * Confirms a due charge with a user-checked amount (in the charge's own
+     * currency) and rate: charged = amount × rate, in the app currency.
      */
-    fun confirmRecurringWithRate(item: RecurringWithCategory, rate: Double) {
-        if (rate <= 0.0) return
+    fun confirmRecurring(item: RecurringWithCategory, amountMinor: Long, rate: Double) {
+        if (amountMinor <= 0 || rate <= 0.0) return
         viewModelScope.launch {
             val state = uiState.value
-            val converted = Math.round(item.recurring.amountMinor * rate)
+            val converted = Math.round(amountMinor * rate)
             val byn = RatesRepository.toBynMinor(converted, state.currencyCode, state.rates)
             walletRepository.confirmRecurring(item.recurring, converted, byn)
         }

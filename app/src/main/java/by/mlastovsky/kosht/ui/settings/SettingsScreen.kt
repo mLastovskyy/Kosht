@@ -18,7 +18,10 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.HelpOutline
 import androidx.compose.material.icons.rounded.BrightnessMedium
+import androidx.compose.material.icons.rounded.CurrencyExchange
 import androidx.compose.material.icons.rounded.Info
+import androidx.compose.material.icons.rounded.LocalFireDepartment
+import androidx.compose.material.icons.rounded.WavingHand
 import androidx.compose.material.icons.rounded.Language
 import androidx.compose.material.icons.rounded.NotificationsActive
 import androidx.compose.material.icons.rounded.Palette
@@ -191,6 +194,32 @@ fun SettingsScreen(
                 onDismiss = { showBudgetDialog = false }
             )
         }
+        }
+
+        SectionHeader(stringResource(R.string.settings_display))
+
+        SettingsCard {
+            NotificationToggle(
+                titleRes = R.string.show_greeting,
+                descRes = R.string.show_greeting_desc,
+                icon = Icons.Rounded.WavingHand,
+                checked = current.showGreeting,
+                onChange = viewModel::setShowGreeting
+            )
+            NotificationToggle(
+                titleRes = R.string.show_streak,
+                descRes = R.string.show_streak_desc,
+                icon = Icons.Rounded.LocalFireDepartment,
+                checked = current.showStreak,
+                onChange = viewModel::setShowStreak
+            )
+            NotificationToggle(
+                titleRes = R.string.show_rates,
+                descRes = R.string.show_rates_desc,
+                icon = Icons.Rounded.CurrencyExchange,
+                checked = current.showRates,
+                onChange = viewModel::setShowRates
+            )
         }
 
         SectionHeader(stringResource(R.string.settings_notifications))

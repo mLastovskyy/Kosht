@@ -71,6 +71,7 @@ fun WalletScreen(
     var savingDialogWithdraw by remember { mutableStateOf<Boolean?>(null) }
     var debtInAction by remember { mutableStateOf<DebtEntity?>(null) }
     var recurringToConfirm by remember { mutableStateOf<RecurringWithCategory?>(null) }
+    var recurringToEdit by remember { mutableStateOf<RecurringWithCategory?>(null) }
     var showAddGoal by remember { mutableStateOf(false) }
 
     LazyColumn(
@@ -86,13 +87,15 @@ fun WalletScreen(
                 modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp)
             )
         }
-        item(key = "rates") {
-            RatesCard(
-                rates = state.rates,
-                updatedAt = state.ratesUpdatedAt,
-                refreshing = state.refreshingRates,
-                onRefresh = viewModel::refreshRates
-            )
+        if (state.showRates) {
+            item(key = "rates") {
+                RatesCard(
+                    rates = state.rates,
+                    updatedAt = state.ratesUpdatedAt,
+                    refreshing = state.refreshingRates,
+                    onRefresh = viewModel::refreshRates
+                )
+            }
         }
 
         // --- Due recurring charges ---
@@ -104,13 +107,7 @@ fun WalletScreen(
             items(due, key = { "due-${it.recurring.id}" }) { item ->
                 DueCard(
                     item = item,
-                    onConfirm = {
-                        if (item.recurring.currencyCode == state.currencyCode) {
-                            viewModel.confirmRecurring(item)
-                        } else {
-                            recurringToConfirm = item
-                        }
-                    },
+                    onConfirm = { recurringToConfirm = item },
                     modifier = Modifier.animateItem()
                 )
             }
@@ -133,6 +130,7 @@ fun WalletScreen(
                 item = item,
                 onToggle = { enabled -> viewModel.setRecurringEnabled(item, enabled) },
                 onDelete = { viewModel.deleteRecurring(item) },
+                onClick = { recurringToEdit = item },
                 modifier = Modifier.animateItem()
             )
         }
@@ -297,18 +295,29 @@ fun WalletScreen(
         )
     }
 
+    recurringToEdit?.let { item ->
+        EditRecurringDialog(
+            initial = item.recurring,
+            onConfirm = { title, amount, due, freq ->
+                viewModel.updateRecurringDetails(item, title, amount, due, freq)
+                recurringToEdit = null
+            },
+            onDismiss = { recurringToEdit = null }
+        )
+    }
+
     recurringToConfirm?.let { item ->
         ConfirmRecurringDialog(
             title = item.recurring.title,
-            amountMinor = item.recurring.amountMinor,
+            initialAmountMinor = item.recurring.amountMinor,
             currencyCode = item.recurring.currencyCode,
             appCurrencyCode = state.currencyCode,
             suggestedRate = viewModel.suggestedRate(
                 from = item.recurring.currencyCode,
                 to = state.currencyCode
             ),
-            onConfirm = { rate ->
-                viewModel.confirmRecurringWithRate(item, rate)
+            onConfirm = { amountMinor, rate ->
+                viewModel.confirmRecurring(item, amountMinor, rate)
                 recurringToConfirm = null
             },
             onDismiss = { recurringToConfirm = null }
@@ -496,10 +505,12 @@ private fun RecurringRow(
     item: RecurringWithCategory,
     onToggle: (Boolean) -> Unit,
     onDelete: () -> Unit,
+    onClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     Row(
         modifier = modifier
+            .clickable(onClick = onClick)
             .fillMaxWidth()
             .padding(horizontal = 16.dp, vertical = 8.dp),
         verticalAlignment = Alignment.CenterVertically,

@@ -488,6 +488,114 @@ fun AddRecurringDialog(
     }
 }
 
+/** Edit an existing recurring charge: title, amount, next date, frequency. */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun EditRecurringDialog(
+    initial: by.mlastovsky.kosht.data.db.RecurringEntity,
+    onConfirm: (
+        title: String,
+        amountMinor: Long,
+        nextDue: LocalDate,
+        frequency: RecurringFrequency
+    ) -> Unit,
+    onDismiss: () -> Unit
+) {
+    var title by remember { mutableStateOf(initial.title) }
+    var amountText by remember {
+        mutableStateOf(
+            Money.format(initial.amountMinor, initial.currencyCode)
+                .filter { it.isDigit() || it == ',' }
+        )
+    }
+    var due by remember { mutableStateOf(initial.nextDueDate) }
+    var frequency by remember { mutableStateOf(initial.frequency) }
+    var showDatePicker by remember { mutableStateOf(false) }
+    val amountMinor = Money.parseToMinor(amountText, initial.currencyCode) ?: 0L
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(initial.title) },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                OutlinedTextField(
+                    value = title,
+                    onValueChange = { title = it.take(60) },
+                    label = { Text(stringResource(R.string.recurring_title_hint)) },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth()
+                )
+                OutlinedTextField(
+                    value = amountText,
+                    onValueChange = { amountText = it.take(12) },
+                    label = { Text(stringResource(R.string.amount_hint)) },
+                    singleLine = true,
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+                    modifier = Modifier.fillMaxWidth()
+                )
+                AssistChip(
+                    onClick = { showDatePicker = true },
+                    leadingIcon = {
+                        Icon(Icons.Rounded.Event, contentDescription = null, Modifier.size(18.dp))
+                    },
+                    label = {
+                        Text(
+                            stringResource(R.string.recurring_first_date) + ": " +
+                                relativeDate(due)
+                        )
+                    }
+                )
+                LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    items(RecurringFrequency.entries) { option ->
+                        FilterChip(
+                            selected = frequency == option,
+                            onClick = { frequency = option },
+                            label = { Text(frequencyLabel(option)) }
+                        )
+                    }
+                }
+            }
+        },
+        confirmButton = {
+            TextButton(
+                enabled = title.isNotBlank() && amountMinor > 0,
+                onClick = { onConfirm(title, amountMinor, due, frequency) }
+            ) { Text(stringResource(R.string.editor_save)) }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) { Text(stringResource(R.string.action_cancel)) }
+        }
+    )
+
+    if (showDatePicker) {
+        val pickerState = rememberDatePickerState(
+            initialSelectedDateMillis = due
+                .atStartOfDay(java.time.ZoneOffset.UTC).toInstant().toEpochMilli()
+        )
+        DatePickerDialog(
+            onDismissRequest = { showDatePicker = false },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        pickerState.selectedDateMillis?.let { millis ->
+                            due = java.time.Instant.ofEpochMilli(millis)
+                                .atZone(java.time.ZoneOffset.UTC).toLocalDate()
+                        }
+                        showDatePicker = false
+                    }
+                ) { Text(stringResource(R.string.action_apply)) }
+            },
+            dismissButton = {
+                TextButton(onClick = { showDatePicker = false }) {
+                    Text(stringResource(R.string.action_cancel))
+                }
+            }
+        ) {
+            DatePicker(state = pickerState, showModeToggle = false)
+        }
+    }
+}
+
 @Composable
 fun frequencyLabel(frequency: RecurringFrequency): String = stringResource(
     when (frequency) {
@@ -498,20 +606,32 @@ fun frequencyLabel(frequency: RecurringFrequency): String = stringResource(
     }
 )
 
+/**
+ * Confirmation of a due charge: the amount is editable (this month's bill may
+ * differ), and a foreign-currency charge also exposes the rate.
+ */
 @Composable
 fun ConfirmRecurringDialog(
     title: String,
-    amountMinor: Long,
+    initialAmountMinor: Long,
     currencyCode: String,
     appCurrencyCode: String,
     suggestedRate: Double?,
-    onConfirm: (rate: Double) -> Unit,
+    onConfirm: (amountMinor: Long, rate: Double) -> Unit,
     onDismiss: () -> Unit
 ) {
+    val sameCurrency = currencyCode == appCurrencyCode
+    var amountText by remember {
+        mutableStateOf(
+            Money.format(initialAmountMinor, currencyCode)
+                .filter { it.isDigit() || it == ',' }
+        )
+    }
     var rateText by remember {
         mutableStateOf(suggestedRate?.let { "%.4f".format(it).replace(',', '.') } ?: "")
     }
-    val rate = rateText.replace(',', '.').toDoubleOrNull() ?: 0.0
+    val amountMinor = Money.parseToMinor(amountText, currencyCode) ?: 0L
+    val rate = if (sameCurrency) 1.0 else rateText.replace(',', '.').toDoubleOrNull() ?: 0.0
     val convertedMinor = if (rate > 0) Math.round(amountMinor * rate) else 0L
 
     AlertDialog(
@@ -519,26 +639,32 @@ fun ConfirmRecurringDialog(
         title = { Text(title) },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                Text(
-                    text = Money.format(amountMinor, currencyCode),
-                    style = MaterialTheme.typography.headlineSmall
-                )
                 OutlinedTextField(
-                    value = rateText,
-                    onValueChange = { rateText = it.take(10) },
-                    label = {
-                        Text(
-                            stringResource(
-                                R.string.recurring_rate,
-                                currencyCode,
-                                appCurrencyCode
-                            )
-                        )
-                    },
+                    value = amountText,
+                    onValueChange = { amountText = it.take(12) },
+                    label = { Text(stringResource(R.string.amount_hint) + " ($currencyCode)") },
                     singleLine = true,
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                     modifier = Modifier.fillMaxWidth()
                 )
+                if (!sameCurrency) {
+                    OutlinedTextField(
+                        value = rateText,
+                        onValueChange = { rateText = it.take(10) },
+                        label = {
+                            Text(
+                                stringResource(
+                                    R.string.recurring_rate,
+                                    currencyCode,
+                                    appCurrencyCode
+                                )
+                            )
+                        },
+                        singleLine = true,
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                }
                 if (convertedMinor > 0) {
                     Text(
                         text = stringResource(
@@ -553,8 +679,8 @@ fun ConfirmRecurringDialog(
         },
         confirmButton = {
             TextButton(
-                enabled = rate > 0,
-                onClick = { onConfirm(rate) }
+                enabled = amountMinor > 0 && rate > 0,
+                onClick = { onConfirm(amountMinor, rate) }
             ) { Text(stringResource(R.string.action_confirm)) }
         },
         dismissButton = {

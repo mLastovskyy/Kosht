@@ -84,15 +84,19 @@ fun HomeScreen(
                         .padding(start = 20.dp, end = 20.dp, top = 12.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
+                    val displayName = profile.displayName("")
                     Text(
-                        text = stringResource(
-                            R.string.home_greeting,
-                            profile.displayName(stringResource(R.string.profile_default_name))
-                        ),
+                        text = when {
+                            !state.showGreeting -> ""
+                            displayName.isBlank() -> stringResource(R.string.home_welcome)
+                            else -> stringResource(R.string.home_greeting, displayName)
+                        },
                         style = MaterialTheme.typography.titleLarge,
+                        maxLines = 1,
+                        overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
                         modifier = Modifier.weight(1f)
                     )
-                    if (state.loaded) {
+                    if (state.loaded && state.showStreak) {
                         Row(
                             verticalAlignment = Alignment.CenterVertically,
                             modifier = Modifier
@@ -123,9 +127,7 @@ fun HomeScreen(
                     }
                     Avatar(
                         photoPath = profile.photoPath,
-                        fallbackText = profile.displayName(
-                            stringResource(R.string.profile_default_name)
-                        )
+                        fallbackText = displayName.ifBlank { "🙂" }
                     )
                 }
             }

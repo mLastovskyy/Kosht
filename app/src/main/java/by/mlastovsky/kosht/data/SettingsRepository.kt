@@ -27,7 +27,10 @@ data class AppSettings(
     val notifyRecurringDue: Boolean,
     val notifyWeeklySummary: Boolean,
     /** Daily spending budget for the streak; 0 = auto from last month. */
-    val dailyBudgetMinor: Long
+    val dailyBudgetMinor: Long,
+    val showGreeting: Boolean,
+    val showStreak: Boolean,
+    val showRates: Boolean
 )
 
 data class UserProfile(
@@ -53,6 +56,21 @@ class SettingsRepository(private val context: Context) {
         val profileNickname = stringPreferencesKey("profile_nickname")
         val profilePhotoPath = stringPreferencesKey("profile_photo_path")
         val dailyBudgetMinor = longPreferencesKey("daily_budget_minor")
+        val showGreeting = booleanPreferencesKey("show_greeting")
+        val showStreak = booleanPreferencesKey("show_streak")
+        val showRates = booleanPreferencesKey("show_rates")
+    }
+
+    suspend fun setShowGreeting(value: Boolean) {
+        context.dataStore.edit { it[Keys.showGreeting] = value }
+    }
+
+    suspend fun setShowStreak(value: Boolean) {
+        context.dataStore.edit { it[Keys.showStreak] = value }
+    }
+
+    suspend fun setShowRates(value: Boolean) {
+        context.dataStore.edit { it[Keys.showRates] = value }
     }
 
     suspend fun setDailyBudgetMinor(value: Long) {
@@ -88,7 +106,10 @@ class SettingsRepository(private val context: Context) {
             notifyDailyReminder = prefs[Keys.notifyDailyReminder] ?: false,
             notifyRecurringDue = prefs[Keys.notifyRecurringDue] ?: true,
             notifyWeeklySummary = prefs[Keys.notifyWeeklySummary] ?: false,
-            dailyBudgetMinor = prefs[Keys.dailyBudgetMinor] ?: 0L
+            dailyBudgetMinor = prefs[Keys.dailyBudgetMinor] ?: 0L,
+            showGreeting = prefs[Keys.showGreeting] ?: true,
+            showStreak = prefs[Keys.showStreak] ?: true,
+            showRates = prefs[Keys.showRates] ?: true
         )
     }
 

@@ -13,6 +13,14 @@
     <!-- Главная -->
     <string name="home_balance">Общий баланс</string>
     <string name="home_greeting">Привет, %1$s!</string>
+    <string name="home_welcome">Добро пожаловать!</string>
+    <string name="settings_display">Интерфейс</string>
+    <string name="show_greeting">Приветствие на главной</string>
+    <string name="show_greeting_desc">Отключите для более лаконичного вида</string>
+    <string name="show_streak">Серия на главной</string>
+    <string name="show_streak_desc">Чип 🔥 с днями в бюджете</string>
+    <string name="show_rates">Курсы в кошельке</string>
+    <string name="show_rates_desc">Карточка курсов НБРБ</string>
     <string name="settings_profile">Профиль</string>
     <string name="profile_name">Имя</string>
     <string name="profile_nickname">Никнейм</string>

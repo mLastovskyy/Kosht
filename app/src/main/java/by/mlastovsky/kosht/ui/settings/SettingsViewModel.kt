@@ -91,6 +91,18 @@ class SettingsViewModel(
         viewModelScope.launch { settingsRepository.setDailyBudgetMinor(minor) }
     }
 
+    fun setShowGreeting(value: Boolean) {
+        viewModelScope.launch { settingsRepository.setShowGreeting(value) }
+    }
+
+    fun setShowStreak(value: Boolean) {
+        viewModelScope.launch { settingsRepository.setShowStreak(value) }
+    }
+
+    fun setShowRates(value: Boolean) {
+        viewModelScope.launch { settingsRepository.setShowRates(value) }
+    }
+
     companion object {
         val SUPPORTED_CURRENCIES = listOf("BYN", "USD", "EUR", "PLN", "UAH", "RUB", "GBP", "KZT")
     }

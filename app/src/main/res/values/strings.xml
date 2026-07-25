@@ -13,6 +13,14 @@
     <!-- Home -->
     <string name="home_balance">Total balance</string>
     <string name="home_greeting">Hi, %1$s!</string>
+    <string name="home_welcome">Welcome!</string>
+    <string name="settings_display">Interface</string>
+    <string name="show_greeting">Greeting on Home</string>
+    <string name="show_greeting_desc">Hide if you prefer a cleaner look</string>
+    <string name="show_streak">Streak on Home</string>
+    <string name="show_streak_desc">The 🔥 days-under-budget chip</string>
+    <string name="show_rates">Rates card in Wallet</string>
+    <string name="show_rates_desc">NBRB exchange rates block</string>
     <string name="settings_profile">Profile</string>
     <string name="profile_name">Name</string>
     <string name="profile_nickname">Nickname</string>
