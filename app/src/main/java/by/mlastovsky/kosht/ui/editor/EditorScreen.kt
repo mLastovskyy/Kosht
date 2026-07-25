@@ -60,7 +60,10 @@ import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.ListItem
 import androidx.compose.material3.ListItemDefaults
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.ModalBottomSheet
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.material3.SegmentedButton
 import androidx.compose.material3.SegmentedButtonDefaults
 import androidx.compose.material3.SingleChoiceSegmentedButtonRow
@@ -70,10 +73,12 @@ import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.rememberDatePickerState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -152,6 +157,16 @@ fun EditorScreen(
         if (success && target != null) viewModel.attachPhoto(target)
     }
 
+    // A fresh record starts in the calculator right away — no extra tap.
+    var calcAutoOpened by rememberSaveable { mutableStateOf(false) }
+    LaunchedEffect(state.loaded) {
+        if (state.loaded && !state.isEdit && state.amountInput.isEmpty() && !calcAutoOpened) {
+            calcAutoOpened = true
+            viewModel.openCalculator()
+            showCalculator = true
+        }
+    }
+
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -172,15 +187,6 @@ fun EditorScreen(
                 }
             },
             actions = {
-                IconButton(
-                    onClick = { showScanSource = true },
-                    enabled = !state.scanning
-                ) {
-                    Icon(
-                        Icons.Rounded.DocumentScanner,
-                        contentDescription = stringResource(R.string.editor_scan_receipt)
-                    )
-                }
                 if (state.isEdit) {
                     IconButton(onClick = { viewModel.delete(onClose) }) {
                         Icon(
@@ -212,6 +218,10 @@ fun EditorScreen(
                 .padding(horizontal = 16.dp)
         )
 
+        // The amount is the hero: centered in the free space, controls
+        // grouped compactly at the bottom.
+        Spacer(Modifier.weight(1f))
+
         AmountDisplay(
             amountInput = state.amountInput,
             currencyCode = state.currencyCode,
@@ -223,8 +233,10 @@ fun EditorScreen(
             },
             modifier = Modifier
                 .fillMaxWidth()
-                .weight(1f)
+                .padding(vertical = 8.dp)
         )
+
+        Spacer(Modifier.weight(1.2f))
 
         CategoryPicker(
             categories = state.categories,
@@ -239,7 +251,7 @@ fun EditorScreen(
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 16.dp, vertical = 4.dp),
+                .padding(horizontal = 16.dp, vertical = 8.dp),
             horizontalArrangement = Arrangement.spacedBy(8.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
@@ -273,6 +285,16 @@ fun EditorScreen(
                 }
             }
             Spacer(Modifier.weight(1f))
+            IconButton(
+                onClick = { showScanSource = true },
+                enabled = !state.scanning
+            ) {
+                Icon(
+                    Icons.Rounded.DocumentScanner,
+                    contentDescription = stringResource(R.string.editor_scan_receipt),
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
             if (state.photoPath == null) {
                 IconButton(onClick = { showAttachSource = true }) {
                     Icon(
@@ -318,7 +340,7 @@ fun EditorScreen(
             textStyle = MaterialTheme.typography.bodyMedium,
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 16.dp, vertical = 2.dp)
+                .padding(horizontal = 16.dp, vertical = 6.dp)
         )
 
         Button(
@@ -341,7 +363,7 @@ fun EditorScreen(
     }
 
     if (showCalculator) {
-        CalculatorDialog(
+        CalculatorSheet(
             calcInput = state.calcInput,
             currencyCode = state.currencyCode,
             pendingOperation = state.calcPendingOperation,
@@ -746,12 +768,14 @@ private fun AmountDisplay(
 }
 
 /**
- * Standalone calculator: the keypad lives here, not in the editor itself.
- * "=" evaluates a pending expression; Apply writes the result into the
- * editor's amount input.
+ * Standalone calculator in a full-width bottom sheet: the keypad lives
+ * here, not in the editor itself. It opens by itself for a fresh record
+ * and on any tap on the amount. "=" evaluates a pending expression;
+ * Apply writes the result into the editor's amount input.
  */
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun CalculatorDialog(
+private fun CalculatorSheet(
     calcInput: String,
     currencyCode: String,
     pendingOperation: Boolean,
@@ -764,66 +788,91 @@ private fun CalculatorDialog(
     onApply: () -> Unit,
     onDismiss: () -> Unit
 ) {
-    AlertDialog(
+    ModalBottomSheet(
         onDismissRequest = onDismiss,
-        title = { Text(stringResource(R.string.calc_title)) },
-        text = {
-            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                val displayValue = calcInput.ifEmpty { "0" }.replace('.', ',')
-                val symbol = remember(currencyCode) {
-                    runCatching {
-                        Currency.getInstance(currencyCode).getSymbol(Locale.getDefault())
-                    }.getOrNull() ?: currencyCode
-                }
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 8.dp),
-                    horizontalArrangement = Arrangement.End,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Text(
-                        text = displayValue,
-                        style = MaterialTheme.typography.headlineMedium,
-                        color = if (calcInput.isEmpty()) {
-                            MaterialTheme.colorScheme.onSurfaceVariant
-                        } else {
-                            MaterialTheme.colorScheme.onSurface
-                        },
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                        modifier = Modifier.weight(1f, fill = false)
-                    )
-                    Spacer(Modifier.width(6.dp))
-                    Text(
-                        text = symbol,
-                        style = MaterialTheme.typography.titleMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
-                Keypad(
-                    onDigit = onDigit,
-                    onDecimal = onDecimal,
-                    onOperator = onOperator,
-                    onBackspace = onBackspace
+        sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .navigationBarsPadding()
+                .padding(start = 16.dp, end = 16.dp, bottom = 16.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            val displayValue = calcInput.ifEmpty { "0" }.replace('.', ',')
+            val symbol = remember(currencyCode) {
+                runCatching {
+                    Currency.getInstance(currencyCode).getSymbol(Locale.getDefault())
+                }.getOrNull() ?: currencyCode
+            }
+            val fontSize = when {
+                displayValue.length > 12 -> 28.sp
+                displayValue.length > 8 -> 34.sp
+                else -> 40.sp
+            }
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 8.dp),
+                horizontalArrangement = Arrangement.End,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = displayValue,
+                    style = MaterialTheme.typography.displaySmall.copy(fontSize = fontSize),
+                    color = if (calcInput.isEmpty()) {
+                        MaterialTheme.colorScheme.onSurfaceVariant
+                    } else {
+                        MaterialTheme.colorScheme.onSurface
+                    },
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier.weight(1f, fill = false)
+                )
+                Spacer(Modifier.width(8.dp))
+                Text(
+                    text = symbol,
+                    style = MaterialTheme.typography.titleLarge,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
-        },
-        confirmButton = {
-            if (pendingOperation) {
-                TextButton(onClick = onEquals) {
-                    Text("=", style = MaterialTheme.typography.titleMedium)
-                }
-            } else {
-                TextButton(onClick = onApply, enabled = canApply) {
-                    Text(stringResource(R.string.action_apply))
+            Keypad(
+                onDigit = onDigit,
+                onDecimal = onDecimal,
+                onOperator = onOperator,
+                onBackspace = onBackspace
+            )
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                OutlinedButton(
+                    onClick = onDismiss,
+                    modifier = Modifier
+                        .weight(1f)
+                        .height(56.dp),
+                    shape = MaterialTheme.shapes.large
+                ) { Text(stringResource(R.string.action_cancel)) }
+                Button(
+                    onClick = if (pendingOperation) onEquals else onApply,
+                    enabled = pendingOperation || canApply,
+                    modifier = Modifier
+                        .weight(1.6f)
+                        .height(56.dp),
+                    shape = MaterialTheme.shapes.large
+                ) {
+                    Text(
+                        text = if (pendingOperation) {
+                            "="
+                        } else {
+                            stringResource(R.string.action_apply)
+                        },
+                        style = MaterialTheme.typography.titleMedium
+                    )
                 }
             }
-        },
-        dismissButton = {
-            TextButton(onClick = onDismiss) { Text(stringResource(R.string.action_cancel)) }
         }
-    )
+    }
 }
 
 @Composable
@@ -916,13 +965,13 @@ private fun Keypad(
 ) {
     Column(
         modifier = Modifier.fillMaxWidth(),
-        verticalArrangement = Arrangement.spacedBy(4.dp)
+        verticalArrangement = Arrangement.spacedBy(8.dp)
     ) {
         // A slim calculator column on the right: sum up items on the fly.
         listOf("123" to '÷', "456" to '×', "789" to '−').forEach { (rowDigits, op) ->
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(4.dp)
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 rowDigits.forEach { digit ->
                     KeypadButton(
@@ -941,7 +990,7 @@ private fun Keypad(
         }
         Row(
             modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(4.dp)
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
         ) {
             KeypadButton(modifier = Modifier.weight(1f), onClick = onDecimal) {
                 Text(
@@ -977,7 +1026,7 @@ private fun OperatorButton(
 ) {
     Box(
         modifier = modifier
-            .height(56.dp)
+            .height(64.dp)
             .clip(MaterialTheme.shapes.medium)
             .background(MaterialTheme.colorScheme.surfaceContainerHigh)
             .clickable { onOperator(op) },
@@ -1000,7 +1049,7 @@ private fun KeypadButton(
 ) {
     Box(
         modifier = modifier
-            .height(56.dp)
+            .height(64.dp)
             .clip(MaterialTheme.shapes.medium)
             .clickable(onClick = onClick),
         contentAlignment = Alignment.Center
