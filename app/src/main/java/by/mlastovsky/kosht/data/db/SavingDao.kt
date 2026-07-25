@@ -16,6 +16,9 @@ interface SavingDao {
     @Query("SELECT * FROM savings ORDER BY timestamp DESC, id DESC LIMIT :limit")
     fun observeRecent(limit: Int): Flow<List<SavingEntity>>
 
+    @Query("SELECT * FROM savings WHERE timestamp >= :from")
+    fun observeSince(from: Long): Flow<List<SavingEntity>>
+
     @Query(
         "SELECT currencyCode, COALESCE(SUM(amountMinor), 0) AS total " +
             "FROM savings GROUP BY currencyCode HAVING total != 0"

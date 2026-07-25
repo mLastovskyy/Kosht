@@ -18,9 +18,11 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Add
 import androidx.compose.material.icons.rounded.DeleteOutline
+import androidx.compose.material.icons.rounded.EmojiEvents
 import androidx.compose.material.icons.rounded.Refresh
 import androidx.compose.material.icons.rounded.Remove
 import androidx.compose.material3.Button
+import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
@@ -69,6 +71,7 @@ fun WalletScreen(
     var savingDialogWithdraw by remember { mutableStateOf<Boolean?>(null) }
     var debtInAction by remember { mutableStateOf<DebtEntity?>(null) }
     var recurringToConfirm by remember { mutableStateOf<RecurringWithCategory?>(null) }
+    var showAddGoal by remember { mutableStateOf(false) }
 
     LazyColumn(
         modifier = Modifier
@@ -176,6 +179,26 @@ fun WalletScreen(
             )
         }
 
+        // --- Savings goals ---
+        item(key = "goals-header") {
+            SectionHeaderRow(
+                title = stringResource(R.string.goals_title),
+                onAdd = { showAddGoal = true }
+            )
+        }
+        if (state.loaded && state.goals.isEmpty()) {
+            item(key = "goals-empty") {
+                EmptyHint(stringResource(R.string.goals_empty))
+            }
+        }
+        items(state.goals, key = { "goal-${it.goal.id}" }) { goalUi ->
+            GoalCard(
+                goalUi = goalUi,
+                onDelete = { viewModel.deleteGoal(goalUi) },
+                modifier = Modifier.animateItem()
+            )
+        }
+
         // --- Savings ---
         item(key = "savings-header") {
             SectionHeaderRow(
@@ -242,11 +265,23 @@ fun WalletScreen(
         AddSavingDialog(
             withdraw = withdraw,
             defaultCurrency = state.currencyCode,
-            onConfirm = { amount, currency, note ->
-                viewModel.addSaving(amount, currency, note)
+            goals = state.goals.filter { !it.achieved },
+            onConfirm = { amount, currency, note, goalId ->
+                viewModel.addSaving(amount, currency, note, goalId)
                 savingDialogWithdraw = null
             },
             onDismiss = { savingDialogWithdraw = null }
+        )
+    }
+
+    if (showAddGoal) {
+        AddGoalDialog(
+            defaultCurrency = state.currencyCode,
+            onConfirm = { title, target, currency ->
+                viewModel.addGoal(title, target, currency)
+                showAddGoal = false
+            },
+            onDismiss = { showAddGoal = false }
         )
     }
 
@@ -597,6 +632,74 @@ private fun DebtRow(
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
+        }
+    }
+}
+
+@Composable
+private fun GoalCard(
+    goalUi: GoalUi,
+    onDelete: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    val goal = goalUi.goal
+    val accent = if (goalUi.achieved) KoshtTheme.colors.income else MaterialTheme.colorScheme.primary
+    Column(
+        modifier = modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp, vertical = 4.dp)
+            .clip(MaterialTheme.shapes.large)
+            .background(MaterialTheme.colorScheme.surfaceContainer)
+            .padding(start = 16.dp, end = 4.dp, top = 12.dp, bottom = 12.dp)
+    ) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            if (goalUi.achieved) {
+                Icon(
+                    Icons.Rounded.EmojiEvents,
+                    contentDescription = null,
+                    tint = accent,
+                    modifier = Modifier
+                        .padding(end = 8.dp)
+                        .size(22.dp)
+                )
+            }
+            Text(
+                text = goal.title,
+                style = MaterialTheme.typography.titleSmall,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                modifier = Modifier.weight(1f)
+            )
+            Text(
+                text = Money.format(goalUi.savedMinor, goal.currencyCode) + " / " +
+                    Money.format(goal.targetMinor, goal.currencyCode),
+                style = MaterialTheme.typography.labelLarge,
+                color = accent
+            )
+            IconButton(onClick = onDelete) {
+                Icon(
+                    Icons.Rounded.DeleteOutline,
+                    contentDescription = stringResource(R.string.editor_delete),
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+        }
+        LinearProgressIndicator(
+            progress = { goalUi.progress },
+            color = accent,
+            trackColor = MaterialTheme.colorScheme.surfaceContainerHighest,
+            drawStopIndicator = {},
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(top = 8.dp, end = 12.dp)
+        )
+        if (goalUi.achieved) {
+            Text(
+                text = stringResource(R.string.goal_achieved),
+                style = MaterialTheme.typography.labelMedium,
+                color = accent,
+                modifier = Modifier.padding(top = 6.dp)
+            )
         }
     }
 }

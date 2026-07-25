@@ -131,6 +131,45 @@
     <string name="wallet_empty_savings">Пока ничего не отложено</string>
     <string name="amount_hint">Сумма</string>
 
+    <!-- Цели, достижения, испытания -->
+    <string name="goals_title">Цели накоплений</string>
+    <string name="goals_empty">Создайте цель и начните откладывать</string>
+    <string name="goal_new">Новая цель</string>
+    <string name="goal_title_hint">На что копим?</string>
+    <string name="goal_achieved">Цель достигнута! 🎉</string>
+    <string name="goals_pick">На цель</string>
+    <string name="goals_none">Без цели</string>
+    <string name="achievements_title">Достижения</string>
+    <string name="streak_days">Серия: %1$d дн.</string>
+    <string name="streak_none">Начните серию</string>
+    <string name="streak_hint">Записывайте хотя бы одну операцию в день</string>
+    <string name="challenges_title">Испытания</string>
+    <string name="challenges_empty">Создайте испытание: тратить меньше, откладывать больше</string>
+    <string name="challenge_new">Новое испытание</string>
+    <string name="challenge_type_limit_short">Лимит</string>
+    <string name="challenge_type_no_spend_short">Без трат</string>
+    <string name="challenge_type_save_short">Накопить</string>
+    <string name="challenge_type_no_spend">Дни без трат</string>
+    <string name="challenge_active">Активно</string>
+    <string name="challenge_done">Готово!</string>
+    <string name="challenge_failed">Провалено</string>
+    <string name="challenge_spent_of">Потрачено %1$s из %2$s</string>
+    <string name="challenge_saved_of">Отложено %1$s из %2$s</string>
+    <string name="challenge_days">День %1$d из %2$d</string>
+    <string name="challenge_duration_week">Неделя</string>
+    <string name="challenge_duration_month_end">До конца месяца</string>
+    <string name="challenge_duration_30">30 дней</string>
+    <string name="badges_title">Бейджи</string>
+    <string name="badge_first_steps">Первые шаги</string>
+    <string name="badge_ten">10 записей</string>
+    <string name="badge_hundred">Сотня</string>
+    <string name="badge_streak7">Неделя подряд</string>
+    <string name="badge_streak30">Железный месяц</string>
+    <string name="badge_scanner">Сканер</string>
+    <string name="badge_saver">Копилка</string>
+    <string name="badge_goal_done">Цель взята</string>
+    <string name="badge_surplus">В плюсе</string>
+
     <!-- Категории: управление -->
     <string name="category_new">Новая категория</string>
     <string name="category_name_hint">Название</string>

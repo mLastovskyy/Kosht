@@ -1,28 +1,39 @@
 package by.mlastovsky.kosht.data
 
+import by.mlastovsky.kosht.data.db.ChallengeDao
+import by.mlastovsky.kosht.data.db.ChallengeEntity
 import by.mlastovsky.kosht.data.db.DebtDao
 import by.mlastovsky.kosht.data.db.DebtEntity
+import by.mlastovsky.kosht.data.db.GoalDao
+import by.mlastovsky.kosht.data.db.GoalProgress
 import by.mlastovsky.kosht.data.db.RecurringDao
 import by.mlastovsky.kosht.data.db.RecurringEntity
 import by.mlastovsky.kosht.data.db.RecurringWithCategory
 import by.mlastovsky.kosht.data.db.SavingDao
 import by.mlastovsky.kosht.data.db.SavingEntity
+import by.mlastovsky.kosht.data.db.SavingGoalEntity
 import by.mlastovsky.kosht.data.db.SavingTotal
 import by.mlastovsky.kosht.data.db.TransactionDao
 import by.mlastovsky.kosht.data.db.TransactionEntity
+import by.mlastovsky.kosht.model.ChallengeType
 import by.mlastovsky.kosht.model.DebtDirection
 import by.mlastovsky.kosht.model.TransactionType
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.first
+import java.time.LocalDate
 import java.time.YearMonth
 
 /**
- * Debts, savings and recurring charges — everything on the Wallet tab.
+ * Debts, savings, goals, challenges and recurring charges — everything on
+ * the Wallet tab and the achievements screen.
  */
 class WalletRepository(
     private val debtDao: DebtDao,
     private val savingDao: SavingDao,
     private val recurringDao: RecurringDao,
-    private val transactionDao: TransactionDao
+    private val transactionDao: TransactionDao,
+    private val goalDao: GoalDao,
+    private val challengeDao: ChallengeDao
 ) {
 
     // --- Debts ---
@@ -67,19 +78,87 @@ class WalletRepository(
 
     fun observeSavings(limit: Int): Flow<List<SavingEntity>> = savingDao.observeRecent(limit)
 
+    fun observeSavingsSince(from: Long): Flow<List<SavingEntity>> = savingDao.observeSince(from)
+
     fun observeSavingTotals(): Flow<List<SavingTotal>> = savingDao.observeTotals()
 
-    suspend fun addSaving(amountMinor: Long, currencyCode: String, note: String): Long =
-        savingDao.insert(
+    suspend fun addSaving(
+        amountMinor: Long,
+        currencyCode: String,
+        note: String,
+        goalId: Long? = null
+    ): Long {
+        val id = savingDao.insert(
             SavingEntity(
                 amountMinor = amountMinor,
                 currencyCode = currencyCode,
                 note = note.trim(),
-                timestamp = System.currentTimeMillis()
+                timestamp = System.currentTimeMillis(),
+                goalId = goalId
+            )
+        )
+        if (goalId != null) checkGoalAchieved(goalId)
+        return id
+    }
+
+    suspend fun deleteSaving(id: Long) = savingDao.deleteById(id)
+
+    // --- Savings goals ---
+
+    fun observeGoals(): Flow<List<SavingGoalEntity>> = goalDao.observeAll()
+
+    fun observeGoalProgress(): Flow<List<GoalProgress>> = goalDao.observeProgress()
+
+    suspend fun addGoal(title: String, targetMinor: Long, currencyCode: String): Long =
+        goalDao.insert(
+            SavingGoalEntity(
+                title = title.trim(),
+                targetMinor = targetMinor,
+                currencyCode = currencyCode,
+                createdAt = System.currentTimeMillis()
             )
         )
 
-    suspend fun deleteSaving(id: Long) = savingDao.deleteById(id)
+    suspend fun deleteGoal(id: Long) {
+        goalDao.unlinkSavings(id)
+        goalDao.deleteById(id)
+    }
+
+    private suspend fun checkGoalAchieved(goalId: Long) {
+        val goal = goalDao.getById(goalId) ?: return
+        if (goal.achievedAt != null) return
+        // One-shot read of the freshly updated progress.
+        val total = goalDao.observeProgress().first()
+            .firstOrNull { it.goalId == goalId }?.total ?: 0L
+        if (total >= goal.targetMinor) {
+            goalDao.update(goal.copy(achievedAt = System.currentTimeMillis()))
+        }
+    }
+
+    // --- Challenges ---
+
+    fun observeChallenges(): Flow<List<ChallengeEntity>> = challengeDao.observeAll()
+
+    suspend fun addChallenge(
+        type: ChallengeType,
+        title: String,
+        amountMinor: Long,
+        categoryId: Long?,
+        start: LocalDate,
+        end: LocalDate
+    ): Long = challengeDao.insert(
+        ChallengeEntity(
+            type = type,
+            title = title.trim(),
+            amountMinor = amountMinor,
+            categoryId = categoryId,
+            startEpochDay = start.toEpochDay(),
+            endEpochDay = end.toEpochDay(),
+            createdAt = System.currentTimeMillis()
+        )
+    )
+
+    suspend fun deleteChallenge(id: Long) = challengeDao.deleteById(id)
 
     // --- Recurring charges ---
 

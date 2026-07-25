@@ -7,6 +7,7 @@ import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
 import by.mlastovsky.kosht.KoshtApp
 import by.mlastovsky.kosht.MainViewModel
+import by.mlastovsky.kosht.ui.achievements.AchievementsViewModel
 import by.mlastovsky.kosht.ui.editor.EditorViewModel
 import by.mlastovsky.kosht.ui.history.HistoryViewModel
 import by.mlastovsky.kosht.ui.home.HomeViewModel
@@ -46,6 +47,14 @@ object AppViewModelProvider {
             SettingsViewModel(
                 app().container.settingsRepository,
                 app().container.photoStore
+            )
+        }
+        initializer {
+            AchievementsViewModel(
+                app().container.walletRepository,
+                app().container.transactionRepository,
+                app().container.ratesRepository,
+                app().container.settingsRepository
             )
         }
         initializer {

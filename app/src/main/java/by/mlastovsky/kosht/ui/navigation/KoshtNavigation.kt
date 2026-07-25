@@ -21,6 +21,7 @@ object Routes {
     const val STATS = "stats"
     const val WALLET = "wallet"
     const val SETTINGS = "settings"
+    const val ACHIEVEMENTS = "achievements"
     const val EDITOR = "editor?transactionId={transactionId}"
 
     const val EDITOR_ARG_ID = "transactionId"

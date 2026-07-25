@@ -206,13 +206,18 @@ fun DebtActionsDialog(
 fun AddSavingDialog(
     withdraw: Boolean,
     defaultCurrency: String,
-    onConfirm: (amountMinor: Long, currency: String, note: String) -> Unit,
+    goals: List<by.mlastovsky.kosht.ui.wallet.GoalUi>,
+    onConfirm: (amountMinor: Long, currency: String, note: String, goalId: Long?) -> Unit,
     onDismiss: () -> Unit
 ) {
     var amountText by remember { mutableStateOf("") }
     var currency by remember { mutableStateOf(defaultCurrency) }
     var note by remember { mutableStateOf("") }
-    val amountMinor = Money.parseToMinor(amountText, currency) ?: 0L
+    var goalId by remember { mutableStateOf<Long?>(null) }
+    // A goal locks the currency so its progress stays in one currency.
+    val selectedGoal = goals.firstOrNull { it.goal.id == goalId }
+    val effectiveCurrency = selectedGoal?.goal?.currencyCode ?: currency
+    val amountMinor = Money.parseToMinor(amountText, effectiveCurrency) ?: 0L
 
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -226,7 +231,37 @@ fun AddSavingDialog(
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 AmountField(amountText, { amountText = it })
-                CurrencyChips(currency) { currency = it }
+                if (!withdraw && goals.isNotEmpty()) {
+                    Text(
+                        stringResource(R.string.goals_pick),
+                        style = MaterialTheme.typography.labelLarge
+                    )
+                    LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        item {
+                            FilterChip(
+                                selected = goalId == null,
+                                onClick = { goalId = null },
+                                label = { Text(stringResource(R.string.goals_none)) }
+                            )
+                        }
+                        items(goals, key = { it.goal.id }) { goalUi ->
+                            FilterChip(
+                                selected = goalId == goalUi.goal.id,
+                                onClick = { goalId = goalUi.goal.id },
+                                label = { Text(goalUi.goal.title) }
+                            )
+                        }
+                    }
+                }
+                if (selectedGoal == null) {
+                    CurrencyChips(currency) { currency = it }
+                } else {
+                    Text(
+                        text = selectedGoal.goal.currencyCode,
+                        style = MaterialTheme.typography.labelLarge,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
                 OutlinedTextField(
                     value = note,
                     onValueChange = { note = it.take(120) },
@@ -240,8 +275,52 @@ fun AddSavingDialog(
             TextButton(
                 enabled = amountMinor > 0,
                 onClick = {
-                    onConfirm(if (withdraw) -amountMinor else amountMinor, currency, note)
+                    onConfirm(
+                        if (withdraw) -amountMinor else amountMinor,
+                        effectiveCurrency,
+                        note,
+                        if (withdraw) null else goalId
+                    )
                 }
+            ) { Text(stringResource(R.string.action_add)) }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) { Text(stringResource(R.string.action_cancel)) }
+        }
+    )
+}
+
+@Composable
+fun AddGoalDialog(
+    defaultCurrency: String,
+    onConfirm: (title: String, targetMinor: Long, currency: String) -> Unit,
+    onDismiss: () -> Unit
+) {
+    var title by remember { mutableStateOf("") }
+    var amountText by remember { mutableStateOf("") }
+    var currency by remember { mutableStateOf(defaultCurrency) }
+    val targetMinor = Money.parseToMinor(amountText, currency) ?: 0L
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(stringResource(R.string.goal_new)) },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                OutlinedTextField(
+                    value = title,
+                    onValueChange = { title = it.take(60) },
+                    placeholder = { Text(stringResource(R.string.goal_title_hint)) },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth()
+                )
+                AmountField(amountText, { amountText = it })
+                CurrencyChips(currency) { currency = it }
+            }
+        },
+        confirmButton = {
+            TextButton(
+                enabled = title.isNotBlank() && targetMinor > 0,
+                onClick = { onConfirm(title, targetMinor, currency) }
             ) { Text(stringResource(R.string.action_add)) }
         },
         dismissButton = {

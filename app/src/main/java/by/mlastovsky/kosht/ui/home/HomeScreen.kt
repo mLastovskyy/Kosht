@@ -3,6 +3,7 @@ package by.mlastovsky.kosht.ui.home
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -21,9 +22,12 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ReceiptLong
 import androidx.compose.material.icons.rounded.ArrowDownward
 import androidx.compose.material.icons.rounded.ArrowUpward
+import androidx.compose.material.icons.rounded.EmojiEvents
+import androidx.compose.material.icons.rounded.LocalFireDepartment
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -54,6 +58,7 @@ import by.mlastovsky.kosht.util.Money
 fun HomeScreen(
     onTransactionClick: (Long) -> Unit,
     onSeeAllClick: () -> Unit,
+    onAchievementsClick: () -> Unit,
     viewModel: HomeViewModel = viewModel(factory = AppViewModelProvider.Factory)
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
@@ -87,6 +92,35 @@ fun HomeScreen(
                         style = MaterialTheme.typography.titleLarge,
                         modifier = Modifier.weight(1f)
                     )
+                    if (state.streakDays > 1) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier = Modifier
+                                .padding(end = 8.dp)
+                                .clip(CircleShape)
+                                .background(MaterialTheme.colorScheme.surfaceContainerHigh)
+                                .clickable(onClick = onAchievementsClick)
+                                .padding(horizontal = 10.dp, vertical = 4.dp)
+                        ) {
+                            Icon(
+                                Icons.Rounded.LocalFireDepartment,
+                                contentDescription = null,
+                                tint = Color(0xFFFF7A00),
+                                modifier = Modifier.size(18.dp)
+                            )
+                            Text(
+                                text = state.streakDays.toString(),
+                                style = MaterialTheme.typography.labelLarge
+                            )
+                        }
+                    }
+                    IconButton(onClick = onAchievementsClick) {
+                        Icon(
+                            Icons.Rounded.EmojiEvents,
+                            contentDescription = stringResource(R.string.achievements_title),
+                            tint = MaterialTheme.colorScheme.primary
+                        )
+                    }
                     Avatar(
                         photoPath = profile.photoPath,
                         fallbackText = profile.displayName(

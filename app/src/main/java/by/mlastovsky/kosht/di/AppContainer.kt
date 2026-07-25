@@ -35,7 +35,9 @@ class AppContainer(context: Context) {
             database.debtDao(),
             database.savingDao(),
             database.recurringDao(),
-            database.transactionDao()
+            database.transactionDao(),
+            database.goalDao(),
+            database.challengeDao()
         )
     }
 

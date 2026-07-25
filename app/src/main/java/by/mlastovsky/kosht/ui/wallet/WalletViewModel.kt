@@ -11,6 +11,7 @@ import by.mlastovsky.kosht.data.db.DebtEntity
 import by.mlastovsky.kosht.data.db.RateEntity
 import by.mlastovsky.kosht.data.db.RecurringWithCategory
 import by.mlastovsky.kosht.data.db.SavingEntity
+import by.mlastovsky.kosht.data.db.SavingGoalEntity
 import by.mlastovsky.kosht.data.db.SavingTotal
 import by.mlastovsky.kosht.model.DebtDirection
 import by.mlastovsky.kosht.model.TransactionType
@@ -20,6 +21,21 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
+
+data class GoalUi(
+    val goal: SavingGoalEntity,
+    val savedMinor: Long
+) {
+    val progress: Float
+        get() = if (goal.targetMinor > 0) {
+            (savedMinor.toFloat() / goal.targetMinor).coerceIn(0f, 1f)
+        } else {
+            0f
+        }
+
+    val achieved: Boolean
+        get() = goal.achievedAt != null || savedMinor >= goal.targetMinor
+}
 
 data class WalletUiState(
     val loaded: Boolean = false,
@@ -33,6 +49,7 @@ data class WalletUiState(
     val savings: List<SavingEntity> = emptyList(),
     val savingTotals: List<SavingTotal> = emptyList(),
     val savingsBynMinor: Long = 0,
+    val goals: List<GoalUi> = emptyList(),
     val recurring: List<RecurringWithCategory> = emptyList(),
     val dueRecurringIds: Set<Long> = emptySet(),
     val expenseCategories: List<CategoryEntity> = emptyList()
@@ -60,11 +77,24 @@ class WalletViewModel(
         }
     }
 
+    private val goals = combine(
+        walletRepository.observeGoals(),
+        walletRepository.observeGoalProgress()
+    ) { goals, progress ->
+        goals.map { goal ->
+            GoalUi(
+                goal = goal,
+                savedMinor = progress.firstOrNull { it.goalId == goal.id }?.total ?: 0L
+            )
+        }
+    }
+
     private val wallet = combine(
         walletRepository.observeDebts(),
         walletRepository.observeSavings(SAVINGS_LIMIT),
         walletRepository.observeSavingTotals(),
         walletRepository.observeRecurring(),
+        goals,
         ::WalletData
     )
 
@@ -87,7 +117,8 @@ class WalletViewModel(
         val debts: List<DebtEntity>,
         val savings: List<SavingEntity>,
         val savingTotals: List<SavingTotal>,
-        val recurring: List<RecurringWithCategory>
+        val recurring: List<RecurringWithCategory>,
+        val goals: List<GoalUi>
     )
 
     val uiState: StateFlow<WalletUiState> = combine(wallet, context) { data,
@@ -106,6 +137,7 @@ class WalletViewModel(
             savingsBynMinor = data.savingTotals.sumOf {
                 RatesRepository.toBynMinor(it.total, it.currencyCode, rates) ?: 0L
             },
+            goals = data.goals,
             recurring = data.recurring,
             dueRecurringIds = data.recurring
                 .filter { it.recurring.isDue() }
@@ -147,9 +179,20 @@ class WalletViewModel(
         viewModelScope.launch { walletRepository.deleteDebt(debt.id) }
     }
 
-    fun addSaving(amountMinor: Long, currencyCode: String, note: String) {
+    fun addSaving(amountMinor: Long, currencyCode: String, note: String, goalId: Long? = null) {
         if (amountMinor == 0L) return
-        viewModelScope.launch { walletRepository.addSaving(amountMinor, currencyCode, note) }
+        viewModelScope.launch {
+            walletRepository.addSaving(amountMinor, currencyCode, note, goalId)
+        }
+    }
+
+    fun addGoal(title: String, targetMinor: Long, currencyCode: String) {
+        if (title.isBlank() || targetMinor <= 0) return
+        viewModelScope.launch { walletRepository.addGoal(title, targetMinor, currencyCode) }
+    }
+
+    fun deleteGoal(goal: GoalUi) {
+        viewModelScope.launch { walletRepository.deleteGoal(goal.goal.id) }
     }
 
     fun deleteSaving(saving: SavingEntity) {

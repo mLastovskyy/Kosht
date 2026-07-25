@@ -131,6 +131,45 @@
     <string name="wallet_empty_savings">Nothing set aside yet</string>
     <string name="amount_hint">Amount</string>
 
+    <!-- Goals, achievements, challenges -->
+    <string name="goals_title">Savings goals</string>
+    <string name="goals_empty">Create a goal and start setting money aside</string>
+    <string name="goal_new">New goal</string>
+    <string name="goal_title_hint">What are you saving for?</string>
+    <string name="goal_achieved">Goal achieved! 🎉</string>
+    <string name="goals_pick">Toward a goal</string>
+    <string name="goals_none">No goal</string>
+    <string name="achievements_title">Achievements</string>
+    <string name="streak_days">%1$d-day streak</string>
+    <string name="streak_none">Start your streak</string>
+    <string name="streak_hint">Log at least one transaction a day</string>
+    <string name="challenges_title">Challenges</string>
+    <string name="challenges_empty">Create a challenge: spend less, save more</string>
+    <string name="challenge_new">New challenge</string>
+    <string name="challenge_type_limit_short">Limit</string>
+    <string name="challenge_type_no_spend_short">No spend</string>
+    <string name="challenge_type_save_short">Save up</string>
+    <string name="challenge_type_no_spend">Days without spending</string>
+    <string name="challenge_active">Active</string>
+    <string name="challenge_done">Done!</string>
+    <string name="challenge_failed">Failed</string>
+    <string name="challenge_spent_of">Spent %1$s of %2$s</string>
+    <string name="challenge_saved_of">Saved %1$s of %2$s</string>
+    <string name="challenge_days">Day %1$d of %2$d</string>
+    <string name="challenge_duration_week">Week</string>
+    <string name="challenge_duration_month_end">Until month end</string>
+    <string name="challenge_duration_30">30 days</string>
+    <string name="badges_title">Badges</string>
+    <string name="badge_first_steps">First steps</string>
+    <string name="badge_ten">10 records</string>
+    <string name="badge_hundred">Century</string>
+    <string name="badge_streak7">Week streak</string>
+    <string name="badge_streak30">Iron month</string>
+    <string name="badge_scanner">Scanner</string>
+    <string name="badge_saver">Money box</string>
+    <string name="badge_goal_done">Goal crusher</string>
+    <string name="badge_surplus">In the black</string>
+
     <!-- Category management -->
     <string name="category_new">New category</string>
     <string name="category_name_hint">Name</string>

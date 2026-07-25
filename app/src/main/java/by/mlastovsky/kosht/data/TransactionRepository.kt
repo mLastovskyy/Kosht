@@ -30,6 +30,13 @@ class TransactionRepository(
     fun observeCategoryTotals(type: TransactionType, from: Long, to: Long): Flow<List<CategoryTotal>> =
         transactionDao.observeCategoryTotals(type, from, to)
 
+    fun observeCount(): Flow<Int> = transactionDao.observeCount()
+
+    fun observePhotoCount(): Flow<Int> = transactionDao.observePhotoCount()
+
+    fun observeCreatedSince(from: Long): Flow<List<Long>> =
+        transactionDao.observeCreatedSince(from)
+
     suspend fun getTransaction(id: Long): TransactionWithCategory? = transactionDao.getById(id)
 
     suspend fun addTransaction(transaction: TransactionEntity): Long =

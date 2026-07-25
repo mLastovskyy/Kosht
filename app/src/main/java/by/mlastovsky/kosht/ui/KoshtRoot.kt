@@ -31,6 +31,7 @@ import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import by.mlastovsky.kosht.R
+import by.mlastovsky.kosht.ui.achievements.AchievementsScreen
 import by.mlastovsky.kosht.ui.editor.EditorScreen
 import by.mlastovsky.kosht.ui.history.HistoryScreen
 import by.mlastovsky.kosht.ui.home.HomeScreen
@@ -90,8 +91,21 @@ fun KoshtRoot() {
             composable(Routes.HOME) {
                 HomeScreen(
                     onTransactionClick = { id -> navController.navigate(Routes.editor(id)) },
-                    onSeeAllClick = { navController.navigateToTab(Routes.HISTORY) }
+                    onSeeAllClick = { navController.navigateToTab(Routes.HISTORY) },
+                    onAchievementsClick = { navController.navigate(Routes.ACHIEVEMENTS) }
                 )
+            }
+            composable(
+                route = Routes.ACHIEVEMENTS,
+                enterTransition = {
+                    slideInVertically(tween(300)) { it } + fadeIn(tween(300))
+                },
+                exitTransition = { fadeOut(tween(150)) },
+                popExitTransition = {
+                    slideOutVertically(tween(250)) { it } + fadeOut(tween(250))
+                }
+            ) {
+                AchievementsScreen(onBack = { navController.popBackStack() })
             }
             composable(Routes.HISTORY) {
                 HistoryScreen(

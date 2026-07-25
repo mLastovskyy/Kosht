@@ -14,5 +14,7 @@ data class SavingEntity(
     val amountMinor: Long,
     val currencyCode: String,
     val note: String = "",
-    val timestamp: Long
+    val timestamp: Long,
+    /** Optional link to a savings goal. */
+    val goalId: Long? = null
 )

@@ -55,6 +55,16 @@ interface TransactionDao {
     @Query("SELECT COUNT(*) FROM transactions WHERE categoryId = :categoryId")
     suspend fun countByCategory(categoryId: Long): Int
 
+    @Query("SELECT COUNT(*) FROM transactions")
+    fun observeCount(): Flow<Int>
+
+    @Query("SELECT COUNT(*) FROM transactions WHERE photoPath IS NOT NULL")
+    fun observePhotoCount(): Flow<Int>
+
+    /** Creation moments used for the logging-streak computation. */
+    @Query("SELECT createdAt FROM transactions WHERE createdAt >= :from")
+    fun observeCreatedSince(from: Long): Flow<List<Long>>
+
     @Query("UPDATE transactions SET categoryId = :to WHERE categoryId = :from")
     suspend fun reassignCategory(from: Long, to: Long)
 

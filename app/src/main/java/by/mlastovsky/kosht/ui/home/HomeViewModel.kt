@@ -9,6 +9,7 @@ import by.mlastovsky.kosht.data.UserProfile
 import by.mlastovsky.kosht.data.db.TransactionWithCategory
 import by.mlastovsky.kosht.model.TransactionType
 import by.mlastovsky.kosht.util.Dates
+import by.mlastovsky.kosht.util.Streak
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
@@ -24,7 +25,8 @@ data class HomeUiState(
     val monthExpenseMinor: Long = 0,
     val recent: List<TransactionWithCategory> = emptyList(),
     val currencyCode: String = SettingsRepository.DEFAULT_CURRENCY,
-    val profile: UserProfile? = null
+    val profile: UserProfile? = null,
+    val streakDays: Int = 0
 )
 
 class HomeViewModel(
@@ -35,12 +37,23 @@ class HomeViewModel(
 
     private val monthRange = Dates.monthRange(YearMonth.now())
 
+    private data class Totals(
+        val balance: Long,
+        val income: Long,
+        val expense: Long,
+        val streak: Int
+    )
+
     private val totals = combine(
         repository.observeBalance(),
         repository.observeTotal(TransactionType.INCOME, monthRange.first, monthRange.last + 1),
         repository.observeTotal(TransactionType.EXPENSE, monthRange.first, monthRange.last + 1),
-        ::Triple
-    )
+        repository.observeCreatedSince(
+            Dates.toEpochMillis(java.time.LocalDate.now().minusDays(90))
+        )
+    ) { balance, income, expense, created ->
+        Totals(balance, income, expense, Streak.compute(created))
+    }
 
     private data class HomeContext(
         val recent: List<TransactionWithCategory>,
@@ -57,22 +70,23 @@ class HomeViewModel(
         ::HomeContext
     )
 
-    val uiState: StateFlow<HomeUiState> = combine(totals, context) { (balance, income, expense),
+    val uiState: StateFlow<HomeUiState> = combine(totals, context) { t,
         (recent, settings, rates, profile) ->
         val bynEquivalent = if (settings.currencyCode != "BYN") {
-            RatesRepository.toBynMinor(balance, settings.currencyCode, rates)
+            RatesRepository.toBynMinor(t.balance, settings.currencyCode, rates)
         } else {
             null
         }
         HomeUiState(
             loaded = true,
-            balanceMinor = balance,
+            balanceMinor = t.balance,
             balanceBynMinor = bynEquivalent,
-            monthIncomeMinor = income,
-            monthExpenseMinor = expense,
+            monthIncomeMinor = t.income,
+            monthExpenseMinor = t.expense,
             recent = recent,
             currencyCode = settings.currencyCode,
-            profile = profile
+            profile = profile,
+            streakDays = t.streak
         )
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), HomeUiState())
 

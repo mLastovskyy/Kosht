@@ -15,9 +15,11 @@ import by.mlastovsky.kosht.data.CategorySeed
         RateEntity::class,
         DebtEntity::class,
         SavingEntity::class,
-        RecurringEntity::class
+        RecurringEntity::class,
+        SavingGoalEntity::class,
+        ChallengeEntity::class
     ],
-    version = 5,
+    version = 6,
     exportSchema = false
 )
 abstract class KoshtDatabase : RoomDatabase() {
@@ -34,12 +36,18 @@ abstract class KoshtDatabase : RoomDatabase() {
 
     abstract fun recurringDao(): RecurringDao
 
+    abstract fun goalDao(): GoalDao
+
+    abstract fun challengeDao(): ChallengeDao
+
     companion object {
 
         fun build(context: Context): KoshtDatabase =
             Room.databaseBuilder(context, KoshtDatabase::class.java, "kosht.db")
                 .addCallback(SeedCallback)
-                .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5)
+                .addMigrations(
+                    MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6
+                )
                 .build()
 
         private val MIGRATION_1_2 = object : Migration(1, 2) {
@@ -106,6 +114,32 @@ abstract class KoshtDatabase : RoomDatabase() {
             override fun migrate(db: SupportSQLiteDatabase) {
                 db.execSQL(
                     "ALTER TABLE recurring ADD COLUMN currencyCode TEXT NOT NULL DEFAULT 'BYN'"
+                )
+            }
+        }
+
+        private val MIGRATION_5_6 = object : Migration(5, 6) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("ALTER TABLE savings ADD COLUMN goalId INTEGER")
+                db.execSQL(
+                    "CREATE TABLE IF NOT EXISTS saving_goals (" +
+                        "id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, " +
+                        "title TEXT NOT NULL, " +
+                        "targetMinor INTEGER NOT NULL, " +
+                        "currencyCode TEXT NOT NULL, " +
+                        "createdAt INTEGER NOT NULL, " +
+                        "achievedAt INTEGER)"
+                )
+                db.execSQL(
+                    "CREATE TABLE IF NOT EXISTS challenges (" +
+                        "id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, " +
+                        "type TEXT NOT NULL, " +
+                        "title TEXT NOT NULL, " +
+                        "amountMinor INTEGER NOT NULL, " +
+                        "categoryId INTEGER, " +
+                        "startEpochDay INTEGER NOT NULL, " +
+                        "endEpochDay INTEGER NOT NULL, " +
+                        "createdAt INTEGER NOT NULL)"
                 )
             }
         }
