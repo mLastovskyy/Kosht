@@ -6,13 +6,13 @@ import androidx.room.ForeignKey
 import androidx.room.Index
 import androidx.room.PrimaryKey
 import androidx.room.Relation
+import by.mlastovsky.kosht.model.RecurringFrequency
 import java.time.LocalDate
-import java.time.YearMonth
 
 /**
- * A monthly recurring charge. It never creates transactions silently:
- * when due, the user must confirm it, which records an expense and stamps
- * [lastConfirmed] with the current period ("2026-07").
+ * A recurring charge with a chosen due date and frequency. It never creates
+ * transactions silently: when due, the user must confirm it, which records
+ * an expense and advances [nextDueEpochDay] by one period.
  */
 @Entity(
     tableName = "recurring",
@@ -34,21 +34,21 @@ data class RecurringEntity(
     /** Currency the charge is defined in; may differ from the app currency. */
     val currencyCode: String = "BYN",
     val categoryId: Long,
-    val dayOfMonth: Int,
-    val lastConfirmed: String? = null,
+    /** Next charge date as epoch day; picked in a calendar. */
+    val nextDueEpochDay: Long,
+    val frequency: RecurringFrequency = RecurringFrequency.MONTHLY,
     val enabled: Boolean = true,
     val createdAt: Long
 ) {
-    fun isDue(today: LocalDate = LocalDate.now()): Boolean {
-        if (!enabled) return false
-        val currentPeriod = YearMonth.from(today)
-        val lastPeriod = lastConfirmed?.let { runCatching { YearMonth.parse(it) }.getOrNull() }
-        if (lastPeriod != null && lastPeriod >= currentPeriod) return false
-        // Unconfirmed periods older than the previous month are overdue immediately.
-        if (lastPeriod != null && lastPeriod < currentPeriod.minusMonths(1)) return true
-        val effectiveDay = dayOfMonth.coerceAtMost(currentPeriod.lengthOfMonth())
-        return today.dayOfMonth >= effectiveDay
-    }
+    val nextDueDate: LocalDate
+        get() = LocalDate.ofEpochDay(nextDueEpochDay)
+
+    fun isDue(today: LocalDate = LocalDate.now()): Boolean =
+        enabled && today.toEpochDay() >= nextDueEpochDay
+
+    /** The entity after one confirmed charge. */
+    fun advanced(): RecurringEntity =
+        copy(nextDueEpochDay = frequency.next(nextDueDate).toEpochDay())
 }
 
 data class RecurringWithCategory(

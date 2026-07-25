@@ -289,8 +289,8 @@ fun WalletScreen(
         AddRecurringDialog(
             categories = state.expenseCategories,
             currencyCode = state.currencyCode,
-            onConfirm = { title, amount, currency, categoryId, day ->
-                viewModel.addRecurring(title, amount, currency, categoryId, day)
+            onConfirm = { title, amount, currency, categoryId, firstDue, frequency ->
+                viewModel.addRecurring(title, amount, currency, categoryId, firstDue, frequency)
                 showAddRecurring = false
             },
             onDismiss = { showAddRecurring = false }
@@ -518,7 +518,8 @@ private fun RecurringRow(
                 overflow = TextOverflow.Ellipsis
             )
             Text(
-                text = stringResource(R.string.recurring_day_format, item.recurring.dayOfMonth) +
+                text = relativeDate(item.recurring.nextDueDate) +
+                    " · " + frequencyLabel(item.recurring.frequency) +
                     " · " + Money.format(item.recurring.amountMinor, item.recurring.currencyCode),
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant

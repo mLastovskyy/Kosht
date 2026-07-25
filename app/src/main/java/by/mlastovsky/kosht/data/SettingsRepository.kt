@@ -5,6 +5,7 @@ import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
+import androidx.datastore.preferences.core.longPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
 import by.mlastovsky.kosht.model.AppLanguage
@@ -24,7 +25,9 @@ data class AppSettings(
     val dynamicColors: Boolean,
     val notifyDailyReminder: Boolean,
     val notifyRecurringDue: Boolean,
-    val notifyWeeklySummary: Boolean
+    val notifyWeeklySummary: Boolean,
+    /** Daily spending budget for the streak; 0 = auto from last month. */
+    val dailyBudgetMinor: Long
 )
 
 data class UserProfile(
@@ -49,6 +52,11 @@ class SettingsRepository(private val context: Context) {
         val profileName = stringPreferencesKey("profile_name")
         val profileNickname = stringPreferencesKey("profile_nickname")
         val profilePhotoPath = stringPreferencesKey("profile_photo_path")
+        val dailyBudgetMinor = longPreferencesKey("daily_budget_minor")
+    }
+
+    suspend fun setDailyBudgetMinor(value: Long) {
+        context.dataStore.edit { it[Keys.dailyBudgetMinor] = value.coerceAtLeast(0) }
     }
 
     val profile: Flow<UserProfile> = context.dataStore.data.map { prefs ->
@@ -79,7 +87,8 @@ class SettingsRepository(private val context: Context) {
             dynamicColors = prefs[Keys.dynamicColors] ?: false,
             notifyDailyReminder = prefs[Keys.notifyDailyReminder] ?: false,
             notifyRecurringDue = prefs[Keys.notifyRecurringDue] ?: true,
-            notifyWeeklySummary = prefs[Keys.notifyWeeklySummary] ?: false
+            notifyWeeklySummary = prefs[Keys.notifyWeeklySummary] ?: false,
+            dailyBudgetMinor = prefs[Keys.dailyBudgetMinor] ?: 0L
         )
     }
 

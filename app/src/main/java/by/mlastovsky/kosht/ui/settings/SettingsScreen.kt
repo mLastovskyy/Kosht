@@ -22,6 +22,7 @@ import androidx.compose.material.icons.rounded.NotificationsActive
 import androidx.compose.material.icons.rounded.Palette
 import androidx.compose.material.icons.rounded.Payments
 import androidx.compose.material.icons.rounded.Repeat
+import androidx.compose.material.icons.rounded.Speed
 import androidx.compose.material.icons.rounded.Summarize
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.HorizontalDivider
@@ -155,6 +156,35 @@ fun SettingsScreen(
             colors = transparentListColors(),
             modifier = Modifier.clickable { showCurrencyDialog = true }
         )
+
+        var showBudgetDialog by remember { mutableStateOf(false) }
+        ListItem(
+            headlineContent = { Text(stringResource(R.string.settings_daily_budget)) },
+            supportingContent = {
+                Text(
+                    if (current.dailyBudgetMinor > 0) {
+                        by.mlastovsky.kosht.util.Money.format(
+                            current.dailyBudgetMinor, current.currencyCode
+                        )
+                    } else {
+                        stringResource(R.string.daily_budget_auto)
+                    }
+                )
+            },
+            leadingContent = { Icon(Icons.Rounded.Speed, contentDescription = null) },
+            colors = transparentListColors(),
+            modifier = Modifier.clickable { showBudgetDialog = true }
+        )
+        if (showBudgetDialog) {
+            DailyBudgetDialog(
+                currencyCode = current.currencyCode,
+                onSet = { minor ->
+                    viewModel.setDailyBudget(minor)
+                    showBudgetDialog = false
+                },
+                onDismiss = { showBudgetDialog = false }
+            )
+        }
 
         HorizontalDivider(Modifier.padding(vertical = 8.dp))
 
@@ -312,6 +342,57 @@ private fun LanguageDialog(
             }
         },
         confirmButton = {
+            TextButton(onClick = onDismiss) { Text(stringResource(R.string.action_cancel)) }
+        }
+    )
+}
+
+@Composable
+private fun DailyBudgetDialog(
+    currencyCode: String,
+    onSet: (Long) -> Unit,
+    onDismiss: () -> Unit
+) {
+    var amountText by remember { mutableStateOf("") }
+    val minor = by.mlastovsky.kosht.util.Money.parseToMinor(amountText, currencyCode) ?: 0L
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(stringResource(R.string.settings_daily_budget)) },
+        text = {
+            Column {
+                Text(
+                    stringResource(R.string.daily_budget_hint),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                OutlinedTextField(
+                    value = amountText,
+                    onValueChange = { amountText = it.take(10) },
+                    placeholder = { Text(stringResource(R.string.amount_hint)) },
+                    singleLine = true,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(top = 12.dp)
+                )
+                Text(
+                    text = stringResource(R.string.daily_budget_auto),
+                    style = MaterialTheme.typography.bodyLarge,
+                    color = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable { onSet(0L) }
+                        .padding(vertical = 12.dp)
+                )
+            }
+        },
+        confirmButton = {
+            TextButton(
+                enabled = minor > 0,
+                onClick = { onSet(minor) }
+            ) { Text(stringResource(R.string.editor_save)) }
+        },
+        dismissButton = {
             TextButton(onClick = onDismiss) { Text(stringResource(R.string.action_cancel)) }
         }
     )

@@ -69,6 +69,10 @@ class SettingsViewModel(
         viewModelScope.launch { settingsRepository.setNotifyWeeklySummary(enabled) }
     }
 
+    fun setDailyBudget(minor: Long) {
+        viewModelScope.launch { settingsRepository.setDailyBudgetMinor(minor) }
+    }
+
     companion object {
         val SUPPORTED_CURRENCIES = listOf("BYN", "USD", "EUR", "PLN", "UAH", "RUB", "GBP", "KZT")
     }

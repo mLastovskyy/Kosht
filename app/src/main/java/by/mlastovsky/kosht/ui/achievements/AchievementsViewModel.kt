@@ -42,6 +42,7 @@ data class BadgeUi(
 data class AchievementsUiState(
     val loaded: Boolean = false,
     val streakDays: Int = 0,
+    val dailyBudgetMinor: Long = 0,
     val challenges: List<ChallengeUi> = emptyList(),
     val badges: List<BadgeUi> = emptyList(),
     val expenseCategories: List<CategoryEntity> = emptyList(),
@@ -110,7 +111,14 @@ class AchievementsViewModel(
     val uiState: StateFlow<AchievementsUiState> = combine(
         activity, walletData, context
     ) { act, wallet, ctx ->
-        val streak = by.mlastovsky.kosht.util.Streak.compute(act.createdStamps)
+        val spendByDay = by.mlastovsky.kosht.util.Streak.spendByDay(act.transactions)
+        val budget = ctx.settings.dailyBudgetMinor.takeIf { it > 0 }
+            ?: by.mlastovsky.kosht.util.Streak.autoDailyBudget(spendByDay)
+        val firstRecordDay = act.transactions
+            .minOfOrNull { it.transaction.timestamp }
+            ?.let(Dates::toLocalDate)
+        val streak = by.mlastovsky.kosht.util.Streak
+            .budgetStreak(spendByDay, budget, firstRecordDay)
         val monthRange = Dates.monthRange(YearMonth.now())
         val monthTx = act.transactions.filter { it.transaction.timestamp in monthRange }
         val monthIncome = monthTx.filter { it.transaction.type == TransactionType.INCOME }
@@ -121,6 +129,7 @@ class AchievementsViewModel(
         AchievementsUiState(
             loaded = true,
             streakDays = streak,
+            dailyBudgetMinor = budget,
             challenges = wallet.challenges.map {
                 evaluate(it, act.transactions, wallet.savings, ctx.rates, ctx.settings.currencyCode)
             },

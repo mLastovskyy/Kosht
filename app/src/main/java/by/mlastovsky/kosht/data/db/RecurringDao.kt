@@ -11,7 +11,7 @@ import kotlinx.coroutines.flow.Flow
 interface RecurringDao {
 
     @Transaction
-    @Query("SELECT * FROM recurring ORDER BY dayOfMonth ASC, id ASC")
+    @Query("SELECT * FROM recurring ORDER BY nextDueEpochDay ASC, id ASC")
     fun observeAll(): Flow<List<RecurringWithCategory>>
 
     @Query("SELECT * FROM recurring WHERE id = :id")

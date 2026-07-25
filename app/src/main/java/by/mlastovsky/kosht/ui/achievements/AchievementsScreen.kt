@@ -107,7 +107,10 @@ fun AchievementsScreen(
 
         LazyColumn(contentPadding = PaddingValues(bottom = 32.dp)) {
             item(key = "streak") {
-                StreakCard(days = state.streakDays)
+                StreakCard(
+                    days = state.streakDays,
+                    budgetText = Money.format(state.dailyBudgetMinor, state.currencyCode)
+                )
             }
 
             item(key = "challenges-header") {
@@ -187,7 +190,7 @@ fun AchievementsScreen(
 }
 
 @Composable
-private fun StreakCard(days: Int) {
+private fun StreakCard(days: Int, budgetText: String) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -215,7 +218,7 @@ private fun StreakCard(days: Int) {
                 color = MaterialTheme.colorScheme.onPrimaryContainer
             )
             Text(
-                text = stringResource(R.string.streak_hint),
+                text = stringResource(R.string.streak_hint, budgetText),
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.8f)
             )

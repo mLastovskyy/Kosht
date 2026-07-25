@@ -41,18 +41,27 @@ class HomeViewModel(
         val balance: Long,
         val income: Long,
         val expense: Long,
-        val streak: Int
+        val spendByDay: Map<java.time.LocalDate, Long>,
+        val firstRecordDay: java.time.LocalDate?
     )
 
     private val totals = combine(
         repository.observeBalance(),
         repository.observeTotal(TransactionType.INCOME, monthRange.first, monthRange.last + 1),
         repository.observeTotal(TransactionType.EXPENSE, monthRange.first, monthRange.last + 1),
-        repository.observeCreatedSince(
-            Dates.toEpochMillis(java.time.LocalDate.now().minusDays(90))
+        repository.observeBetween(
+            Dates.toEpochMillis(java.time.LocalDate.now().minusDays(90)),
+            Long.MAX_VALUE
         )
-    ) { balance, income, expense, created ->
-        Totals(balance, income, expense, Streak.compute(created))
+    ) { balance, income, expense, window ->
+        Totals(
+            balance = balance,
+            income = income,
+            expense = expense,
+            spendByDay = Streak.spendByDay(window),
+            firstRecordDay = window.minOfOrNull { it.transaction.timestamp }
+                ?.let(Dates::toLocalDate)
+        )
     }
 
     private data class HomeContext(
@@ -77,6 +86,8 @@ class HomeViewModel(
         } else {
             null
         }
+        val budget = settings.dailyBudgetMinor.takeIf { it > 0 }
+            ?: Streak.autoDailyBudget(t.spendByDay)
         HomeUiState(
             loaded = true,
             balanceMinor = t.balance,
@@ -86,7 +97,7 @@ class HomeViewModel(
             recent = recent,
             currencyCode = settings.currencyCode,
             profile = profile,
-            streakDays = t.streak
+            streakDays = Streak.budgetStreak(t.spendByDay, budget, t.firstRecordDay)
         )
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), HomeUiState())
 

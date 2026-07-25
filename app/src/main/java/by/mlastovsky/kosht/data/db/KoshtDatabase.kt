@@ -19,7 +19,7 @@ import by.mlastovsky.kosht.data.CategorySeed
         SavingGoalEntity::class,
         ChallengeEntity::class
     ],
-    version = 6,
+    version = 7,
     exportSchema = false
 )
 abstract class KoshtDatabase : RoomDatabase() {
@@ -46,7 +46,8 @@ abstract class KoshtDatabase : RoomDatabase() {
             Room.databaseBuilder(context, KoshtDatabase::class.java, "kosht.db")
                 .addCallback(SeedCallback)
                 .addMigrations(
-                    MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6
+                    MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6,
+                    MIGRATION_6_7
                 )
                 .build()
 
@@ -140,6 +141,41 @@ abstract class KoshtDatabase : RoomDatabase() {
                         "startEpochDay INTEGER NOT NULL, " +
                         "endEpochDay INTEGER NOT NULL, " +
                         "createdAt INTEGER NOT NULL)"
+                )
+            }
+        }
+
+        private val MIGRATION_6_7 = object : Migration(6, 7) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                // Recurring charges move from day-of-month to a concrete next
+                // due date + frequency. Existing rows become due today.
+                db.execSQL(
+                    "CREATE TABLE recurring_new (" +
+                        "id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, " +
+                        "title TEXT NOT NULL, " +
+                        "amountMinor INTEGER NOT NULL, " +
+                        "currencyCode TEXT NOT NULL, " +
+                        "categoryId INTEGER NOT NULL, " +
+                        "nextDueEpochDay INTEGER NOT NULL, " +
+                        "frequency TEXT NOT NULL, " +
+                        "enabled INTEGER NOT NULL, " +
+                        "createdAt INTEGER NOT NULL, " +
+                        "FOREIGN KEY(categoryId) REFERENCES categories(id) " +
+                        "ON UPDATE NO ACTION ON DELETE RESTRICT)"
+                )
+                db.execSQL(
+                    "INSERT INTO recurring_new " +
+                        "(id, title, amountMinor, currencyCode, categoryId, " +
+                        "nextDueEpochDay, frequency, enabled, createdAt) " +
+                        "SELECT id, title, amountMinor, currencyCode, categoryId, " +
+                        "CAST(strftime('%s','now') / 86400 AS INTEGER), 'MONTHLY', " +
+                        "enabled, createdAt FROM recurring"
+                )
+                db.execSQL("DROP TABLE recurring")
+                db.execSQL("ALTER TABLE recurring_new RENAME TO recurring")
+                db.execSQL(
+                    "CREATE INDEX IF NOT EXISTS index_recurring_categoryId " +
+                        "ON recurring (categoryId)"
                 )
             }
         }

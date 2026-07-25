@@ -1,20 +1,61 @@
 package by.mlastovsky.kosht.util
 
+import by.mlastovsky.kosht.data.db.TransactionWithCategory
+import by.mlastovsky.kosht.model.TransactionType
 import java.time.LocalDate
+import java.time.YearMonth
 
+/**
+ * "Days under budget" streak: a day counts when its expenses stay within the
+ * daily budget. Encourages spending less, not logging for its own sake.
+ */
 object Streak {
 
+    /** Fallback budget when there is no history at all: 50.00 in minor units. */
+    const val DEFAULT_BUDGET_MINOR = 50_00L
+
+    fun spendByDay(transactions: List<TransactionWithCategory>): Map<LocalDate, Long> =
+        transactions
+            .filter { it.transaction.type == TransactionType.EXPENSE }
+            .groupBy { Dates.toLocalDate(it.transaction.timestamp) }
+            .mapValues { (_, items) -> items.sumOf { it.transaction.amountMinor } }
+
+    /** Average daily spending of the previous month (or a sensible fallback). */
+    fun autoDailyBudget(
+        spendByDay: Map<LocalDate, Long>,
+        today: LocalDate = LocalDate.now()
+    ): Long {
+        val prevMonth = YearMonth.from(today).minusMonths(1)
+        val prevTotal = spendByDay
+            .filterKeys { YearMonth.from(it) == prevMonth }
+            .values.sum()
+        if (prevTotal > 0) {
+            return (prevTotal / prevMonth.lengthOfMonth()).coerceAtLeast(1)
+        }
+        val currentTotal = spendByDay
+            .filterKeys { YearMonth.from(it) == YearMonth.from(today) }
+            .values.sum()
+        if (currentTotal > 0) {
+            return (currentTotal / today.dayOfMonth).coerceAtLeast(1)
+        }
+        return DEFAULT_BUDGET_MINOR
+    }
+
     /**
-     * Consecutive days with at least one logged record, ending today
-     * (or yesterday, so the streak is not broken before the day is over).
+     * Consecutive days (ending today) with spending within [budgetMinor].
+     * Bounded by [firstRecordDay] so empty pre-history does not count.
      */
-    fun compute(createdStamps: List<Long>, today: LocalDate = LocalDate.now()): Int {
-        if (createdStamps.isEmpty()) return 0
-        val days = createdStamps.map { Dates.toLocalDate(it) }.toHashSet()
-        var cursor = today
-        if (cursor !in days) cursor = cursor.minusDays(1)
-        var streak = 0
-        while (cursor in days) {
+    fun budgetStreak(
+        spendByDay: Map<LocalDate, Long>,
+        budgetMinor: Long,
+        firstRecordDay: LocalDate?,
+        today: LocalDate = LocalDate.now()
+    ): Int {
+        if (firstRecordDay == null || budgetMinor <= 0) return 0
+        if ((spendByDay[today] ?: 0L) > budgetMinor) return 0
+        var streak = if (!today.isBefore(firstRecordDay)) 1 else 0
+        var cursor = today.minusDays(1)
+        while (!cursor.isBefore(firstRecordDay) && (spendByDay[cursor] ?: 0L) <= budgetMinor) {
             streak++
             cursor = cursor.minusDays(1)
         }

@@ -8,11 +8,18 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.Event
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.AssistChip
+import androidx.compose.material3.DatePicker
+import androidx.compose.material3.DatePickerDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.SegmentedButton
@@ -20,6 +27,7 @@ import androidx.compose.material3.SegmentedButtonDefaults
 import androidx.compose.material3.SingleChoiceSegmentedButtonRow
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.material3.rememberDatePickerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -35,10 +43,13 @@ import by.mlastovsky.kosht.R
 import by.mlastovsky.kosht.data.db.CategoryEntity
 import by.mlastovsky.kosht.data.db.DebtEntity
 import by.mlastovsky.kosht.model.DebtDirection
+import by.mlastovsky.kosht.model.RecurringFrequency
 import by.mlastovsky.kosht.ui.CategoryVisuals
 import by.mlastovsky.kosht.ui.components.CategoryBadge
+import by.mlastovsky.kosht.ui.relativeDate
 import by.mlastovsky.kosht.ui.settings.SettingsViewModel
 import by.mlastovsky.kosht.util.Money
+import java.time.LocalDate
 
 @Composable
 private fun AmountField(
@@ -329,6 +340,7 @@ fun AddGoalDialog(
     )
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AddRecurringDialog(
     categories: List<CategoryEntity>,
@@ -338,17 +350,19 @@ fun AddRecurringDialog(
         amountMinor: Long,
         currency: String,
         categoryId: Long,
-        dayOfMonth: Int
+        firstDue: LocalDate,
+        frequency: RecurringFrequency
     ) -> Unit,
     onDismiss: () -> Unit
 ) {
     var title by remember { mutableStateOf("") }
     var amountText by remember { mutableStateOf("") }
-    var dayText by remember { mutableStateOf("1") }
     var currency by remember { mutableStateOf(currencyCode) }
     var categoryId by remember { mutableStateOf(categories.firstOrNull()?.id) }
+    var firstDue by remember { mutableStateOf(LocalDate.now()) }
+    var frequency by remember { mutableStateOf(RecurringFrequency.MONTHLY) }
+    var showDatePicker by remember { mutableStateOf(false) }
     val amountMinor = Money.parseToMinor(amountText, currency) ?: 0L
-    val day = dayText.toIntOrNull() ?: 0
 
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -362,23 +376,38 @@ fun AddRecurringDialog(
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth()
                 )
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    OutlinedTextField(
-                        value = amountText,
-                        onValueChange = { amountText = it.take(12) },
-                        placeholder = { Text(stringResource(R.string.amount_hint)) },
-                        singleLine = true,
-                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
-                        modifier = Modifier.weight(1f)
-                    )
-                    OutlinedTextField(
-                        value = dayText,
-                        onValueChange = { dayText = it.filter(Char::isDigit).take(2) },
-                        label = { Text(stringResource(R.string.recurring_day)) },
-                        singleLine = true,
-                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                        modifier = Modifier.weight(1f)
-                    )
+                OutlinedTextField(
+                    value = amountText,
+                    onValueChange = { amountText = it.take(12) },
+                    placeholder = { Text(stringResource(R.string.amount_hint)) },
+                    singleLine = true,
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+                    modifier = Modifier.fillMaxWidth()
+                )
+                AssistChip(
+                    onClick = { showDatePicker = true },
+                    leadingIcon = {
+                        Icon(
+                            Icons.Rounded.Event,
+                            contentDescription = null,
+                            Modifier.size(18.dp)
+                        )
+                    },
+                    label = {
+                        Text(
+                            stringResource(R.string.recurring_first_date) + ": " +
+                                relativeDate(firstDue)
+                        )
+                    }
+                )
+                LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    items(RecurringFrequency.entries) { option ->
+                        FilterChip(
+                            selected = frequency == option,
+                            onClick = { frequency = option },
+                            label = { Text(frequencyLabel(option)) }
+                        )
+                    }
                 }
                 CurrencyChips(currency) { currency = it }
                 LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -409,16 +438,55 @@ fun AddRecurringDialog(
         },
         confirmButton = {
             TextButton(
-                enabled = title.isNotBlank() && amountMinor > 0 &&
-                    day in 1..31 && categoryId != null,
-                onClick = { onConfirm(title, amountMinor, currency, categoryId!!, day) }
+                enabled = title.isNotBlank() && amountMinor > 0 && categoryId != null,
+                onClick = {
+                    onConfirm(title, amountMinor, currency, categoryId!!, firstDue, frequency)
+                }
             ) { Text(stringResource(R.string.action_add)) }
         },
         dismissButton = {
             TextButton(onClick = onDismiss) { Text(stringResource(R.string.action_cancel)) }
         }
     )
+
+    if (showDatePicker) {
+        val pickerState = rememberDatePickerState(
+            initialSelectedDateMillis = firstDue
+                .atStartOfDay(java.time.ZoneOffset.UTC).toInstant().toEpochMilli()
+        )
+        DatePickerDialog(
+            onDismissRequest = { showDatePicker = false },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        pickerState.selectedDateMillis?.let { millis ->
+                            firstDue = java.time.Instant.ofEpochMilli(millis)
+                                .atZone(java.time.ZoneOffset.UTC).toLocalDate()
+                        }
+                        showDatePicker = false
+                    }
+                ) { Text(stringResource(R.string.action_apply)) }
+            },
+            dismissButton = {
+                TextButton(onClick = { showDatePicker = false }) {
+                    Text(stringResource(R.string.action_cancel))
+                }
+            }
+        ) {
+            DatePicker(state = pickerState, showModeToggle = false)
+        }
+    }
 }
+
+@Composable
+fun frequencyLabel(frequency: RecurringFrequency): String = stringResource(
+    when (frequency) {
+        RecurringFrequency.WEEKLY -> R.string.freq_weekly
+        RecurringFrequency.MONTHLY -> R.string.freq_monthly
+        RecurringFrequency.QUARTERLY -> R.string.freq_quarterly
+        RecurringFrequency.YEARLY -> R.string.freq_yearly
+    }
+)
 
 @Composable
 fun ConfirmRecurringDialog(

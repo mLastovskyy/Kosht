@@ -204,11 +204,14 @@ class WalletViewModel(
         amountMinor: Long,
         currencyCode: String,
         categoryId: Long,
-        dayOfMonth: Int
+        firstDue: java.time.LocalDate,
+        frequency: by.mlastovsky.kosht.model.RecurringFrequency
     ) {
         if (title.isBlank() || amountMinor <= 0) return
         viewModelScope.launch {
-            walletRepository.addRecurring(title, amountMinor, currencyCode, categoryId, dayOfMonth)
+            walletRepository.addRecurring(
+                title, amountMinor, currencyCode, categoryId, firstDue, frequency
+            )
         }
     }
 

@@ -207,6 +207,7 @@ class StatsViewModel(
 
         val verdict = when {
             income > 0 && expense > income -> ReportVerdict.BAD
+            income == 0L && expense > 0 -> ReportVerdict.OK
             deltaPercent != null && deltaPercent > 20 -> ReportVerdict.OK
             else -> ReportVerdict.GREAT
         }

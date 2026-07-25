@@ -21,7 +21,6 @@ import by.mlastovsky.kosht.model.TransactionType
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
 import java.time.LocalDate
-import java.time.YearMonth
 
 /**
  * Debts, savings, goals, challenges and recurring charges — everything on
@@ -169,14 +168,16 @@ class WalletRepository(
         amountMinor: Long,
         currencyCode: String,
         categoryId: Long,
-        dayOfMonth: Int
+        firstDue: LocalDate,
+        frequency: by.mlastovsky.kosht.model.RecurringFrequency
     ): Long = recurringDao.insert(
         RecurringEntity(
             title = title.trim(),
             amountMinor = amountMinor,
             currencyCode = currencyCode,
             categoryId = categoryId,
-            dayOfMonth = dayOfMonth.coerceIn(1, 31),
+            nextDueEpochDay = firstDue.toEpochDay(),
+            frequency = frequency,
             createdAt = System.currentTimeMillis()
         )
     )
@@ -190,9 +191,9 @@ class WalletRepository(
     }
 
     /**
-     * Confirms this month's charge: records the expense transaction (already
-     * converted to the app currency by the caller when needed) and stamps the
-     * current period so it is not asked again until next month.
+     * Confirms a due charge: records the expense transaction (already
+     * converted to the app currency by the caller when needed) and advances
+     * the next due date by one period.
      */
     suspend fun confirmRecurring(
         recurring: RecurringEntity,
@@ -211,6 +212,6 @@ class WalletRepository(
                 bynMinor = bynMinor
             )
         )
-        recurringDao.update(recurring.copy(lastConfirmed = YearMonth.now().toString()))
+        recurringDao.update(recurring.advanced())
     }
 }
