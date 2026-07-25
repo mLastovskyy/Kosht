@@ -12,6 +12,13 @@
 
     <!-- Главная -->
     <string name="home_balance">Общий баланс</string>
+    <string name="home_greeting">Привет, %1$s!</string>
+    <string name="settings_profile">Профиль</string>
+    <string name="profile_name">Имя</string>
+    <string name="profile_nickname">Никнейм</string>
+    <string name="profile_default_name">Друг</string>
+    <string name="profile_edit_hint">Нажмите, чтобы настроить профиль</string>
+    <string name="profile_photo_hint">Нажмите на аватар, чтобы сменить фото</string>
     <string name="home_income">Доходы</string>
     <string name="home_expenses">Расходы</string>
     <string name="home_recent">Недавние</string>

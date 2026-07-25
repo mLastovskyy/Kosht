@@ -29,10 +29,12 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.ListItem
 import androidx.compose.material3.ListItemDefaults
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import by.mlastovsky.kosht.ui.components.Avatar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -64,6 +66,10 @@ fun SettingsScreen(
     val context = LocalContext.current
     val activity = LocalActivity.current
 
+    val profile by viewModel.profile.collectAsStateWithLifecycle()
+    var showProfileDialog by remember { mutableStateOf(false) }
+    val defaultName = stringResource(R.string.profile_default_name)
+
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -75,6 +81,32 @@ fun SettingsScreen(
             style = MaterialTheme.typography.headlineMedium,
             modifier = Modifier.padding(horizontal = 16.dp, vertical = 16.dp)
         )
+
+        profile?.let { p ->
+            ListItem(
+                headlineContent = {
+                    Text(
+                        text = p.displayName(defaultName),
+                        style = MaterialTheme.typography.titleMedium
+                    )
+                },
+                supportingContent = {
+                    Text(
+                        p.name.ifBlank { stringResource(R.string.profile_edit_hint) }
+                    )
+                },
+                leadingContent = {
+                    Avatar(
+                        photoPath = p.photoPath,
+                        fallbackText = p.displayName(defaultName),
+                        size = 52.dp
+                    )
+                },
+                colors = transparentListColors(),
+                modifier = Modifier.clickable { showProfileDialog = true }
+            )
+            HorizontalDivider(Modifier.padding(vertical = 8.dp))
+        }
 
         SectionHeader(stringResource(R.string.settings_appearance))
 
@@ -207,6 +239,23 @@ fun SettingsScreen(
         )
     }
 
+    if (showProfileDialog) {
+        profile?.let { p ->
+            ProfileDialog(
+                initialName = p.name,
+                initialNickname = p.nickname,
+                photoPath = p.photoPath,
+                defaultName = defaultName,
+                onPickPhoto = viewModel::setProfilePhoto,
+                onSave = { name, nickname ->
+                    viewModel.saveProfile(name, nickname)
+                    showProfileDialog = false
+                },
+                onDismiss = { showProfileDialog = false }
+            )
+        }
+    }
+
     if (showLanguageDialog) {
         LanguageDialog(
             current = language,
@@ -263,6 +312,74 @@ private fun LanguageDialog(
             }
         },
         confirmButton = {
+            TextButton(onClick = onDismiss) { Text(stringResource(R.string.action_cancel)) }
+        }
+    )
+}
+
+@Composable
+private fun ProfileDialog(
+    initialName: String,
+    initialNickname: String,
+    photoPath: String?,
+    defaultName: String,
+    onPickPhoto: (android.net.Uri) -> Unit,
+    onSave: (name: String, nickname: String) -> Unit,
+    onDismiss: () -> Unit
+) {
+    var name by remember { mutableStateOf(initialName) }
+    var nickname by remember { mutableStateOf(initialNickname) }
+    val photoLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.PickVisualMedia()
+    ) { uri -> if (uri != null) onPickPhoto(uri) }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(stringResource(R.string.settings_profile)) },
+        text = {
+            Column(
+                horizontalAlignment = androidx.compose.ui.Alignment.CenterHorizontally,
+                verticalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(12.dp)
+            ) {
+                Avatar(
+                    photoPath = photoPath,
+                    fallbackText = nickname.ifBlank { name.ifBlank { defaultName } },
+                    size = 72.dp,
+                    modifier = Modifier.clickable {
+                        photoLauncher.launch(
+                            androidx.activity.result.PickVisualMediaRequest(
+                                ActivityResultContracts.PickVisualMedia.ImageOnly
+                            )
+                        )
+                    }
+                )
+                Text(
+                    text = stringResource(R.string.profile_photo_hint),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                OutlinedTextField(
+                    value = name,
+                    onValueChange = { name = it.take(40) },
+                    label = { Text(stringResource(R.string.profile_name)) },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth()
+                )
+                OutlinedTextField(
+                    value = nickname,
+                    onValueChange = { nickname = it.take(24) },
+                    label = { Text(stringResource(R.string.profile_nickname)) },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth()
+                )
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = { onSave(name, nickname) }) {
+                Text(stringResource(R.string.editor_save))
+            }
+        },
+        dismissButton = {
             TextButton(onClick = onDismiss) { Text(stringResource(R.string.action_cancel)) }
         }
     )

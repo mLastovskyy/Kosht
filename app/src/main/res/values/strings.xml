@@ -12,6 +12,13 @@
 
     <!-- Home -->
     <string name="home_balance">Total balance</string>
+    <string name="home_greeting">Hi, %1$s!</string>
+    <string name="settings_profile">Profile</string>
+    <string name="profile_name">Name</string>
+    <string name="profile_nickname">Nickname</string>
+    <string name="profile_default_name">Friend</string>
+    <string name="profile_edit_hint">Tap to set up your profile</string>
+    <string name="profile_photo_hint">Tap the avatar to change the photo</string>
     <string name="home_income">Income</string>
     <string name="home_expenses">Expenses</string>
     <string name="home_recent">Recent</string>

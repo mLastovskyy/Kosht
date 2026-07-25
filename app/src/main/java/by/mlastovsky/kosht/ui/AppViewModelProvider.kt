@@ -43,7 +43,10 @@ object AppViewModelProvider {
             )
         }
         initializer {
-            SettingsViewModel(app().container.settingsRepository)
+            SettingsViewModel(
+                app().container.settingsRepository,
+                app().container.photoStore
+            )
         }
         initializer {
             WalletViewModel(

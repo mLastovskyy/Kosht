@@ -14,24 +14,25 @@ import java.io.File
  */
 class PhotoStore(private val context: Context) {
 
-    suspend fun saveFromUri(uri: Uri): String? = withContext(Dispatchers.IO) {
-        runCatching {
-            val bitmap = decodeDownscaled(uri) ?: return@runCatching null
-            val dir = File(context.filesDir, "receipts").apply { mkdirs() }
-            val file = File(dir, "photo_${System.currentTimeMillis()}.jpg")
-            file.outputStream().use { out ->
-                bitmap.compress(Bitmap.CompressFormat.JPEG, JPEG_QUALITY, out)
-            }
-            file.absolutePath
-        }.getOrNull()
-    }
+    suspend fun saveFromUri(uri: Uri, subdir: String = "receipts"): String? =
+        withContext(Dispatchers.IO) {
+            runCatching {
+                val bitmap = decodeDownscaled(uri) ?: return@runCatching null
+                val dir = File(context.filesDir, subdir).apply { mkdirs() }
+                val file = File(dir, "photo_${System.currentTimeMillis()}.jpg")
+                file.outputStream().use { out ->
+                    bitmap.compress(Bitmap.CompressFormat.JPEG, JPEG_QUALITY, out)
+                }
+                file.absolutePath
+            }.getOrNull()
+        }
 
     fun delete(path: String?) {
         if (path.isNullOrBlank()) return
         runCatching {
             val file = File(path)
-            // Only ever touch our own attachment directory.
-            if (file.parentFile?.name == "receipts") file.delete()
+            // Only ever touch our own attachment directories.
+            if (file.parentFile?.name in setOf("receipts", "profile")) file.delete()
         }
     }
 

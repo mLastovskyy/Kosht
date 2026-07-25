@@ -42,6 +42,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import by.mlastovsky.kosht.R
 import by.mlastovsky.kosht.ui.AppViewModelProvider
 import by.mlastovsky.kosht.ui.components.AnimatedAmountText
+import by.mlastovsky.kosht.ui.components.Avatar
 import by.mlastovsky.kosht.ui.components.EmptyState
 import by.mlastovsky.kosht.ui.components.TransactionRow
 import by.mlastovsky.kosht.ui.relativeDate
@@ -68,6 +69,33 @@ fun HomeScreen(
             .alpha(contentAlpha),
         contentPadding = androidx.compose.foundation.layout.PaddingValues(bottom = 96.dp)
     ) {
+        item(key = "greeting") {
+            val profile = state.profile
+            if (profile != null) {
+                Row(
+                    modifier = Modifier
+                        .statusBarsPadding()
+                        .fillMaxWidth()
+                        .padding(start = 20.dp, end = 20.dp, top = 12.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = stringResource(
+                            R.string.home_greeting,
+                            profile.displayName(stringResource(R.string.profile_default_name))
+                        ),
+                        style = MaterialTheme.typography.titleLarge,
+                        modifier = Modifier.weight(1f)
+                    )
+                    Avatar(
+                        photoPath = profile.photoPath,
+                        fallbackText = profile.displayName(
+                            stringResource(R.string.profile_default_name)
+                        )
+                    )
+                }
+            }
+        }
         item(key = "balance") {
             BalanceCard(
                 balanceMinor = state.balanceMinor,
@@ -129,7 +157,6 @@ private fun BalanceCard(
 ) {
     Card(
         modifier = Modifier
-            .statusBarsPadding()
             .fillMaxWidth()
             .padding(16.dp),
         shape = MaterialTheme.shapes.extraLarge,

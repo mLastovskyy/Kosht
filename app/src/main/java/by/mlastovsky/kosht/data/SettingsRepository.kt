@@ -27,6 +27,16 @@ data class AppSettings(
     val notifyWeeklySummary: Boolean
 )
 
+data class UserProfile(
+    val name: String,
+    val nickname: String,
+    val photoPath: String?
+) {
+    /** Nickname wins, then name, then the localized default. */
+    fun displayName(fallback: String): String =
+        nickname.ifBlank { name.ifBlank { fallback } }
+}
+
 class SettingsRepository(private val context: Context) {
 
     private object Keys {
@@ -36,6 +46,28 @@ class SettingsRepository(private val context: Context) {
         val notifyDailyReminder = booleanPreferencesKey("notify_daily_reminder")
         val notifyRecurringDue = booleanPreferencesKey("notify_recurring_due")
         val notifyWeeklySummary = booleanPreferencesKey("notify_weekly_summary")
+        val profileName = stringPreferencesKey("profile_name")
+        val profileNickname = stringPreferencesKey("profile_nickname")
+        val profilePhotoPath = stringPreferencesKey("profile_photo_path")
+    }
+
+    val profile: Flow<UserProfile> = context.dataStore.data.map { prefs ->
+        UserProfile(
+            name = prefs[Keys.profileName] ?: "",
+            nickname = prefs[Keys.profileNickname] ?: "",
+            photoPath = prefs[Keys.profilePhotoPath]?.takeIf { it.isNotBlank() }
+        )
+    }
+
+    suspend fun setProfile(name: String, nickname: String) {
+        context.dataStore.edit {
+            it[Keys.profileName] = name.trim().take(40)
+            it[Keys.profileNickname] = nickname.trim().take(24)
+        }
+    }
+
+    suspend fun setProfilePhoto(path: String?) {
+        context.dataStore.edit { it[Keys.profilePhotoPath] = path.orEmpty() }
     }
 
     val settings: Flow<AppSettings> = context.dataStore.data.map { prefs ->

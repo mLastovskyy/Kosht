@@ -5,6 +5,7 @@ import androidx.lifecycle.viewModelScope
 import by.mlastovsky.kosht.data.RatesRepository
 import by.mlastovsky.kosht.data.SettingsRepository
 import by.mlastovsky.kosht.data.TransactionRepository
+import by.mlastovsky.kosht.data.UserProfile
 import by.mlastovsky.kosht.data.db.TransactionWithCategory
 import by.mlastovsky.kosht.model.TransactionType
 import by.mlastovsky.kosht.util.Dates
@@ -22,7 +23,8 @@ data class HomeUiState(
     val monthIncomeMinor: Long = 0,
     val monthExpenseMinor: Long = 0,
     val recent: List<TransactionWithCategory> = emptyList(),
-    val currencyCode: String = SettingsRepository.DEFAULT_CURRENCY
+    val currencyCode: String = SettingsRepository.DEFAULT_CURRENCY,
+    val profile: UserProfile? = null
 )
 
 class HomeViewModel(
@@ -40,15 +42,23 @@ class HomeViewModel(
         ::Triple
     )
 
+    private data class HomeContext(
+        val recent: List<TransactionWithCategory>,
+        val settings: by.mlastovsky.kosht.data.AppSettings,
+        val rates: Map<String, by.mlastovsky.kosht.data.db.RateEntity>,
+        val profile: UserProfile
+    )
+
     private val context = combine(
         repository.observeRecent(RECENT_LIMIT),
         settingsRepository.settings,
         ratesRepository.rates,
-        ::Triple
+        settingsRepository.profile,
+        ::HomeContext
     )
 
     val uiState: StateFlow<HomeUiState> = combine(totals, context) { (balance, income, expense),
-        (recent, settings, rates) ->
+        (recent, settings, rates, profile) ->
         val bynEquivalent = if (settings.currencyCode != "BYN") {
             RatesRepository.toBynMinor(balance, settings.currencyCode, rates)
         } else {
@@ -61,7 +71,8 @@ class HomeViewModel(
             monthIncomeMinor = income,
             monthExpenseMinor = expense,
             recent = recent,
-            currencyCode = settings.currencyCode
+            currencyCode = settings.currencyCode,
+            profile = profile
         )
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), HomeUiState())
 
