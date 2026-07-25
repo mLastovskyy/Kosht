@@ -5,6 +5,7 @@ import androidx.lifecycle.viewModelScope
 import by.mlastovsky.kosht.data.SettingsRepository
 import by.mlastovsky.kosht.data.TransactionRepository
 import by.mlastovsky.kosht.data.db.CategoryEntity
+import by.mlastovsky.kosht.data.db.TransactionWithCategory
 import by.mlastovsky.kosht.model.TransactionType
 import by.mlastovsky.kosht.util.Dates
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -15,6 +16,7 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
+import java.time.LocalDate
 import java.time.YearMonth
 
 data class CategorySlice(
@@ -31,6 +33,8 @@ data class StatsUiState(
     val slices: List<CategorySlice> = emptyList(),
     /** Sum per day of month, index 0 = first day. */
     val daily: List<Long> = emptyList(),
+    /** Transactions of the selected type grouped by day, for the calendar view. */
+    val byDay: Map<LocalDate, List<TransactionWithCategory>> = emptyMap(),
     val currencyCode: String = SettingsRepository.DEFAULT_CURRENCY
 ) {
     val isCurrentMonth: Boolean
@@ -92,6 +96,7 @@ class StatsViewModel(
             totalMinor = total,
             slices = slices,
             daily = daily.toList(),
+            byDay = relevant.groupBy { Dates.toLocalDate(it.transaction.timestamp) },
             currencyCode = settings.currencyCode
         )
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), StatsUiState())

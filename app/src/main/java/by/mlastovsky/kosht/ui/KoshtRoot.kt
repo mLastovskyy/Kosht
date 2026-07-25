@@ -98,7 +98,9 @@ fun KoshtRoot() {
                 )
             }
             composable(Routes.STATS) {
-                StatsScreen()
+                StatsScreen(
+                    onTransactionClick = { id -> navController.navigate(Routes.editor(id)) }
+                )
             }
             composable(Routes.SETTINGS) {
                 SettingsScreen()

@@ -18,8 +18,11 @@ import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.CalendarMonth
 import androidx.compose.material.icons.rounded.DonutLarge
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FilledIconToggleButton
+import androidx.compose.material3.Icon
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.SegmentedButton
@@ -29,7 +32,11 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableLongStateOf
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
@@ -50,14 +57,25 @@ import by.mlastovsky.kosht.ui.components.AnimatedAmountText
 import by.mlastovsky.kosht.ui.components.CategoryBadge
 import by.mlastovsky.kosht.ui.components.EmptyState
 import by.mlastovsky.kosht.ui.components.MonthSelector
+import by.mlastovsky.kosht.ui.components.TransactionRow
+import by.mlastovsky.kosht.ui.relativeDate
 import by.mlastovsky.kosht.util.Money
+import java.time.LocalDate
+import java.time.YearMonth
 import kotlin.math.roundToInt
 
 @Composable
 fun StatsScreen(
+    onTransactionClick: (Long) -> Unit,
     viewModel: StatsViewModel = viewModel(factory = AppViewModelProvider.Factory)
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
+    var calendarMode by rememberSaveable { mutableStateOf(false) }
+    var selectedEpochDay by rememberSaveable {
+        mutableLongStateOf(LocalDate.now().toEpochDay())
+    }
+    val selectedDay = LocalDate.ofEpochDay(selectedEpochDay)
+        .takeIf { YearMonth.from(LocalDate.ofEpochDay(selectedEpochDay)) == state.month }
 
     Column(
         modifier = Modifier
@@ -71,13 +89,36 @@ fun StatsScreen(
             onNext = viewModel::nextMonth
         )
 
-        TypeToggle(
-            type = state.type,
-            onTypeChange = viewModel::setType,
+        Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 16.dp)
-        )
+                .padding(horizontal = 16.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            TypeToggle(
+                type = state.type,
+                onTypeChange = viewModel::setType,
+                modifier = Modifier.weight(1f)
+            )
+            FilledIconToggleButton(
+                checked = !calendarMode,
+                onCheckedChange = { calendarMode = false }
+            ) {
+                Icon(
+                    Icons.Rounded.DonutLarge,
+                    contentDescription = stringResource(R.string.stats_view_charts)
+                )
+            }
+            FilledIconToggleButton(
+                checked = calendarMode,
+                onCheckedChange = { calendarMode = true }
+            ) {
+                Icon(
+                    Icons.Rounded.CalendarMonth,
+                    contentDescription = stringResource(R.string.stats_view_calendar)
+                )
+            }
+        }
 
         if (state.loaded && !state.hasData) {
             EmptyState(
@@ -85,45 +126,123 @@ fun StatsScreen(
                 title = stringResource(R.string.stats_no_data_title),
                 subtitle = stringResource(R.string.stats_no_data_subtitle)
             )
+        } else if (calendarMode) {
+            CalendarContent(
+                state = state,
+                selectedDay = selectedDay,
+                onDaySelect = { selectedEpochDay = it.toEpochDay() },
+                onTransactionClick = onTransactionClick
+            )
         } else {
-            LazyColumn(
-                modifier = Modifier.fillMaxSize(),
-                contentPadding = PaddingValues(bottom = 96.dp)
-            ) {
-                item(key = "donut") {
-                    DonutChart(
-                        slices = state.slices,
-                        totalText = Money.format(state.totalMinor, state.currencyCode),
-                        chartKey = "${state.month}-${state.type}",
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(24.dp)
+            ChartsContent(state = state)
+        }
+    }
+}
+
+@Composable
+private fun ChartsContent(state: StatsUiState) {
+    LazyColumn(
+        modifier = Modifier.fillMaxSize(),
+        contentPadding = PaddingValues(bottom = 96.dp)
+    ) {
+        item(key = "donut") {
+            DonutChart(
+                slices = state.slices,
+                totalText = Money.format(state.totalMinor, state.currencyCode),
+                chartKey = "${state.month}-${state.type}",
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(24.dp)
+            )
+        }
+        item(key = "bars") {
+            Column(Modifier.padding(horizontal = 16.dp)) {
+                Text(
+                    text = stringResource(R.string.stats_by_day),
+                    style = MaterialTheme.typography.titleMedium
+                )
+                DailyBarChart(
+                    daily = state.daily,
+                    chartKey = "${state.month}-${state.type}",
+                    color = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(96.dp)
+                        .padding(vertical = 8.dp)
+                )
+            }
+        }
+        items(state.slices, key = { it.category.id }) { slice ->
+            CategorySliceRow(
+                slice = slice,
+                currencyCode = state.currencyCode,
+                modifier = Modifier.animateItem()
+            )
+        }
+    }
+}
+
+@Composable
+private fun CalendarContent(
+    state: StatsUiState,
+    selectedDay: LocalDate?,
+    onDaySelect: (LocalDate) -> Unit,
+    onTransactionClick: (Long) -> Unit
+) {
+    val dayItems = selectedDay?.let { state.byDay[it] }.orEmpty()
+    LazyColumn(
+        modifier = Modifier.fillMaxSize(),
+        contentPadding = PaddingValues(bottom = 96.dp)
+    ) {
+        item(key = "calendar") {
+            CalendarHeatmap(
+                month = state.month,
+                daily = state.daily,
+                selectedDay = selectedDay,
+                onDayClick = onDaySelect,
+                modifier = Modifier.padding(top = 8.dp)
+            )
+        }
+        if (selectedDay != null) {
+            item(key = "day-header") {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp, vertical = 12.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = relativeDate(selectedDay),
+                        style = MaterialTheme.typography.titleMedium,
+                        modifier = Modifier.weight(1f)
                     )
-                }
-                item(key = "bars") {
-                    Column(Modifier.padding(horizontal = 16.dp)) {
+                    val dayTotal = dayItems.sumOf { it.transaction.amountMinor }
+                    if (dayTotal > 0) {
                         Text(
-                            text = stringResource(R.string.stats_by_day),
-                            style = MaterialTheme.typography.titleMedium
-                        )
-                        DailyBarChart(
-                            daily = state.daily,
-                            chartKey = "${state.month}-${state.type}",
-                            color = MaterialTheme.colorScheme.primary,
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .height(96.dp)
-                                .padding(vertical = 8.dp)
+                            text = Money.format(dayTotal, state.currencyCode),
+                            style = MaterialTheme.typography.titleMedium,
+                            color = MaterialTheme.colorScheme.primary
                         )
                     }
                 }
-                items(state.slices, key = { it.category.id }) { slice ->
-                    CategorySliceRow(
-                        slice = slice,
-                        currencyCode = state.currencyCode,
-                        modifier = Modifier.animateItem()
+            }
+            if (dayItems.isEmpty()) {
+                item(key = "day-empty") {
+                    Text(
+                        text = stringResource(R.string.stats_empty_day),
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.padding(horizontal = 16.dp)
                     )
                 }
+            }
+            items(dayItems, key = { it.transaction.id }) { item ->
+                TransactionRow(
+                    item = item,
+                    currencyCode = state.currencyCode,
+                    onClick = { onTransactionClick(item.transaction.id) },
+                    modifier = Modifier.animateItem()
+                )
             }
         }
     }

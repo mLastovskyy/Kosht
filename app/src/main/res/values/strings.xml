@@ -42,6 +42,9 @@
     <string name="stats_no_data_title">No data for this month</string>
     <string name="stats_no_data_subtitle">Transactions will appear here once added</string>
     <string name="stats_by_day">Spending by day</string>
+    <string name="stats_view_charts">Charts</string>
+    <string name="stats_view_calendar">Calendar</string>
+    <string name="stats_empty_day">No transactions this day</string>
 
     <!-- Settings -->
     <string name="settings_appearance">Appearance</string>

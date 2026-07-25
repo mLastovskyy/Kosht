@@ -42,6 +42,9 @@
     <string name="stats_no_data_title">Нет данных за этот месяц</string>
     <string name="stats_no_data_subtitle">Операции появятся здесь после добавления</string>
     <string name="stats_by_day">Траты по дням</string>
+    <string name="stats_view_charts">Графики</string>
+    <string name="stats_view_calendar">Календарь</string>
+    <string name="stats_empty_day">В этот день операций нет</string>
 
     <!-- Настройки -->
     <string name="settings_appearance">Внешний вид</string>
