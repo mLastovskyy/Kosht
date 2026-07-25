@@ -63,6 +63,8 @@ data class StatsUiState(
     /** Transactions of the selected type grouped by day, for the calendar view. */
     val byDay: Map<LocalDate, List<TransactionWithCategory>> = emptyMap(),
     val report: ReportUi? = null,
+    val accounts: List<by.mlastovsky.kosht.data.db.AccountEntity> = emptyList(),
+    val accountFilter: Long? = null,
     val currencyCode: String = SettingsRepository.DEFAULT_CURRENCY
 ) {
     val isCurrentMonth: Boolean
@@ -76,12 +78,14 @@ data class StatsUiState(
 class StatsViewModel(
     repository: TransactionRepository,
     settingsRepository: SettingsRepository,
-    walletRepository: WalletRepository
+    walletRepository: WalletRepository,
+    accountRepository: by.mlastovsky.kosht.data.AccountRepository
 ) : ViewModel() {
 
     private data class Selector(
         val month: YearMonth = YearMonth.now(),
-        val type: TransactionType = TransactionType.EXPENSE
+        val type: TransactionType = TransactionType.EXPENSE,
+        val accountId: Long? = null
     )
 
     private val selector = MutableStateFlow(Selector())
@@ -99,13 +103,15 @@ class StatsViewModel(
     private data class ReportContext(
         val prev: List<TransactionWithCategory>,
         val savings: List<by.mlastovsky.kosht.data.db.SavingEntity>,
-        val profile: UserProfile
+        val profile: UserProfile,
+        val accounts: List<by.mlastovsky.kosht.data.db.AccountEntity>
     )
 
     private val reportContext = combine(
         prevMonthTransactions,
         walletRepository.observeSavingsSince(0L),
         settingsRepository.profile,
+        accountRepository.observeAccounts(),
         ::ReportContext
     )
 
@@ -115,7 +121,13 @@ class StatsViewModel(
         settingsRepository.settings,
         reportContext
     ) { s, all, settings, report ->
-        val relevant = all.filter { it.transaction.type == s.type }
+        val primaryId = report.accounts.firstOrNull()?.id
+        val byAccount = if (s.accountId == null) {
+            all
+        } else {
+            all.filter { (it.transaction.accountId ?: primaryId) == s.accountId }
+        }
+        val relevant = byAccount.filter { it.transaction.type == s.type }
         val total = relevant.sumOf { it.transaction.amountMinor }
 
         val slices = relevant
@@ -145,7 +157,9 @@ class StatsViewModel(
             slices = slices,
             daily = daily.toList(),
             byDay = relevant.groupBy { Dates.toLocalDate(it.transaction.timestamp) },
-            report = buildReport(s.month, all, report),
+            report = buildReport(s.month, byAccount, report),
+            accounts = report.accounts,
+            accountFilter = s.accountId,
             currencyCode = settings.currencyCode
         )
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), StatsUiState())
@@ -234,4 +248,7 @@ class StatsViewModel(
     }
 
     fun setType(type: TransactionType) = selector.update { it.copy(type = type) }
+
+    fun setAccountFilter(accountId: Long?) =
+        selector.update { it.copy(accountId = accountId) }
 }

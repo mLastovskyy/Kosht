@@ -119,6 +119,7 @@ fun EditorScreen(
     var showNewCategory by remember { mutableStateOf(false) }
     var showScanSource by remember { mutableStateOf(false) }
     var showAttachSource by remember { mutableStateOf(false) }
+    var showAccountPicker by remember { mutableStateOf(false) }
     var showPhotoView by remember { mutableStateOf(false) }
     var cameraTarget by remember { mutableStateOf<Uri?>(null) }
     val scanFailedMessage = stringResource(R.string.scan_failed)
@@ -242,6 +243,28 @@ fun EditorScreen(
                 },
                 label = { Text(relativeDate(state.date)) }
             )
+            if (state.accounts.size > 1) {
+                val account = state.accounts.firstOrNull { it.id == state.accountId }
+                if (account != null) {
+                    AssistChip(
+                        onClick = { showAccountPicker = true },
+                        leadingIcon = {
+                            Icon(
+                                CategoryVisuals.icon(account.iconKey),
+                                contentDescription = null,
+                                tint = Color(account.colorArgb),
+                                modifier = Modifier.size(18.dp)
+                            )
+                        },
+                        label = {
+                            Text(
+                                by.mlastovsky.kosht.ui.AccountVisuals.displayName(account),
+                                maxLines = 1
+                            )
+                        }
+                    )
+                }
+            }
             OutlinedTextField(
                 value = state.note,
                 onValueChange = viewModel::setNote,
@@ -402,6 +425,43 @@ fun EditorScreen(
                 )
             },
             onDismiss = { showAttachSource = false }
+        )
+    }
+
+    if (showAccountPicker) {
+        AlertDialog(
+            onDismissRequest = { showAccountPicker = false },
+            title = { Text(stringResource(R.string.editor_account)) },
+            text = {
+                Column {
+                    state.accounts.forEach { account ->
+                        ListItem(
+                            headlineContent = {
+                                Text(by.mlastovsky.kosht.ui.AccountVisuals.displayName(account))
+                            },
+                            leadingContent = {
+                                Icon(
+                                    CategoryVisuals.icon(account.iconKey),
+                                    contentDescription = null,
+                                    tint = Color(account.colorArgb)
+                                )
+                            },
+                            colors = ListItemDefaults.colors(
+                                containerColor = Color.Transparent
+                            ),
+                            modifier = Modifier.clickable {
+                                viewModel.selectAccount(account.id)
+                                showAccountPicker = false
+                            }
+                        )
+                    }
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = { showAccountPicker = false }) {
+                    Text(stringResource(R.string.action_cancel))
+                }
+            }
         )
     }
 

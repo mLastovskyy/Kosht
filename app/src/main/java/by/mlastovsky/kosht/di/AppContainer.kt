@@ -1,6 +1,7 @@
 package by.mlastovsky.kosht.di
 
 import android.content.Context
+import by.mlastovsky.kosht.data.AccountRepository
 import by.mlastovsky.kosht.data.CurrencyChanger
 import by.mlastovsky.kosht.data.PhotoStore
 import by.mlastovsky.kosht.data.RatesRepository
@@ -29,6 +30,10 @@ class AppContainer(context: Context) {
 
     val ratesRepository: RatesRepository by lazy {
         RatesRepository(database.rateDao())
+    }
+
+    val accountRepository: AccountRepository by lazy {
+        AccountRepository(database.accountDao(), database.transactionDao())
     }
 
     val walletRepository: WalletRepository by lazy {

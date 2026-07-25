@@ -28,7 +28,8 @@ object AppViewModelProvider {
             HomeViewModel(
                 app().container.transactionRepository,
                 app().container.settingsRepository,
-                app().container.ratesRepository
+                app().container.ratesRepository,
+                app().container.accountRepository
             )
         }
         initializer {
@@ -41,14 +42,16 @@ object AppViewModelProvider {
             StatsViewModel(
                 app().container.transactionRepository,
                 app().container.settingsRepository,
-                app().container.walletRepository
+                app().container.walletRepository,
+                app().container.accountRepository
             )
         }
         initializer {
             SettingsViewModel(
                 app().container.settingsRepository,
                 app().container.photoStore,
-                app().container.currencyChanger
+                app().container.currencyChanger,
+                app().container.accountRepository
             )
         }
         initializer {
@@ -74,7 +77,8 @@ object AppViewModelProvider {
                 settingsRepository = app().container.settingsRepository,
                 receiptScanner = app().container.receiptScanner,
                 photoStore = app().container.photoStore,
-                ratesRepository = app().container.ratesRepository
+                ratesRepository = app().container.ratesRepository,
+                accountRepository = app().container.accountRepository
             )
         }
     }

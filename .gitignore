@@ -1,5 +1,7 @@
 *.iml
 .gradle
+/CLAUDE.md
+/HANDOFF.md
 /local.properties
 /.idea
 .DS_Store

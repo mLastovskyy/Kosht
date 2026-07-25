@@ -17,6 +17,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ReceiptLong
@@ -96,7 +97,7 @@ fun HomeScreen(
                         overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
                         modifier = Modifier.weight(1f)
                     )
-                    if (state.loaded && state.showStreak) {
+                    if (state.loaded && state.showStreak && state.streakDays > 0) {
                         Row(
                             verticalAlignment = Alignment.CenterVertically,
                             modifier = Modifier
@@ -140,6 +141,52 @@ fun HomeScreen(
                 expenseMinor = state.monthExpenseMinor,
                 currencyCode = state.currencyCode
             )
+        }
+        if (state.accountBalances.isNotEmpty()) {
+            item(key = "accounts") {
+                androidx.compose.foundation.lazy.LazyRow(
+                    contentPadding = androidx.compose.foundation.layout.PaddingValues(
+                        horizontal = 16.dp
+                    ),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    items(
+                        state.accountBalances.size,
+                        key = { state.accountBalances[it].first.id }
+                    ) { index ->
+                        val (account, balance) = state.accountBalances[index]
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                            modifier = Modifier
+                                .clip(MaterialTheme.shapes.medium)
+                                .background(MaterialTheme.colorScheme.surfaceContainer)
+                                .padding(horizontal = 12.dp, vertical = 8.dp)
+                        ) {
+                            Icon(
+                                imageVector = by.mlastovsky.kosht.ui.CategoryVisuals
+                                    .icon(account.iconKey),
+                                contentDescription = null,
+                                tint = Color(account.colorArgb),
+                                modifier = Modifier.size(18.dp)
+                            )
+                            Column {
+                                Text(
+                                    text = by.mlastovsky.kosht.ui.AccountVisuals
+                                        .displayName(account),
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                                Text(
+                                    text = Money.format(balance, state.currencyCode),
+                                    style = MaterialTheme.typography.titleSmall,
+                                    maxLines = 1
+                                )
+                            }
+                        }
+                    }
+                }
+            }
         }
         item(key = "recent-header") {
             Row(

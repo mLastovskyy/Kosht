@@ -8,6 +8,7 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -17,7 +18,9 @@ import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.HelpOutline
+import androidx.compose.material.icons.rounded.AccountBalanceWallet
 import androidx.compose.material.icons.rounded.BrightnessMedium
+import androidx.compose.material.icons.rounded.DeleteOutline
 import androidx.compose.material.icons.rounded.CurrencyExchange
 import androidx.compose.material.icons.rounded.Info
 import androidx.compose.material.icons.rounded.LocalFireDepartment
@@ -184,6 +187,25 @@ fun SettingsScreen(
             colors = transparentListColors(),
             modifier = Modifier.clickable { showBudgetDialog = true }
         )
+        var showAccountsDialog by remember { mutableStateOf(false) }
+        ListItem(
+            headlineContent = { Text(stringResource(R.string.settings_accounts)) },
+            supportingContent = { Text(stringResource(R.string.settings_accounts_desc)) },
+            leadingContent = {
+                Icon(Icons.Rounded.AccountBalanceWallet, contentDescription = null)
+            },
+            colors = transparentListColors(),
+            modifier = Modifier.clickable { showAccountsDialog = true }
+        )
+        if (showAccountsDialog) {
+            AccountsDialog(
+                accounts = viewModel.accounts.collectAsStateWithLifecycle().value,
+                onAdd = viewModel::addAccount,
+                onDelete = viewModel::deleteAccount,
+                onDismiss = { showAccountsDialog = false }
+            )
+        }
+
         if (showBudgetDialog) {
             DailyBudgetDialog(
                 currencyCode = current.currencyCode,
@@ -219,6 +241,13 @@ fun SettingsScreen(
                 icon = Icons.Rounded.CurrencyExchange,
                 checked = current.showRates,
                 onChange = viewModel::setShowRates
+            )
+            NotificationToggle(
+                titleRes = R.string.auto_convert,
+                descRes = R.string.auto_convert_desc,
+                icon = Icons.Rounded.Payments,
+                checked = current.convertOnCurrencyChange,
+                onChange = viewModel::setConvertOnCurrencyChange
             )
         }
 
@@ -387,6 +416,123 @@ private fun LanguageDialog(
                         )
                     }
                 }
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = onDismiss) { Text(stringResource(R.string.action_cancel)) }
+        }
+    )
+}
+
+@Composable
+private fun AccountsDialog(
+    accounts: List<by.mlastovsky.kosht.data.db.AccountEntity>,
+    onAdd: (name: String, iconKey: String, colorArgb: Long) -> Unit,
+    onDelete: (by.mlastovsky.kosht.data.db.AccountEntity) -> Unit,
+    onDismiss: () -> Unit
+) {
+    var name by remember { mutableStateOf("") }
+    var iconKey by remember {
+        mutableStateOf(by.mlastovsky.kosht.ui.AccountVisuals.pickableIconKeys.first())
+    }
+    var colorArgb by remember {
+        androidx.compose.runtime.mutableLongStateOf(
+            by.mlastovsky.kosht.ui.CategoryVisuals.pickableColors.first()
+        )
+    }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(stringResource(R.string.settings_accounts)) },
+        text = {
+            Column(
+                modifier = Modifier.verticalScroll(rememberScrollState()),
+                verticalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(8.dp)
+            ) {
+                accounts.forEach { account ->
+                    androidx.compose.foundation.layout.Row(
+                        verticalAlignment = androidx.compose.ui.Alignment.CenterVertically,
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Icon(
+                            by.mlastovsky.kosht.ui.CategoryVisuals.icon(account.iconKey),
+                            contentDescription = null,
+                            tint = androidx.compose.ui.graphics.Color(account.colorArgb)
+                        )
+                        Text(
+                            text = by.mlastovsky.kosht.ui.AccountVisuals.displayName(account),
+                            style = MaterialTheme.typography.bodyLarge,
+                            modifier = Modifier
+                                .weight(1f)
+                                .padding(start = 12.dp)
+                        )
+                        if (accounts.size > 1) {
+                            androidx.compose.material3.IconButton(
+                                onClick = { onDelete(account) }
+                            ) {
+                                Icon(
+                                    androidx.compose.material.icons.Icons.Rounded.DeleteOutline,
+                                    contentDescription = stringResource(R.string.editor_delete),
+                                    tint = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                        }
+                    }
+                }
+                HorizontalDivider(Modifier.padding(vertical = 4.dp))
+                Text(
+                    stringResource(R.string.account_new),
+                    style = MaterialTheme.typography.labelLarge
+                )
+                OutlinedTextField(
+                    value = name,
+                    onValueChange = { name = it.take(30) },
+                    placeholder = { Text(stringResource(R.string.category_name_hint)) },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth()
+                )
+                androidx.compose.foundation.lazy.LazyRow(
+                    horizontalArrangement =
+                        androidx.compose.foundation.layout.Arrangement.spacedBy(8.dp)
+                ) {
+                    items(
+                        by.mlastovsky.kosht.ui.AccountVisuals.pickableIconKeys.size
+                    ) { index ->
+                        val key = by.mlastovsky.kosht.ui.AccountVisuals.pickableIconKeys[index]
+                        by.mlastovsky.kosht.ui.components.CategoryBadge(
+                            iconKey = key,
+                            color = androidx.compose.ui.graphics.Color(colorArgb),
+                            selected = key == iconKey,
+                            size = 40.dp,
+                            modifier = Modifier.clickable { iconKey = key }
+                        )
+                    }
+                }
+                androidx.compose.foundation.lazy.LazyRow(
+                    horizontalArrangement =
+                        androidx.compose.foundation.layout.Arrangement.spacedBy(8.dp)
+                ) {
+                    items(
+                        by.mlastovsky.kosht.ui.CategoryVisuals.pickableColors.size
+                    ) { index ->
+                        val color = by.mlastovsky.kosht.ui.CategoryVisuals.pickableColors[index]
+                        androidx.compose.foundation.layout.Box(
+                            modifier = Modifier
+                                .padding(vertical = 4.dp)
+                                .size(if (color == colorArgb) 40.dp else 32.dp)
+                                .clip(androidx.compose.foundation.shape.CircleShape)
+                                .background(androidx.compose.ui.graphics.Color(color))
+                                .clickable { colorArgb = color }
+                        )
+                    }
+                }
+                TextButton(
+                    enabled = name.isNotBlank(),
+                    onClick = {
+                        onAdd(name.trim(), iconKey, colorArgb)
+                        name = ""
+                    }
+                ) { Text(stringResource(R.string.action_add)) }
             }
         },
         confirmButton = {

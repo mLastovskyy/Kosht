@@ -18,8 +18,22 @@ import kotlinx.coroutines.launch
 class SettingsViewModel(
     private val settingsRepository: SettingsRepository,
     private val photoStore: PhotoStore,
-    private val currencyChanger: by.mlastovsky.kosht.data.CurrencyChanger
+    private val currencyChanger: by.mlastovsky.kosht.data.CurrencyChanger,
+    private val accountRepository: by.mlastovsky.kosht.data.AccountRepository
 ) : ViewModel() {
+
+    val accounts: StateFlow<List<by.mlastovsky.kosht.data.db.AccountEntity>> =
+        accountRepository.observeAccounts()
+            .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
+
+    fun addAccount(name: String, iconKey: String, colorArgb: Long) {
+        if (name.isBlank()) return
+        viewModelScope.launch { accountRepository.addAccount(name, iconKey, colorArgb) }
+    }
+
+    fun deleteAccount(account: by.mlastovsky.kosht.data.db.AccountEntity) {
+        viewModelScope.launch { accountRepository.deleteAccount(account) }
+    }
 
     val settings: StateFlow<AppSettings?> = settingsRepository.settings
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), null)
@@ -101,6 +115,10 @@ class SettingsViewModel(
 
     fun setShowRates(value: Boolean) {
         viewModelScope.launch { settingsRepository.setShowRates(value) }
+    }
+
+    fun setConvertOnCurrencyChange(value: Boolean) {
+        viewModelScope.launch { settingsRepository.setConvertOnCurrencyChange(value) }
     }
 
     companion object {

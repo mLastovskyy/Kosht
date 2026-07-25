@@ -17,9 +17,10 @@ import by.mlastovsky.kosht.data.CategorySeed
         SavingEntity::class,
         RecurringEntity::class,
         SavingGoalEntity::class,
-        ChallengeEntity::class
+        ChallengeEntity::class,
+        AccountEntity::class
     ],
-    version = 7,
+    version = 8,
     exportSchema = false
 )
 abstract class KoshtDatabase : RoomDatabase() {
@@ -40,6 +41,8 @@ abstract class KoshtDatabase : RoomDatabase() {
 
     abstract fun challengeDao(): ChallengeDao
 
+    abstract fun accountDao(): AccountDao
+
     companion object {
 
         fun build(context: Context): KoshtDatabase =
@@ -47,7 +50,7 @@ abstract class KoshtDatabase : RoomDatabase() {
                 .addCallback(SeedCallback)
                 .addMigrations(
                     MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6,
-                    MIGRATION_6_7
+                    MIGRATION_6_7, MIGRATION_7_8
                 )
                 .build()
 
@@ -180,6 +183,28 @@ abstract class KoshtDatabase : RoomDatabase() {
             }
         }
 
+        private val MIGRATION_7_8 = object : Migration(7, 8) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL(
+                    "CREATE TABLE IF NOT EXISTS accounts (" +
+                        "id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, " +
+                        "key TEXT, name TEXT NOT NULL, iconKey TEXT NOT NULL, " +
+                        "colorArgb INTEGER NOT NULL, position INTEGER NOT NULL)"
+                )
+                db.execSQL("ALTER TABLE transactions ADD COLUMN accountId INTEGER")
+                seedAccounts(db)
+            }
+        }
+
+        private fun seedAccounts(db: SupportSQLiteDatabase) {
+            // A single primary account keeps the UI exactly as before;
+            // account pickers appear only after the user adds more.
+            db.execSQL(
+                "INSERT INTO accounts (key, name, iconKey, colorArgb, position) " +
+                    "VALUES ('card', '', 'card', ${0xFF1E88E5}, 0)"
+            )
+        }
+
         private object SeedCallback : Callback() {
             override fun onCreate(db: SupportSQLiteDatabase) {
                 CategorySeed.all.forEachIndexed { index, seed ->
@@ -189,6 +214,7 @@ abstract class KoshtDatabase : RoomDatabase() {
                         arrayOf<Any?>(seed.key, seed.iconKey, seed.colorArgb, seed.type.name, index)
                     )
                 }
+                seedAccounts(db)
             }
         }
     }

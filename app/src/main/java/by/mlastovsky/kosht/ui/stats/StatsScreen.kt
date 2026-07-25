@@ -16,6 +16,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.CalendarMonth
@@ -127,6 +128,32 @@ fun StatsScreen(
                     Icons.Rounded.Insights,
                     contentDescription = stringResource(R.string.stats_view_report)
                 )
+            }
+        }
+
+        if (state.accounts.size > 1) {
+            androidx.compose.foundation.lazy.LazyRow(
+                contentPadding = PaddingValues(horizontal = 16.dp),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                modifier = Modifier.padding(top = 8.dp)
+            ) {
+                item {
+                    androidx.compose.material3.FilterChip(
+                        selected = state.accountFilter == null,
+                        onClick = { viewModel.setAccountFilter(null) },
+                        label = { Text(stringResource(R.string.stats_all_accounts)) }
+                    )
+                }
+                items(state.accounts.size, key = { state.accounts[it].id }) { index ->
+                    val account = state.accounts[index]
+                    androidx.compose.material3.FilterChip(
+                        selected = state.accountFilter == account.id,
+                        onClick = { viewModel.setAccountFilter(account.id) },
+                        label = {
+                            Text(by.mlastovsky.kosht.ui.AccountVisuals.displayName(account))
+                        }
+                    )
+                }
             }
         }
 

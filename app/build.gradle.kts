@@ -9,7 +9,7 @@ val gitCommitCount: Int = providers.exec {
     commandLine("git", "rev-list", "--count", "HEAD")
 }.standardOutput.asText.map { it.trim().toIntOrNull() ?: 1 }.get()
 
-val appVersionName = "1.$gitCommitCount"
+val appVersionName = "2.$gitCommitCount"
 
 android {
     namespace = "by.mlastovsky.kosht"

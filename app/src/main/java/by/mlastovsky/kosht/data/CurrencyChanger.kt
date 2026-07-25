@@ -25,7 +25,7 @@ class CurrencyChanger(
         val rates = ratesRepository.rates.first()
         val from = rates[oldCode]
         val to = rates[newCode]
-        val convertible = from != null && to != null &&
+        val convertible = settings.convertOnCurrencyChange && from != null && to != null &&
             from.scale > 0 && to.scale > 0 && to.rate > 0.0
         if (convertible) {
             val factor = (from!!.rate / from.scale) / (to!!.rate / to.scale)

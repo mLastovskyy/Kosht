@@ -30,7 +30,9 @@ data class AppSettings(
     val dailyBudgetMinor: Long,
     val showGreeting: Boolean,
     val showStreak: Boolean,
-    val showRates: Boolean
+    val showRates: Boolean,
+    /** Recalculate stored amounts by the NBRB rate when switching currency. */
+    val convertOnCurrencyChange: Boolean
 )
 
 data class UserProfile(
@@ -59,6 +61,11 @@ class SettingsRepository(private val context: Context) {
         val showGreeting = booleanPreferencesKey("show_greeting")
         val showStreak = booleanPreferencesKey("show_streak")
         val showRates = booleanPreferencesKey("show_rates")
+        val convertOnCurrencyChange = booleanPreferencesKey("convert_on_currency_change")
+    }
+
+    suspend fun setConvertOnCurrencyChange(value: Boolean) {
+        context.dataStore.edit { it[Keys.convertOnCurrencyChange] = value }
     }
 
     suspend fun setShowGreeting(value: Boolean) {
@@ -109,7 +116,8 @@ class SettingsRepository(private val context: Context) {
             dailyBudgetMinor = prefs[Keys.dailyBudgetMinor] ?: 0L,
             showGreeting = prefs[Keys.showGreeting] ?: true,
             showStreak = prefs[Keys.showStreak] ?: true,
-            showRates = prefs[Keys.showRates] ?: true
+            showRates = prefs[Keys.showRates] ?: true,
+            convertOnCurrencyChange = prefs[Keys.convertOnCurrencyChange] ?: true
         )
     }
 

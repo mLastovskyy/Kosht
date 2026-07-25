@@ -17,6 +17,8 @@ import androidx.compose.material.icons.automirrored.rounded.ArrowBack
 import androidx.compose.material.icons.automirrored.rounded.ReceiptLong
 import androidx.compose.material.icons.rounded.AccountBalanceWallet
 import androidx.compose.material.icons.rounded.Add
+import androidx.compose.material.icons.rounded.Calculate
+import androidx.compose.material.icons.rounded.CreditCard
 import androidx.compose.material.icons.rounded.DocumentScanner
 import androidx.compose.material.icons.rounded.EmojiEvents
 import androidx.compose.material.icons.rounded.Home
@@ -58,7 +60,17 @@ private val sections = listOf(
         R.string.guide_history_title,
         R.string.guide_history_body
     ),
+    GuideSection(
+        Icons.Rounded.Calculate,
+        R.string.guide_calc_title,
+        R.string.guide_calc_body
+    ),
     GuideSection(Icons.Rounded.PieChart, R.string.guide_stats_title, R.string.guide_stats_body),
+    GuideSection(
+        Icons.Rounded.CreditCard,
+        R.string.guide_accounts_title,
+        R.string.guide_accounts_body
+    ),
     GuideSection(
         Icons.Rounded.AccountBalanceWallet,
         R.string.guide_wallet_title,
@@ -76,6 +88,61 @@ private val sections = listOf(
         R.string.guide_settings_body
     )
 )
+
+/** Copies the bundled PDF to cache and opens it in a viewer. */
+@Composable
+private fun PdfManualCard() {
+    val context = androidx.compose.ui.platform.LocalContext.current
+    val errorText = stringResource(R.string.guide_pdf_error)
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp, vertical = 6.dp)
+            .clip(MaterialTheme.shapes.large)
+            .background(MaterialTheme.colorScheme.primaryContainer)
+            .padding(16.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Column(Modifier.weight(1f)) {
+            Text(
+                text = stringResource(R.string.guide_pdf_title),
+                style = MaterialTheme.typography.titleMedium,
+                color = MaterialTheme.colorScheme.onPrimaryContainer
+            )
+            Text(
+                text = stringResource(R.string.guide_pdf_desc),
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.85f)
+            )
+        }
+        androidx.compose.material3.Button(
+            onClick = {
+                runCatching {
+                    val dir = java.io.File(context.cacheDir, "docs").apply { mkdirs() }
+                    val file = java.io.File(dir, "kosht-manual.pdf")
+                    context.assets.open("manual.pdf").use { input ->
+                        file.outputStream().use { output -> input.copyTo(output) }
+                    }
+                    val uri = androidx.core.content.FileProvider.getUriForFile(
+                        context,
+                        context.packageName + ".fileprovider",
+                        file
+                    )
+                    val intent = android.content.Intent(android.content.Intent.ACTION_VIEW)
+                        .setDataAndType(uri, "application/pdf")
+                        .addFlags(android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                    context.startActivity(intent)
+                }.onFailure {
+                    android.widget.Toast
+                        .makeText(context, errorText, android.widget.Toast.LENGTH_SHORT)
+                        .show()
+                }
+            }
+        ) {
+            Text(stringResource(R.string.guide_pdf_open))
+        }
+    }
+}
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -107,6 +174,9 @@ fun GuideScreen(onBack: () -> Unit) {
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
                 )
+            }
+            item(key = "pdf") {
+                PdfManualCard()
             }
             sections.forEach { section ->
                 item(key = section.titleRes) {

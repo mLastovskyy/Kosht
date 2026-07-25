@@ -15,12 +15,21 @@
     <string name="home_greeting">Hi, %1$s!</string>
     <string name="home_welcome">Welcome!</string>
     <string name="settings_display">Interface</string>
+    <string name="account_card">Card</string>
+    <string name="account_cash">Cash</string>
+    <string name="editor_account">Account</string>
+    <string name="settings_accounts">Accounts</string>
+    <string name="settings_accounts_desc">Cards, cash and other money sources</string>
+    <string name="account_new">New account</string>
+    <string name="stats_all_accounts">All accounts</string>
     <string name="show_greeting">Greeting on Home</string>
     <string name="show_greeting_desc">Hide if you prefer a cleaner look</string>
     <string name="show_streak">Streak on Home</string>
     <string name="show_streak_desc">The 🔥 days-under-budget chip</string>
     <string name="show_rates">Rates card in Wallet</string>
     <string name="show_rates_desc">NBRB exchange rates block</string>
+    <string name="auto_convert">Convert on currency change</string>
+    <string name="auto_convert_desc">Recalculate all amounts by the NBRB rate when switching currency</string>
     <string name="settings_profile">Profile</string>
     <string name="profile_name">Name</string>
     <string name="profile_nickname">Nickname</string>
@@ -214,6 +223,10 @@
     <!-- In-app guide -->
     <string name="guide_title">How to use Kosht</string>
     <string name="guide_settings_entry_desc">Every screen and button explained</string>
+    <string name="guide_pdf_title">Full PDF manual</string>
+    <string name="guide_pdf_desc">An illustrated step-by-step manual with screenshots — open it, save it or share it</string>
+    <string name="guide_pdf_open">Open PDF</string>
+    <string name="guide_pdf_error">No PDF viewer found</string>
     <string name="guide_intro">A quick tour of every screen. Everything works offline and your data never leaves the phone.</string>
     <string name="guide_home_title">Home</string>
     <string name="guide_home_body">The big card shows your total balance (all income minus all expenses) with this month\'s income and expenses below it. If your currency is not BYN, the ≈ line shows the equivalent at the live rate. In the top row: the 🔥 chip is your under-budget streak, the trophy opens Achievements, the avatar is your profile. "Recent" lists the latest records — tap one to edit, "All" jumps to History. The big + button adds a transaction.</string>
@@ -231,6 +244,10 @@
     <string name="guide_savings_body">Debts: + adds one — who, direction (I owe / owed to me), amount in any currency, note. The two tiles total both directions in BYN. Tap a debt to repay a part, close it or delete it. Goals: + creates a goal with a target amount; deposits linked to the goal fill its progress bar, and reaching the target celebrates 🎉. Savings: "Set aside" and "Withdraw" record movements (optionally toward a goal), the journal below lists them with BYN equivalents; the trash removes an entry.</string>
     <string name="guide_achievements_title">Achievements</string>
     <string name="guide_achievements_body">Open with the trophy on Home. The streak card counts consecutive days you stayed within the daily budget (set it in Settings, auto = last month\'s average). Challenges: + creates one — Limit (spend under X, optionally in one category), No spend, or Save up (set aside X) — for a week, until month end or 30 days. Progress updates live; the trash removes a challenge. Badges below unlock automatically as you use the app.</string>
+    <string name="guide_accounts_title">Accounts: cards &amp; cash</string>
+    <string name="guide_accounts_body">By default there is a single account and the app looks perfectly simple. Add more (Settings → Accounts: name, icon, color — e.g. Cash, a second card) and Kosht lights up: the editor gets an account chip next to the date so you choose where the money comes from or goes to, Home shows a balance pill per account under the main card, and Statistics gains an account filter. Deleting an account moves its records to the primary one.</string>
+    <string name="guide_calc_title">Amount calculator</string>
+    <string name="guide_calc_body">The right column of the keypad holds ÷ × − +. Type expressions right in the amount field: 12,50+3,90+8. While an operation is unfinished the Save button turns into = — tap it to evaluate, then save. Multiplication and division take precedence, as they should.</string>
     <string name="guide_settings_title">Settings</string>
     <string name="guide_settings_body">Profile — tap to set a photo from the gallery or one of the built-in avatars, remove it, and set your name and nickname (used in greetings and reports). Theme: system/light/dark plus Material You dynamic colors. Language: system, Russian or English. Currency — switching converts every stored amount at the live NBRB rate. Daily budget powers the streak. Notifications: an evening reminder (only if nothing was logged), payments awaiting confirmation and a Monday summary — each with its own switch.</string>
 

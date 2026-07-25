@@ -38,6 +38,8 @@ data class TransactionEntity(
     val createdAt: Long,
     /** Attached receipt photo (app-private file path). */
     val photoPath: String? = null,
+    /** Money source; null means the primary account. */
+    val accountId: Long? = null,
     /**
      * BYN equivalent frozen at the moment the record was saved, so historical
      * values do not drift when exchange rates change.

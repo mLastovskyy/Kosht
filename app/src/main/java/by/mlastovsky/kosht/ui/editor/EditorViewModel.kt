@@ -44,7 +44,9 @@ data class EditorUiState(
     val currencyCode: String = SettingsRepository.DEFAULT_CURRENCY,
     val scanning: Boolean = false,
     val photoPath: String? = null,
-    val pendingScan: PendingScan? = null
+    val pendingScan: PendingScan? = null,
+    val accounts: List<by.mlastovsky.kosht.data.db.AccountEntity> = emptyList(),
+    val accountId: Long? = null
 ) {
     /** An arithmetic operation is typed but not evaluated yet. */
     val hasPendingOperation: Boolean
@@ -70,7 +72,8 @@ class EditorViewModel(
     settingsRepository: SettingsRepository,
     private val receiptScanner: ReceiptScanner,
     private val photoStore: PhotoStore,
-    private val ratesRepository: RatesRepository
+    private val ratesRepository: RatesRepository,
+    accountRepository: by.mlastovsky.kosht.data.AccountRepository
 ) : ViewModel() {
 
     private val transactionId: Long = savedStateHandle[Routes.EDITOR_ARG_ID] ?: Routes.NO_ID
@@ -83,6 +86,7 @@ class EditorViewModel(
         val date: LocalDate = LocalDate.now(),
         val categoryId: Long? = null,
         val photoPath: String? = null,
+        val accountId: Long? = null,
         /** Original entity when editing, to preserve id/createdAt/time of day. */
         val original: TransactionEntity? = null
     )
@@ -98,13 +102,25 @@ class EditorViewModel(
         .distinctUntilChanged()
         .flatMapLatest { repository.observeCategories(it) }
 
+    private data class Aux(
+        val scanning: Boolean,
+        val pending: PendingScan?,
+        val accounts: List<by.mlastovsky.kosht.data.db.AccountEntity>
+    )
+
+    private val aux = combine(
+        scanning,
+        pendingScan,
+        accountRepository.observeAccounts(),
+        ::Aux
+    )
+
     val uiState: StateFlow<EditorUiState> = combine(
         draft,
         categoriesForType,
         settingsRepository.settings,
-        scanning,
-        pendingScan
-    ) { d, categories, settings, isScanning, pending ->
+        aux
+    ) { d, categories, settings, extras ->
         val effectiveCategoryId = when {
             d.categoryId != null && categories.any { it.id == d.categoryId } -> d.categoryId
             else -> categories.firstOrNull()?.id
@@ -119,9 +135,11 @@ class EditorViewModel(
             categoryId = effectiveCategoryId,
             categories = categories,
             currencyCode = settings.currencyCode,
-            scanning = isScanning,
+            scanning = extras.scanning,
             photoPath = d.photoPath,
-            pendingScan = pending
+            pendingScan = extras.pending,
+            accounts = extras.accounts,
+            accountId = d.accountId ?: extras.accounts.firstOrNull()?.id
         )
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), EditorUiState())
 
@@ -140,6 +158,7 @@ class EditorViewModel(
                             date = Dates.toLocalDate(tx.timestamp),
                             categoryId = tx.categoryId,
                             photoPath = tx.photoPath,
+                            accountId = tx.accountId,
                             original = tx
                         )
                     }
@@ -156,6 +175,10 @@ class EditorViewModel(
 
     fun selectCategory(id: Long) {
         draft.update { it.copy(categoryId = id) }
+    }
+
+    fun selectAccount(id: Long) {
+        draft.update { it.copy(accountId = id) }
     }
 
     fun setNote(note: String) {
@@ -328,6 +351,7 @@ class EditorViewModel(
                         note = state.note.trim(),
                         timestamp = timestamp,
                         photoPath = draft.value.photoPath,
+                        accountId = state.accountId,
                         bynMinor = bynMinor
                     )
                 )
@@ -341,6 +365,7 @@ class EditorViewModel(
                         timestamp = timestamp,
                         createdAt = System.currentTimeMillis(),
                         photoPath = draft.value.photoPath,
+                        accountId = state.accountId,
                         bynMinor = bynMinor
                     )
                 )

@@ -72,6 +72,9 @@ interface TransactionDao {
     @Query("UPDATE transactions SET amountMinor = CAST(ROUND(amountMinor * :factor) AS INTEGER)")
     suspend fun rescaleAmounts(factor: Double)
 
+    @Query("UPDATE transactions SET accountId = :to WHERE accountId = :from OR (:from IS NULL AND accountId IS NULL)")
+    suspend fun reassignAccount(from: Long?, to: Long)
+
     @Insert
     suspend fun insert(transaction: TransactionEntity): Long
 

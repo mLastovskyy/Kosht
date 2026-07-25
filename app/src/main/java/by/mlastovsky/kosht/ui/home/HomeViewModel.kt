@@ -28,13 +28,16 @@ data class HomeUiState(
     val profile: UserProfile? = null,
     val streakDays: Int = 0,
     val showGreeting: Boolean = true,
-    val showStreak: Boolean = true
+    val showStreak: Boolean = true,
+    /** Per-account balances; shown only when there is more than one account. */
+    val accountBalances: List<Pair<by.mlastovsky.kosht.data.db.AccountEntity, Long>> = emptyList()
 )
 
 class HomeViewModel(
     repository: TransactionRepository,
     settingsRepository: SettingsRepository,
-    ratesRepository: RatesRepository
+    ratesRepository: RatesRepository,
+    accountRepository: by.mlastovsky.kosht.data.AccountRepository
 ) : ViewModel() {
 
     private val monthRange = Dates.monthRange(YearMonth.now())
@@ -70,21 +73,40 @@ class HomeViewModel(
         val recent: List<TransactionWithCategory>,
         val settings: by.mlastovsky.kosht.data.AppSettings,
         val rates: Map<String, by.mlastovsky.kosht.data.db.RateEntity>,
-        val profile: UserProfile
+        val profile: UserProfile,
+        val accountBalances: List<Pair<by.mlastovsky.kosht.data.db.AccountEntity, Long>>
     )
+
+    private val accountBalances = combine(
+        accountRepository.observeAccounts(),
+        accountRepository.observeBalances()
+    ) { accounts, balances ->
+        val primaryId = accounts.firstOrNull()?.id
+        accounts.map { account ->
+            val own = balances.firstOrNull { it.accountId == account.id }?.balance ?: 0L
+            // Legacy records without an account belong to the primary one.
+            val legacy = if (account.id == primaryId) {
+                balances.firstOrNull { it.accountId == null }?.balance ?: 0L
+            } else {
+                0L
+            }
+            account to (own + legacy)
+        }
+    }
 
     private val context = combine(
         repository.observeRecent(RECENT_LIMIT),
         settingsRepository.settings,
         ratesRepository.rates,
         settingsRepository.profile,
+        accountBalances,
         ::HomeContext
     )
 
-    val uiState: StateFlow<HomeUiState> = combine(totals, context) { t,
-        (recent, settings, rates, profile) ->
+    val uiState: StateFlow<HomeUiState> = combine(totals, context) { t, ctx ->
+        val settings = ctx.settings
         val bynEquivalent = if (settings.currencyCode != "BYN") {
-            RatesRepository.toBynMinor(t.balance, settings.currencyCode, rates)
+            RatesRepository.toBynMinor(t.balance, settings.currencyCode, ctx.rates)
         } else {
             null
         }
@@ -96,12 +118,13 @@ class HomeViewModel(
             balanceBynMinor = bynEquivalent,
             monthIncomeMinor = t.income,
             monthExpenseMinor = t.expense,
-            recent = recent,
+            recent = ctx.recent,
             currencyCode = settings.currencyCode,
-            profile = profile,
+            profile = ctx.profile,
             streakDays = Streak.budgetStreak(t.spendByDay, budget, t.firstRecordDay),
             showGreeting = settings.showGreeting,
-            showStreak = settings.showStreak
+            showStreak = settings.showStreak,
+            accountBalances = if (ctx.accountBalances.size > 1) ctx.accountBalances else emptyList()
         )
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), HomeUiState())
 
