@@ -43,12 +43,21 @@ data class EditorUiState(
     val categories: List<CategoryEntity> = emptyList(),
     val currencyCode: String = SettingsRepository.DEFAULT_CURRENCY,
     val scanning: Boolean = false,
-    val photoPath: String? = null
+    val photoPath: String? = null,
+    val pendingScan: PendingScan? = null
 ) {
     val canSave: Boolean
         get() = categoryId != null &&
             (Money.parseToMinor(amountInput, currencyCode) ?: 0L) > 0L
 }
+
+/** OCR result awaiting user review before it is applied to the draft. */
+data class PendingScan(
+    val amountInput: String,
+    val date: LocalDate?,
+    val merchant: String?,
+    val photoPath: String?
+)
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class EditorViewModel(
@@ -78,6 +87,8 @@ class EditorViewModel(
 
     private val scanning = MutableStateFlow(false)
 
+    private val pendingScan = MutableStateFlow<PendingScan?>(null)
+
     private val categoriesForType = draft
         .map { it.type }
         .distinctUntilChanged()
@@ -87,8 +98,9 @@ class EditorViewModel(
         draft,
         categoriesForType,
         settingsRepository.settings,
-        scanning
-    ) { d, categories, settings, isScanning ->
+        scanning,
+        pendingScan
+    ) { d, categories, settings, isScanning, pending ->
         val effectiveCategoryId = when {
             d.categoryId != null && categories.any { it.id == d.categoryId } -> d.categoryId
             else -> categories.firstOrNull()?.id
@@ -104,7 +116,8 @@ class EditorViewModel(
             categories = categories,
             currencyCode = settings.currencyCode,
             scanning = isScanning,
-            photoPath = d.photoPath
+            photoPath = d.photoPath,
+            pendingScan = pending
         )
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), EditorUiState())
 
@@ -189,29 +202,47 @@ class EditorViewModel(
         viewModelScope.launch {
             scanning.value = true
             val parsed = receiptScanner.scan(uri)
-            // The scanned photo is attached to the transaction either way.
             val savedPhoto = photoStore.saveFromUri(uri)
             scanning.value = false
             val amount = parsed?.amountMinor
             if (amount != null) {
-                draft.update { d ->
-                    if (savedPhoto != null && d.photoPath != null) {
-                        photoStore.delete(d.photoPath)
-                    }
-                    d.copy(
-                        type = TransactionType.EXPENSE,
-                        amountInput = minorToInput(amount),
-                        date = parsed.date ?: d.date,
-                        note = parsed.merchant ?: d.note,
-                        photoPath = savedPhoto ?: d.photoPath
-                    )
-                }
+                // Let the user review/correct the OCR result before applying.
+                pendingScan.value = PendingScan(
+                    amountInput = minorToInput(amount),
+                    date = parsed.date,
+                    merchant = parsed.merchant,
+                    photoPath = savedPhoto
+                )
                 onResult(true)
             } else {
                 photoStore.delete(savedPhoto)
                 onResult(false)
             }
         }
+    }
+
+    /** Applies the (possibly corrected) scan result to the draft. */
+    fun applyScan(amountInput: String, note: String) {
+        val pending = pendingScan.value ?: return
+        draft.update { d ->
+            if (pending.photoPath != null && d.photoPath != null) {
+                photoStore.delete(d.photoPath)
+            }
+            d.copy(
+                type = TransactionType.EXPENSE,
+                amountInput = amountInput.replace(',', '.').trim(),
+                date = pending.date ?: d.date,
+                note = note.trim().take(200),
+                photoPath = pending.photoPath ?: d.photoPath
+            )
+        }
+        pendingScan.value = null
+    }
+
+    /** Discards the scan result and its photo. */
+    fun dismissScan() {
+        photoStore.delete(pendingScan.value?.photoPath)
+        pendingScan.value = null
     }
 
     fun attachPhoto(uri: Uri) {

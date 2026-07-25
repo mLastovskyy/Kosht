@@ -36,6 +36,10 @@
     <string name="attach_photo">Прикрепить фото</string>
     <string name="photo_receipt">Фото чека</string>
     <string name="photo_remove">Удалить фото</string>
+    <string name="scan_review_title">Распознано с чека</string>
+    <string name="scan_review_hint">Проверьте значения и поправьте при необходимости</string>
+    <string name="scan_review_date">Дата: %1$s</string>
+    <string name="action_apply">Применить</string>
 
     <!-- История -->
     <string name="history_search_hint">Поиск</string>

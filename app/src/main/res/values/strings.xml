@@ -36,6 +36,10 @@
     <string name="attach_photo">Attach photo</string>
     <string name="photo_receipt">Receipt photo</string>
     <string name="photo_remove">Remove photo</string>
+    <string name="scan_review_title">Recognized from receipt</string>
+    <string name="scan_review_hint">Check the values and correct them if needed</string>
+    <string name="scan_review_date">Date: %1$s</string>
+    <string name="action_apply">Apply</string>
 
     <!-- History -->
     <string name="history_search_hint">Search</string>

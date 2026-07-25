@@ -25,6 +25,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
@@ -392,6 +393,14 @@ fun EditorScreen(
         )
     }
 
+    state.pendingScan?.let { pending ->
+        ScanReviewDialog(
+            pending = pending,
+            onApply = { amount, note -> viewModel.applyScan(amount, note) },
+            onDismiss = { viewModel.dismissScan() }
+        )
+    }
+
     if (showPhotoView && state.photoPath != null) {
         PhotoViewDialog(
             path = state.photoPath!!,
@@ -441,6 +450,72 @@ private fun PhotoSourceDialog(
             }
         },
         confirmButton = {
+            TextButton(onClick = onDismiss) { Text(stringResource(R.string.action_cancel)) }
+        }
+    )
+}
+
+@Composable
+private fun ScanReviewDialog(
+    pending: PendingScan,
+    onApply: (amount: String, note: String) -> Unit,
+    onDismiss: () -> Unit
+) {
+    var amountText by remember { mutableStateOf(pending.amountInput.replace('.', ',')) }
+    var noteText by remember { mutableStateOf(pending.merchant.orEmpty()) }
+    val thumbnail = rememberBitmapFromPath(pending.photoPath, maxDimension = 512)
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(stringResource(R.string.scan_review_title)) },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                Text(
+                    text = stringResource(R.string.scan_review_hint),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                if (thumbnail != null) {
+                    Image(
+                        bitmap = thumbnail,
+                        contentDescription = null,
+                        contentScale = ContentScale.Crop,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(120.dp)
+                            .clip(MaterialTheme.shapes.medium)
+                    )
+                }
+                OutlinedTextField(
+                    value = amountText,
+                    onValueChange = { amountText = it.take(12) },
+                    label = { Text(stringResource(R.string.amount_hint)) },
+                    singleLine = true,
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+                    modifier = Modifier.fillMaxWidth()
+                )
+                OutlinedTextField(
+                    value = noteText,
+                    onValueChange = { noteText = it.take(200) },
+                    label = { Text(stringResource(R.string.editor_note_hint)) },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth()
+                )
+                if (pending.date != null) {
+                    Text(
+                        text = stringResource(R.string.scan_review_date, relativeDate(pending.date)),
+                        style = MaterialTheme.typography.bodyMedium
+                    )
+                }
+            }
+        },
+        confirmButton = {
+            TextButton(
+                enabled = amountText.isNotBlank(),
+                onClick = { onApply(amountText, noteText) }
+            ) { Text(stringResource(R.string.action_apply)) }
+        },
+        dismissButton = {
             TextButton(onClick = onDismiss) { Text(stringResource(R.string.action_cancel)) }
         }
     )
