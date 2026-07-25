@@ -4,6 +4,8 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import by.mlastovsky.kosht.data.SettingsRepository
 import by.mlastovsky.kosht.data.TransactionRepository
+import by.mlastovsky.kosht.data.UserProfile
+import by.mlastovsky.kosht.data.WalletRepository
 import by.mlastovsky.kosht.data.db.CategoryEntity
 import by.mlastovsky.kosht.data.db.TransactionWithCategory
 import by.mlastovsky.kosht.model.TransactionType
@@ -25,6 +27,31 @@ data class CategorySlice(
     val share: Float
 )
 
+enum class ReportVerdict { GREAT, OK, BAD }
+
+enum class ReportTip {
+    OVERSPEND,       // expenses exceed income
+    GROWTH,          // expenses grew a lot vs last month
+    TOP_HEAVY,       // one category dominates
+    START_SAVING,    // positive month but nothing set aside
+    KEEP_IT_UP       // spending went down
+}
+
+data class ReportUi(
+    val verdict: ReportVerdict,
+    val expenseMinor: Long,
+    val prevExpenseMinor: Long,
+    /** Expenses change vs previous month in percent; null if no base. */
+    val deltaPercent: Int?,
+    val incomeMinor: Long,
+    val netMinor: Long,
+    val avgPerDayMinor: Long,
+    val daysWithoutSpending: Int,
+    val topSlice: CategorySlice?,
+    val tips: List<ReportTip>,
+    val userName: String
+)
+
 data class StatsUiState(
     val loaded: Boolean = false,
     val month: YearMonth = YearMonth.now(),
@@ -35,6 +62,7 @@ data class StatsUiState(
     val daily: List<Long> = emptyList(),
     /** Transactions of the selected type grouped by day, for the calendar view. */
     val byDay: Map<LocalDate, List<TransactionWithCategory>> = emptyMap(),
+    val report: ReportUi? = null,
     val currencyCode: String = SettingsRepository.DEFAULT_CURRENCY
 ) {
     val isCurrentMonth: Boolean
@@ -47,7 +75,8 @@ data class StatsUiState(
 @OptIn(ExperimentalCoroutinesApi::class)
 class StatsViewModel(
     repository: TransactionRepository,
-    settingsRepository: SettingsRepository
+    settingsRepository: SettingsRepository,
+    walletRepository: WalletRepository
 ) : ViewModel() {
 
     private data class Selector(
@@ -62,11 +91,30 @@ class StatsViewModel(
         repository.observeBetween(range.first, range.last + 1)
     }
 
+    private val prevMonthTransactions = selector.flatMapLatest { s ->
+        val range = Dates.monthRange(s.month.minusMonths(1))
+        repository.observeBetween(range.first, range.last + 1)
+    }
+
+    private data class ReportContext(
+        val prev: List<TransactionWithCategory>,
+        val savings: List<by.mlastovsky.kosht.data.db.SavingEntity>,
+        val profile: UserProfile
+    )
+
+    private val reportContext = combine(
+        prevMonthTransactions,
+        walletRepository.observeSavingsSince(0L),
+        settingsRepository.profile,
+        ::ReportContext
+    )
+
     val uiState: StateFlow<StatsUiState> = combine(
         selector,
         transactions,
-        settingsRepository.settings
-    ) { s, all, settings ->
+        settingsRepository.settings,
+        reportContext
+    ) { s, all, settings, report ->
         val relevant = all.filter { it.transaction.type == s.type }
         val total = relevant.sumOf { it.transaction.amountMinor }
 
@@ -97,9 +145,86 @@ class StatsViewModel(
             slices = slices,
             daily = daily.toList(),
             byDay = relevant.groupBy { Dates.toLocalDate(it.transaction.timestamp) },
+            report = buildReport(s.month, all, report),
             currencyCode = settings.currencyCode
         )
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), StatsUiState())
+
+    private fun buildReport(
+        month: YearMonth,
+        current: List<TransactionWithCategory>,
+        context: ReportContext
+    ): ReportUi {
+        val expenses = current.filter { it.transaction.type == TransactionType.EXPENSE }
+        val expense = expenses.sumOf { it.transaction.amountMinor }
+        val income = current.filter { it.transaction.type == TransactionType.INCOME }
+            .sumOf { it.transaction.amountMinor }
+        val prevExpense = context.prev
+            .filter { it.transaction.type == TransactionType.EXPENSE }
+            .sumOf { it.transaction.amountMinor }
+        val deltaPercent = if (prevExpense > 0) {
+            (((expense - prevExpense) * 100.0) / prevExpense).toInt()
+        } else {
+            null
+        }
+        val net = income - expense
+
+        // For the current month, count only elapsed days.
+        val daysElapsed = if (month == YearMonth.now()) {
+            LocalDate.now().dayOfMonth
+        } else {
+            month.lengthOfMonth()
+        }
+        val spendingDays = expenses
+            .map { Dates.toLocalDate(it.transaction.timestamp) }
+            .toSet().size
+        val daysWithoutSpending = (daysElapsed - spendingDays).coerceAtLeast(0)
+
+        val topSlice = expenses
+            .groupBy { it.category }
+            .map { (category, items) ->
+                val sum = items.sumOf { it.transaction.amountMinor }
+                CategorySlice(
+                    category = category,
+                    totalMinor = sum,
+                    share = if (expense > 0) sum.toFloat() / expense else 0f
+                )
+            }
+            .maxByOrNull { it.totalMinor }
+
+        val monthRange = Dates.monthRange(month)
+        val savedThisMonth = context.savings
+            .filter { it.timestamp in monthRange && it.amountMinor > 0 }
+            .sumOf { it.amountMinor }
+
+        val tips = buildList {
+            if (income in 1 until expense) add(ReportTip.OVERSPEND)
+            if (deltaPercent != null && deltaPercent > 20) add(ReportTip.GROWTH)
+            if (topSlice != null && topSlice.share > 0.35f) add(ReportTip.TOP_HEAVY)
+            if (net > 0 && savedThisMonth == 0L) add(ReportTip.START_SAVING)
+            if (deltaPercent != null && deltaPercent < -10) add(ReportTip.KEEP_IT_UP)
+        }
+
+        val verdict = when {
+            income > 0 && expense > income -> ReportVerdict.BAD
+            deltaPercent != null && deltaPercent > 20 -> ReportVerdict.OK
+            else -> ReportVerdict.GREAT
+        }
+
+        return ReportUi(
+            verdict = verdict,
+            expenseMinor = expense,
+            prevExpenseMinor = prevExpense,
+            deltaPercent = deltaPercent,
+            incomeMinor = income,
+            netMinor = net,
+            avgPerDayMinor = if (daysElapsed > 0) expense / daysElapsed else 0,
+            daysWithoutSpending = daysWithoutSpending,
+            topSlice = topSlice,
+            tips = tips,
+            userName = context.profile.name.ifBlank { context.profile.nickname }
+        )
+    }
 
     fun previousMonth() = selector.update { it.copy(month = it.month.minusMonths(1)) }
 

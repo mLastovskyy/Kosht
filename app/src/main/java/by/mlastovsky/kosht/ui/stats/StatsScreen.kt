@@ -20,6 +20,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.CalendarMonth
 import androidx.compose.material.icons.rounded.DonutLarge
+import androidx.compose.material.icons.rounded.Insights
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilledIconToggleButton
 import androidx.compose.material3.Icon
@@ -70,7 +71,7 @@ fun StatsScreen(
     viewModel: StatsViewModel = viewModel(factory = AppViewModelProvider.Factory)
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
-    var calendarMode by rememberSaveable { mutableStateOf(false) }
+    var viewMode by rememberSaveable { mutableStateOf(0) }
     var selectedEpochDay by rememberSaveable {
         mutableLongStateOf(LocalDate.now().toEpochDay())
     }
@@ -101,8 +102,8 @@ fun StatsScreen(
                 modifier = Modifier.weight(1f)
             )
             FilledIconToggleButton(
-                checked = !calendarMode,
-                onCheckedChange = { calendarMode = false }
+                checked = viewMode == 0,
+                onCheckedChange = { viewMode = 0 }
             ) {
                 Icon(
                     Icons.Rounded.DonutLarge,
@@ -110,31 +111,42 @@ fun StatsScreen(
                 )
             }
             FilledIconToggleButton(
-                checked = calendarMode,
-                onCheckedChange = { calendarMode = true }
+                checked = viewMode == 1,
+                onCheckedChange = { viewMode = 1 }
             ) {
                 Icon(
                     Icons.Rounded.CalendarMonth,
                     contentDescription = stringResource(R.string.stats_view_calendar)
                 )
             }
+            FilledIconToggleButton(
+                checked = viewMode == 2,
+                onCheckedChange = { viewMode = 2 }
+            ) {
+                Icon(
+                    Icons.Rounded.Insights,
+                    contentDescription = stringResource(R.string.stats_view_report)
+                )
+            }
         }
 
-        if (state.loaded && !state.hasData) {
+        if (state.loaded && !state.hasData && viewMode != 2) {
             EmptyState(
                 icon = Icons.Rounded.DonutLarge,
                 title = stringResource(R.string.stats_no_data_title),
                 subtitle = stringResource(R.string.stats_no_data_subtitle)
             )
-        } else if (calendarMode) {
-            CalendarContent(
-                state = state,
-                selectedDay = selectedDay,
-                onDaySelect = { selectedEpochDay = it.toEpochDay() },
-                onTransactionClick = onTransactionClick
-            )
         } else {
-            ChartsContent(state = state)
+            when (viewMode) {
+                1 -> CalendarContent(
+                    state = state,
+                    selectedDay = selectedDay,
+                    onDaySelect = { selectedEpochDay = it.toEpochDay() },
+                    onTransactionClick = onTransactionClick
+                )
+                2 -> ReportContent(state = state)
+                else -> ChartsContent(state = state)
+            }
         }
     }
 }

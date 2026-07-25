@@ -67,6 +67,22 @@
     <string name="stats_view_charts">Charts</string>
     <string name="stats_view_calendar">Calendar</string>
     <string name="stats_empty_day">No transactions this day</string>
+    <string name="stats_view_report">Report</string>
+    <string name="report_verdict_great">Great month!</string>
+    <string name="report_verdict_ok">Not bad, but could be better</string>
+    <string name="report_verdict_bad">Spending exceeded income</string>
+    <string name="report_spent">Spent</string>
+    <string name="report_income">Income</string>
+    <string name="report_net">Month result</string>
+    <string name="report_avg_day">Average per day</string>
+    <string name="report_free_days">Days without spending</string>
+    <string name="report_top_category">Top category</string>
+    <string name="report_tips">Tips</string>
+    <string name="tip_overspend">You spent %1$s more than you earned. Review recurring payments and the biggest category.</string>
+    <string name="tip_growth">Spending grew %1$d%% vs last month. Check what changed.</string>
+    <string name="tip_top_heavy">%1$s takes %2$d%% of expenses. A weekly limit challenge could help.</string>
+    <string name="tip_start_saving">The month is in the black — try setting aside %1$s (10%%) toward a goal.</string>
+    <string name="tip_keep_it_up">Spending is down %1$d%% vs last month. Keep it up!</string>
 
     <!-- Settings -->
     <string name="settings_appearance">Appearance</string>

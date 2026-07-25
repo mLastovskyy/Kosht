@@ -40,7 +40,8 @@ object AppViewModelProvider {
         initializer {
             StatsViewModel(
                 app().container.transactionRepository,
-                app().container.settingsRepository
+                app().container.settingsRepository,
+                app().container.walletRepository
             )
         }
         initializer {
