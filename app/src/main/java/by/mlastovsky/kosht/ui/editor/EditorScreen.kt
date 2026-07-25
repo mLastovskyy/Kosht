@@ -41,6 +41,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.Backspace
 import androidx.compose.material.icons.rounded.Add
 import androidx.compose.material.icons.rounded.AddAPhoto
+import androidx.compose.material.icons.rounded.Calculate
 import androidx.compose.material.icons.rounded.Close
 import androidx.compose.material.icons.rounded.DeleteOutline
 import androidx.compose.material.icons.rounded.DocumentScanner
@@ -120,6 +121,7 @@ fun EditorScreen(
     var showScanSource by remember { mutableStateOf(false) }
     var showAttachSource by remember { mutableStateOf(false) }
     var showAccountPicker by remember { mutableStateOf(false) }
+    var showCalculator by remember { mutableStateOf(false) }
     var showPhotoView by remember { mutableStateOf(false) }
     var cameraTarget by remember { mutableStateOf<Uri?>(null) }
     val scanFailedMessage = stringResource(R.string.scan_failed)
@@ -214,6 +216,11 @@ fun EditorScreen(
             amountInput = state.amountInput,
             currencyCode = state.currencyCode,
             type = state.type,
+            onClick = {
+                view.performHapticFeedback(HapticFeedbackConstants.VIRTUAL_KEY)
+                viewModel.openCalculator()
+                showCalculator = true
+            },
             modifier = Modifier
                 .fillMaxWidth()
                 .weight(1f)
@@ -314,7 +321,31 @@ fun EditorScreen(
                 .padding(horizontal = 16.dp, vertical = 2.dp)
         )
 
-        Keypad(
+        Button(
+            onClick = {
+                view.performHapticFeedback(HapticFeedbackConstants.VIRTUAL_KEY)
+                viewModel.save(onClose)
+            },
+            enabled = state.canSave,
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp, vertical = 12.dp)
+                .height(56.dp),
+            shape = MaterialTheme.shapes.large
+        ) {
+            Text(
+                text = stringResource(R.string.editor_save),
+                style = MaterialTheme.typography.titleMedium
+            )
+        }
+    }
+
+    if (showCalculator) {
+        CalculatorDialog(
+            calcInput = state.calcInput,
+            currencyCode = state.currencyCode,
+            pendingOperation = state.calcPendingOperation,
+            canApply = state.calcCanApply,
             onDigit = { digit ->
                 view.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP)
                 viewModel.onDigit(digit)
@@ -330,30 +361,18 @@ fun EditorScreen(
             onBackspace = {
                 view.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP)
                 viewModel.onBackspace()
-            }
-        )
-
-        Button(
-            onClick = {
-                view.performHapticFeedback(HapticFeedbackConstants.VIRTUAL_KEY)
-                if (state.hasPendingOperation) viewModel.onEquals() else viewModel.save(onClose)
             },
-            enabled = if (state.hasPendingOperation) true else state.canSave,
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 16.dp, vertical = 12.dp)
-                .height(56.dp),
-            shape = MaterialTheme.shapes.large
-        ) {
-            Text(
-                text = if (state.hasPendingOperation) {
-                    "="
-                } else {
-                    stringResource(R.string.editor_save)
-                },
-                style = MaterialTheme.typography.titleMedium
-            )
-        }
+            onEquals = {
+                view.performHapticFeedback(HapticFeedbackConstants.VIRTUAL_KEY)
+                viewModel.onEquals()
+            },
+            onApply = {
+                view.performHapticFeedback(HapticFeedbackConstants.VIRTUAL_KEY)
+                viewModel.applyCalculator()
+                showCalculator = false
+            },
+            onDismiss = { showCalculator = false }
+        )
     }
 
     if (showDatePicker) {
@@ -662,6 +681,7 @@ private fun AmountDisplay(
     amountInput: String,
     currencyCode: String,
     type: TransactionType,
+    onClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     val displayValue = amountInput.ifEmpty { "0" }.replace('.', ',')
@@ -684,23 +704,126 @@ private fun AmountDisplay(
         else -> 57.sp
     }
 
-    Box(modifier = modifier, contentAlignment = Alignment.Center) {
-        Row(verticalAlignment = Alignment.Top) {
-            Text(
-                text = displayValue,
-                style = MaterialTheme.typography.displayLarge.copy(fontSize = fontSize),
-                color = color,
-                maxLines = 1
-            )
-            Spacer(Modifier.width(6.dp))
-            Text(
-                text = symbol,
-                style = MaterialTheme.typography.headlineSmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.padding(top = 8.dp)
-            )
+    Box(
+        modifier = modifier.clickable(onClick = onClick),
+        contentAlignment = Alignment.Center
+    ) {
+        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+            Row(verticalAlignment = Alignment.Top) {
+                Text(
+                    text = displayValue,
+                    style = MaterialTheme.typography.displayLarge.copy(fontSize = fontSize),
+                    color = color,
+                    maxLines = 1
+                )
+                Spacer(Modifier.width(6.dp))
+                Text(
+                    text = symbol,
+                    style = MaterialTheme.typography.headlineSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(top = 8.dp)
+                )
+            }
+            Spacer(Modifier.height(8.dp))
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Icon(
+                    Icons.Rounded.Calculate,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.size(16.dp)
+                )
+                Spacer(Modifier.width(4.dp))
+                Text(
+                    text = stringResource(R.string.editor_tap_amount),
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+            }
         }
     }
+}
+
+/**
+ * Standalone calculator: the keypad lives here, not in the editor itself.
+ * "=" evaluates a pending expression; Apply writes the result into the
+ * editor's amount input.
+ */
+@Composable
+private fun CalculatorDialog(
+    calcInput: String,
+    currencyCode: String,
+    pendingOperation: Boolean,
+    canApply: Boolean,
+    onDigit: (Char) -> Unit,
+    onDecimal: () -> Unit,
+    onOperator: (Char) -> Unit,
+    onBackspace: () -> Unit,
+    onEquals: () -> Unit,
+    onApply: () -> Unit,
+    onDismiss: () -> Unit
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(stringResource(R.string.calc_title)) },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                val displayValue = calcInput.ifEmpty { "0" }.replace('.', ',')
+                val symbol = remember(currencyCode) {
+                    runCatching {
+                        Currency.getInstance(currencyCode).getSymbol(Locale.getDefault())
+                    }.getOrNull() ?: currencyCode
+                }
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 8.dp),
+                    horizontalArrangement = Arrangement.End,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = displayValue,
+                        style = MaterialTheme.typography.headlineMedium,
+                        color = if (calcInput.isEmpty()) {
+                            MaterialTheme.colorScheme.onSurfaceVariant
+                        } else {
+                            MaterialTheme.colorScheme.onSurface
+                        },
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier.weight(1f, fill = false)
+                    )
+                    Spacer(Modifier.width(6.dp))
+                    Text(
+                        text = symbol,
+                        style = MaterialTheme.typography.titleMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+                Keypad(
+                    onDigit = onDigit,
+                    onDecimal = onDecimal,
+                    onOperator = onOperator,
+                    onBackspace = onBackspace
+                )
+            }
+        },
+        confirmButton = {
+            if (pendingOperation) {
+                TextButton(onClick = onEquals) {
+                    Text("=", style = MaterialTheme.typography.titleMedium)
+                }
+            } else {
+                TextButton(onClick = onApply, enabled = canApply) {
+                    Text(stringResource(R.string.action_apply))
+                }
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) { Text(stringResource(R.string.action_cancel)) }
+        }
+    )
 }
 
 @Composable
@@ -792,9 +915,7 @@ private fun Keypad(
     onBackspace: () -> Unit
 ) {
     Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = 24.dp),
+        modifier = Modifier.fillMaxWidth(),
         verticalArrangement = Arrangement.spacedBy(4.dp)
     ) {
         // A slim calculator column on the right: sum up items on the fly.

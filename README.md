@@ -31,10 +31,10 @@ Kosht is a beautifully crafted personal finance app for Android that turns money
 ## 🚀 Key Features
 
 ### ⚡ Lightning-fast expense tracking
-A custom keypad, smart category carousel and haptic feedback make adding a transaction take literal seconds. Attach a photo of the receipt to any expense.
+A clean editor, smart category carousel and haptic feedback make adding a transaction take literal seconds. Attach a photo of the receipt to any expense.
 
-### 🧮 Calculator built into the keypad
-Type `12,50+3,90+8` right in the amount field — the ÷ × − + column and the smart **=** button sum up a basket on the fly, with proper operator precedence.
+### 🧮 Calculator, one tap away
+Tap the amount and a calculator pops up in its own dialog — the editor itself stays uncluttered. Type `12,50+3,90+8`, hit the smart **=** to evaluate (with proper operator precedence), and **Apply** writes the sum into the amount field.
 
 ### 💳 Multiple accounts
 Cards, cash, whatever you use. One account by default keeps the app dead simple; add more and Kosht unlocks per-account balances on Home, an account picker in the editor and an account filter in Statistics.

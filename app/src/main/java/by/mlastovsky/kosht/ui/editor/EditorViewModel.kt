@@ -47,11 +47,17 @@ data class EditorUiState(
     val pendingScan: PendingScan? = null,
     val accounts: List<by.mlastovsky.kosht.data.db.AccountEntity> = emptyList(),
     val accountId: Long? = null,
-    val multiAccount: Boolean = false
+    val multiAccount: Boolean = false,
+    /** Working expression of the standalone calculator dialog. */
+    val calcInput: String = ""
 ) {
-    /** An arithmetic operation is typed but not evaluated yet. */
-    val hasPendingOperation: Boolean
-        get() = by.mlastovsky.kosht.util.Expr.hasPendingOperation(amountInput)
+    /** An arithmetic operation is typed in the calculator but not evaluated yet. */
+    val calcPendingOperation: Boolean
+        get() = by.mlastovsky.kosht.util.Expr.hasPendingOperation(calcInput)
+
+    /** The calculator expression evaluates to a positive amount. */
+    val calcCanApply: Boolean
+        get() = (by.mlastovsky.kosht.util.Expr.evaluateToMinor(calcInput, currencyCode) ?: 0L) > 0L
 
     val canSave: Boolean
         get() = categoryId != null &&
@@ -98,6 +104,9 @@ class EditorViewModel(
 
     private val pendingScan = MutableStateFlow<PendingScan?>(null)
 
+    /** Expression typed in the standalone calculator dialog. */
+    private val calcInput = MutableStateFlow("")
+
     private val categoriesForType = draft
         .map { it.type }
         .distinctUntilChanged()
@@ -106,13 +115,15 @@ class EditorViewModel(
     private data class Aux(
         val scanning: Boolean,
         val pending: PendingScan?,
-        val accounts: List<by.mlastovsky.kosht.data.db.AccountEntity>
+        val accounts: List<by.mlastovsky.kosht.data.db.AccountEntity>,
+        val calcInput: String
     )
 
     private val aux = combine(
         scanning,
         pendingScan,
         accountRepository.observeAccounts(),
+        calcInput,
         ::Aux
     )
 
@@ -141,7 +152,8 @@ class EditorViewModel(
             pendingScan = extras.pending,
             accounts = extras.accounts,
             accountId = d.accountId ?: extras.accounts.firstOrNull()?.id,
-            multiAccount = settings.multiAccount
+            multiAccount = settings.multiAccount,
+            calcInput = extras.calcInput
         )
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), EditorUiState())
 
@@ -191,69 +203,76 @@ class EditorViewModel(
         draft.update { it.copy(date = date) }
     }
 
+    // --- Calculator dialog ---
+
+    /** Seeds the calculator with the current amount when the dialog opens. */
+    fun openCalculator() {
+        calcInput.value = draft.value.amountInput
+    }
+
     /** The operand after the last operator — keypad rules apply per operand. */
     private fun lastOperand(input: String): String =
         input.takeLastWhile { it.isDigit() || it == '.' }
 
     fun onDigit(digit: Char) {
-        draft.update { d ->
-            val operand = lastOperand(d.amountInput)
+        calcInput.update { input ->
+            val operand = lastOperand(input)
             val fractionDigits = Money.fractionDigits(currentCurrency())
             val decimalIndex = operand.indexOf('.')
-            val next = when {
+            when {
                 decimalIndex >= 0 && operand.length - decimalIndex - 1 >= fractionDigits ->
-                    d.amountInput
+                    input
                 decimalIndex < 0 && operand.trimStart('0').length >= MAX_INTEGER_DIGITS ->
-                    d.amountInput
-                operand == "0" -> d.amountInput.dropLast(1) + digit
-                else -> d.amountInput + digit
+                    input
+                operand == "0" -> input.dropLast(1) + digit
+                else -> input + digit
             }
-            d.copy(amountInput = next)
         }
     }
 
     fun onDecimal() {
         if (Money.fractionDigits(currentCurrency()) == 0) return
-        draft.update { d ->
-            val operand = lastOperand(d.amountInput)
-            val next = when {
-                operand.contains('.') -> d.amountInput
-                operand.isEmpty() -> d.amountInput + "0."
-                else -> d.amountInput + "."
+        calcInput.update { input ->
+            val operand = lastOperand(input)
+            when {
+                operand.contains('.') -> input
+                operand.isEmpty() -> input + "0."
+                else -> "$input."
             }
-            d.copy(amountInput = next)
         }
     }
 
     /** Appends a calculator operator (＋ − × ÷) after a digit. */
     fun onOperator(op: Char) {
-        draft.update { d ->
-            val input = d.amountInput
-            val next = when {
+        calcInput.update { input ->
+            when {
                 input.isEmpty() -> input
                 input.last() == '.' -> input
                 input.last().isDigit() -> input + op
                 else -> input.dropLast(1) + op
             }
-            d.copy(amountInput = next)
         }
     }
 
     /** Evaluates the typed expression and replaces it with the result. */
     fun onEquals() {
-        draft.update { d ->
+        calcInput.update { input ->
             val minor = by.mlastovsky.kosht.util.Expr
-                .evaluateToMinor(d.amountInput, currentCurrency())
-            if (minor == null || minor < 0) {
-                d
-            } else {
-                d.copy(amountInput = minorToInput(minor))
-            }
+                .evaluateToMinor(input, currentCurrency())
+            if (minor == null || minor < 0) input else minorToInput(minor)
         }
     }
 
     fun onBackspace() {
-        draft.update { it.copy(amountInput = it.amountInput.dropLast(1)) }
+        calcInput.update { it.dropLast(1) }
+    }
+
+    /** Writes the evaluated calculator result into the amount input. */
+    fun applyCalculator() {
+        val minor = by.mlastovsky.kosht.util.Expr
+            .evaluateToMinor(calcInput.value, currentCurrency()) ?: return
+        if (minor <= 0) return
+        draft.update { it.copy(amountInput = minorToInput(minor)) }
     }
 
     /**
