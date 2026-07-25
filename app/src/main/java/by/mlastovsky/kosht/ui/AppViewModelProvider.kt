@@ -12,6 +12,7 @@ import by.mlastovsky.kosht.ui.history.HistoryViewModel
 import by.mlastovsky.kosht.ui.home.HomeViewModel
 import by.mlastovsky.kosht.ui.settings.SettingsViewModel
 import by.mlastovsky.kosht.ui.stats.StatsViewModel
+import by.mlastovsky.kosht.ui.wallet.WalletViewModel
 
 /**
  * Factory for all ViewModels; resolves dependencies from [KoshtApp.container].
@@ -43,6 +44,14 @@ object AppViewModelProvider {
         }
         initializer {
             SettingsViewModel(app().container.settingsRepository)
+        }
+        initializer {
+            WalletViewModel(
+                app().container.walletRepository,
+                app().container.transactionRepository,
+                app().container.ratesRepository,
+                app().container.settingsRepository
+            )
         }
         initializer {
             EditorViewModel(

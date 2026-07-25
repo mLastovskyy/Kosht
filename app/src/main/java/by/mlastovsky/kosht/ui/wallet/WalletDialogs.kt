@@ -1,0 +1,334 @@
+package by.mlastovsky.kosht.ui.wallet
+
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FilterChip
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.SegmentedButton
+import androidx.compose.material3.SegmentedButtonDefaults
+import androidx.compose.material3.SingleChoiceSegmentedButtonRow
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.unit.dp
+import by.mlastovsky.kosht.R
+import by.mlastovsky.kosht.data.db.CategoryEntity
+import by.mlastovsky.kosht.data.db.DebtEntity
+import by.mlastovsky.kosht.model.DebtDirection
+import by.mlastovsky.kosht.ui.CategoryVisuals
+import by.mlastovsky.kosht.ui.components.CategoryBadge
+import by.mlastovsky.kosht.ui.settings.SettingsViewModel
+import by.mlastovsky.kosht.util.Money
+
+@Composable
+private fun AmountField(
+    value: String,
+    onValueChange: (String) -> Unit,
+    modifier: Modifier = Modifier
+) {
+    OutlinedTextField(
+        value = value,
+        onValueChange = { onValueChange(it.take(12)) },
+        placeholder = { Text(stringResource(R.string.amount_hint)) },
+        singleLine = true,
+        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+        modifier = modifier.fillMaxWidth()
+    )
+}
+
+@Composable
+private fun CurrencyChips(
+    selected: String,
+    onSelect: (String) -> Unit
+) {
+    LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        items(SettingsViewModel.SUPPORTED_CURRENCIES) { code ->
+            FilterChip(
+                selected = code == selected,
+                onClick = { onSelect(code) },
+                label = { Text(code) }
+            )
+        }
+    }
+}
+
+@Composable
+fun AddDebtDialog(
+    defaultCurrency: String,
+    onConfirm: (
+        name: String,
+        direction: DebtDirection,
+        amountMinor: Long,
+        currency: String,
+        note: String
+    ) -> Unit,
+    onDismiss: () -> Unit
+) {
+    var name by remember { mutableStateOf("") }
+    var direction by remember { mutableStateOf(DebtDirection.I_OWE) }
+    var amountText by remember { mutableStateOf("") }
+    var currency by remember { mutableStateOf(defaultCurrency) }
+    var note by remember { mutableStateOf("") }
+    val amountMinor = Money.parseToMinor(amountText, currency) ?: 0L
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(stringResource(R.string.debt_new)) },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                DirectionToggle(direction) { direction = it }
+                OutlinedTextField(
+                    value = name,
+                    onValueChange = { name = it.take(40) },
+                    placeholder = { Text(stringResource(R.string.debt_person)) },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth()
+                )
+                AmountField(amountText, { amountText = it })
+                CurrencyChips(currency) { currency = it }
+                OutlinedTextField(
+                    value = note,
+                    onValueChange = { note = it.take(120) },
+                    placeholder = { Text(stringResource(R.string.editor_note_hint)) },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth()
+                )
+            }
+        },
+        confirmButton = {
+            TextButton(
+                enabled = name.isNotBlank() && amountMinor > 0,
+                onClick = { onConfirm(name, direction, amountMinor, currency, note) }
+            ) { Text(stringResource(R.string.action_add)) }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) { Text(stringResource(R.string.action_cancel)) }
+        }
+    )
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun DirectionToggle(
+    direction: DebtDirection,
+    onChange: (DebtDirection) -> Unit
+) {
+    val options = listOf(
+        DebtDirection.I_OWE to stringResource(R.string.debt_i_owe),
+        DebtDirection.OWED_TO_ME to stringResource(R.string.debt_owed_to_me)
+    )
+    SingleChoiceSegmentedButtonRow(Modifier.fillMaxWidth()) {
+        options.forEachIndexed { index, (option, label) ->
+            SegmentedButton(
+                selected = direction == option,
+                onClick = { onChange(option) },
+                shape = SegmentedButtonDefaults.itemShape(index = index, count = options.size),
+                label = { Text(label) }
+            )
+        }
+    }
+}
+
+@Composable
+fun DebtActionsDialog(
+    debt: DebtEntity,
+    onRepay: (amountMinor: Long) -> Unit,
+    onClose: () -> Unit,
+    onDelete: () -> Unit,
+    onDismiss: () -> Unit
+) {
+    var repayText by remember { mutableStateOf("") }
+    val repayMinor = Money.parseToMinor(repayText, debt.currencyCode) ?: 0L
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(debt.personName) },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                Text(
+                    text = Money.format(debt.amountMinor, debt.currencyCode),
+                    style = MaterialTheme.typography.headlineSmall
+                )
+                if (debt.note.isNotBlank()) {
+                    Text(
+                        text = debt.note,
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+                AmountField(repayText, { repayText = it })
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    TextButton(
+                        enabled = repayMinor > 0,
+                        onClick = { onRepay(repayMinor) }
+                    ) { Text(stringResource(R.string.debt_repay)) }
+                    TextButton(onClick = onClose) {
+                        Text(stringResource(R.string.debt_close))
+                    }
+                }
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = onDismiss) { Text(stringResource(R.string.action_cancel)) }
+        },
+        dismissButton = {
+            TextButton(onClick = onDelete) {
+                Text(
+                    stringResource(R.string.editor_delete),
+                    color = MaterialTheme.colorScheme.error
+                )
+            }
+        }
+    )
+}
+
+@Composable
+fun AddSavingDialog(
+    withdraw: Boolean,
+    defaultCurrency: String,
+    onConfirm: (amountMinor: Long, currency: String, note: String) -> Unit,
+    onDismiss: () -> Unit
+) {
+    var amountText by remember { mutableStateOf("") }
+    var currency by remember { mutableStateOf(defaultCurrency) }
+    var note by remember { mutableStateOf("") }
+    val amountMinor = Money.parseToMinor(amountText, currency) ?: 0L
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = {
+            Text(
+                stringResource(
+                    if (withdraw) R.string.savings_withdraw else R.string.savings_deposit
+                )
+            )
+        },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                AmountField(amountText, { amountText = it })
+                CurrencyChips(currency) { currency = it }
+                OutlinedTextField(
+                    value = note,
+                    onValueChange = { note = it.take(120) },
+                    placeholder = { Text(stringResource(R.string.editor_note_hint)) },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth()
+                )
+            }
+        },
+        confirmButton = {
+            TextButton(
+                enabled = amountMinor > 0,
+                onClick = {
+                    onConfirm(if (withdraw) -amountMinor else amountMinor, currency, note)
+                }
+            ) { Text(stringResource(R.string.action_add)) }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) { Text(stringResource(R.string.action_cancel)) }
+        }
+    )
+}
+
+@Composable
+fun AddRecurringDialog(
+    categories: List<CategoryEntity>,
+    currencyCode: String,
+    onConfirm: (title: String, amountMinor: Long, categoryId: Long, dayOfMonth: Int) -> Unit,
+    onDismiss: () -> Unit
+) {
+    var title by remember { mutableStateOf("") }
+    var amountText by remember { mutableStateOf("") }
+    var dayText by remember { mutableStateOf("1") }
+    var categoryId by remember { mutableStateOf(categories.firstOrNull()?.id) }
+    val amountMinor = Money.parseToMinor(amountText, currencyCode) ?: 0L
+    val day = dayText.toIntOrNull() ?: 0
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(stringResource(R.string.recurring_new)) },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                OutlinedTextField(
+                    value = title,
+                    onValueChange = { title = it.take(60) },
+                    placeholder = { Text(stringResource(R.string.recurring_title_hint)) },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth()
+                )
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    OutlinedTextField(
+                        value = amountText,
+                        onValueChange = { amountText = it.take(12) },
+                        placeholder = { Text(stringResource(R.string.amount_hint)) },
+                        singleLine = true,
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+                        modifier = Modifier.weight(1f)
+                    )
+                    OutlinedTextField(
+                        value = dayText,
+                        onValueChange = { dayText = it.filter(Char::isDigit).take(2) },
+                        label = { Text(stringResource(R.string.recurring_day)) },
+                        singleLine = true,
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                        modifier = Modifier.weight(1f)
+                    )
+                }
+                LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    items(categories, key = { it.id }) { category ->
+                        Column(
+                            horizontalAlignment = androidx.compose.ui.Alignment.CenterHorizontally,
+                            modifier = Modifier
+                                .clip(MaterialTheme.shapes.medium)
+                                .clickable { categoryId = category.id }
+                                .padding(4.dp)
+                        ) {
+                            CategoryBadge(
+                                iconKey = category.iconKey,
+                                color = Color(category.colorArgb),
+                                selected = category.id == categoryId,
+                                size = 40.dp,
+                                modifier = Modifier.clip(CircleShape)
+                            )
+                            Text(
+                                text = CategoryVisuals.displayName(category),
+                                style = MaterialTheme.typography.labelSmall,
+                                maxLines = 1
+                            )
+                        }
+                    }
+                }
+            }
+        },
+        confirmButton = {
+            TextButton(
+                enabled = title.isNotBlank() && amountMinor > 0 &&
+                    day in 1..31 && categoryId != null,
+                onClick = { onConfirm(title, amountMinor, categoryId!!, day) }
+            ) { Text(stringResource(R.string.action_add)) }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) { Text(stringResource(R.string.action_cancel)) }
+        }
+    )
+}

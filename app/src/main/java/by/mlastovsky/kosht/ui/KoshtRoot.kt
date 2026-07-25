@@ -36,6 +36,7 @@ import by.mlastovsky.kosht.ui.history.HistoryScreen
 import by.mlastovsky.kosht.ui.home.HomeScreen
 import by.mlastovsky.kosht.ui.settings.SettingsScreen
 import by.mlastovsky.kosht.ui.stats.StatsScreen
+import by.mlastovsky.kosht.ui.wallet.WalletScreen
 import by.mlastovsky.kosht.ui.navigation.MainTabs
 import by.mlastovsky.kosht.ui.navigation.Routes
 
@@ -101,6 +102,9 @@ fun KoshtRoot() {
                 StatsScreen(
                     onTransactionClick = { id -> navController.navigate(Routes.editor(id)) }
                 )
+            }
+            composable(Routes.WALLET) {
+                WalletScreen()
             }
             composable(Routes.SETTINGS) {
                 SettingsScreen()

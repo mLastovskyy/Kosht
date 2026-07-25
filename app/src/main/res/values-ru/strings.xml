@@ -5,6 +5,7 @@
     <string name="nav_home">Главная</string>
     <string name="nav_history">История</string>
     <string name="nav_stats">Статистика</string>
+    <string name="nav_wallet">Кошелёк</string>
     <string name="nav_settings">Настройки</string>
     <string name="cd_add_transaction">Добавить операцию</string>
     <string name="cd_back">Назад</string>
@@ -60,6 +61,31 @@
     <string name="settings_currency">Валюта</string>
     <string name="settings_about">О приложении</string>
     <string name="settings_version">Версия</string>
+
+    <!-- Кошелёк -->
+    <string name="wallet_rates">Курсы НБРБ</string>
+    <string name="section_due">Ждут подтверждения</string>
+    <string name="action_confirm">Подтвердить</string>
+    <string name="section_recurring">Ежемесячные платежи</string>
+    <string name="recurring_new">Новый платёж</string>
+    <string name="recurring_title_hint">Название</string>
+    <string name="recurring_day">День</string>
+    <string name="recurring_day_format">%1$d-го числа</string>
+    <string name="wallet_empty_recurring">Регулярных платежей пока нет</string>
+    <string name="section_debts">Долги</string>
+    <string name="debt_new">Новый долг</string>
+    <string name="debt_person">Кто</string>
+    <string name="debt_i_owe">Я должен</string>
+    <string name="debt_owed_to_me">Мне должны</string>
+    <string name="debt_repay">Погасить часть</string>
+    <string name="debt_close">Закрыть долг</string>
+    <string name="wallet_empty_debts">Долгов нет — отлично!</string>
+    <string name="section_savings">Накопления</string>
+    <string name="savings_total">Всего отложено</string>
+    <string name="savings_deposit">Отложить</string>
+    <string name="savings_withdraw">Снять</string>
+    <string name="wallet_empty_savings">Пока ничего не отложено</string>
+    <string name="amount_hint">Сумма</string>
 
     <!-- Категории: управление -->
     <string name="category_new">Новая категория</string>

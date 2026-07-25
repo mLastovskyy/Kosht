@@ -4,9 +4,11 @@ import androidx.annotation.StringRes
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.ReceiptLong
 import androidx.compose.material.icons.automirrored.rounded.ReceiptLong
+import androidx.compose.material.icons.outlined.AccountBalanceWallet
 import androidx.compose.material.icons.outlined.Home
 import androidx.compose.material.icons.outlined.PieChart
 import androidx.compose.material.icons.outlined.Settings
+import androidx.compose.material.icons.rounded.AccountBalanceWallet
 import androidx.compose.material.icons.rounded.Home
 import androidx.compose.material.icons.rounded.PieChart
 import androidx.compose.material.icons.rounded.Settings
@@ -17,6 +19,7 @@ object Routes {
     const val HOME = "home"
     const val HISTORY = "history"
     const val STATS = "stats"
+    const val WALLET = "wallet"
     const val SETTINGS = "settings"
     const val EDITOR = "editor?transactionId={transactionId}"
 
@@ -47,6 +50,12 @@ val MainTabs = listOf(
         R.string.nav_stats,
         Icons.Rounded.PieChart,
         Icons.Outlined.PieChart
+    ),
+    TabDestination(
+        Routes.WALLET,
+        R.string.nav_wallet,
+        Icons.Rounded.AccountBalanceWallet,
+        Icons.Outlined.AccountBalanceWallet
     ),
     TabDestination(
         Routes.SETTINGS,

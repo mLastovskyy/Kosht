@@ -12,9 +12,12 @@ import by.mlastovsky.kosht.data.CategorySeed
     entities = [
         TransactionEntity::class,
         CategoryEntity::class,
-        RateEntity::class
+        RateEntity::class,
+        DebtEntity::class,
+        SavingEntity::class,
+        RecurringEntity::class
     ],
-    version = 2,
+    version = 3,
     exportSchema = false
 )
 abstract class KoshtDatabase : RoomDatabase() {
@@ -25,12 +28,18 @@ abstract class KoshtDatabase : RoomDatabase() {
 
     abstract fun rateDao(): RateDao
 
+    abstract fun debtDao(): DebtDao
+
+    abstract fun savingDao(): SavingDao
+
+    abstract fun recurringDao(): RecurringDao
+
     companion object {
 
         fun build(context: Context): KoshtDatabase =
             Room.databaseBuilder(context, KoshtDatabase::class.java, "kosht.db")
                 .addCallback(SeedCallback)
-                .addMigrations(MIGRATION_1_2)
+                .addMigrations(MIGRATION_1_2, MIGRATION_2_3)
                 .build()
 
         private val MIGRATION_1_2 = object : Migration(1, 2) {
@@ -41,6 +50,47 @@ abstract class KoshtDatabase : RoomDatabase() {
                         "scale INTEGER NOT NULL, " +
                         "rate REAL NOT NULL, " +
                         "updatedAt INTEGER NOT NULL)"
+                )
+            }
+        }
+
+        private val MIGRATION_2_3 = object : Migration(2, 3) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL(
+                    "CREATE TABLE IF NOT EXISTS debts (" +
+                        "id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, " +
+                        "personName TEXT NOT NULL, " +
+                        "direction TEXT NOT NULL, " +
+                        "amountMinor INTEGER NOT NULL, " +
+                        "currencyCode TEXT NOT NULL, " +
+                        "note TEXT NOT NULL, " +
+                        "createdAt INTEGER NOT NULL, " +
+                        "closedAt INTEGER)"
+                )
+                db.execSQL(
+                    "CREATE TABLE IF NOT EXISTS savings (" +
+                        "id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, " +
+                        "amountMinor INTEGER NOT NULL, " +
+                        "currencyCode TEXT NOT NULL, " +
+                        "note TEXT NOT NULL, " +
+                        "timestamp INTEGER NOT NULL)"
+                )
+                db.execSQL(
+                    "CREATE TABLE IF NOT EXISTS recurring (" +
+                        "id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, " +
+                        "title TEXT NOT NULL, " +
+                        "amountMinor INTEGER NOT NULL, " +
+                        "categoryId INTEGER NOT NULL, " +
+                        "dayOfMonth INTEGER NOT NULL, " +
+                        "lastConfirmed TEXT, " +
+                        "enabled INTEGER NOT NULL, " +
+                        "createdAt INTEGER NOT NULL, " +
+                        "FOREIGN KEY(categoryId) REFERENCES categories(id) " +
+                        "ON UPDATE NO ACTION ON DELETE RESTRICT)"
+                )
+                db.execSQL(
+                    "CREATE INDEX IF NOT EXISTS index_recurring_categoryId " +
+                        "ON recurring (categoryId)"
                 )
             }
         }

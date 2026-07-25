@@ -3,6 +3,7 @@ package by.mlastovsky.kosht.data
 import by.mlastovsky.kosht.data.db.CategoryDao
 import by.mlastovsky.kosht.data.db.CategoryEntity
 import by.mlastovsky.kosht.data.db.CategoryTotal
+import by.mlastovsky.kosht.data.db.RecurringDao
 import by.mlastovsky.kosht.data.db.TransactionDao
 import by.mlastovsky.kosht.data.db.TransactionEntity
 import by.mlastovsky.kosht.data.db.TransactionWithCategory
@@ -11,7 +12,8 @@ import kotlinx.coroutines.flow.Flow
 
 class TransactionRepository(
     private val transactionDao: TransactionDao,
-    private val categoryDao: CategoryDao
+    private val categoryDao: CategoryDao,
+    private val recurringDao: RecurringDao
 ) {
 
     fun observeBetween(from: Long, to: Long): Flow<List<TransactionWithCategory>> =
@@ -65,8 +67,9 @@ class TransactionRepository(
     suspend fun updateCategory(category: CategoryEntity) = categoryDao.update(category)
 
     /**
-     * Deletes a category. Existing transactions are moved to the built-in
-     * "other" category of the same type so history is never lost.
+     * Deletes a category. Existing transactions and recurring charges are
+     * moved to the built-in "other" category of the same type so nothing
+     * is lost.
      */
     suspend fun deleteCategory(category: CategoryEntity) {
         val fallbackKey =
@@ -74,6 +77,7 @@ class TransactionRepository(
         val fallback = categoryDao.getByKey(fallbackKey)
         if (fallback != null && fallback.id != category.id) {
             transactionDao.reassignCategory(from = category.id, to = fallback.id)
+            recurringDao.reassignCategory(from = category.id, to = fallback.id)
         }
         categoryDao.deleteById(category.id)
     }
