@@ -40,6 +40,22 @@ class SettingsViewModel(
         }
     }
 
+    fun setProfileEmoji(emoji: String) {
+        viewModelScope.launch {
+            photoStore.delete(settingsRepository.profile.first().photoPath)
+            settingsRepository.setProfilePhoto(
+                by.mlastovsky.kosht.ui.components.EMOJI_AVATAR_PREFIX + emoji
+            )
+        }
+    }
+
+    fun removeProfilePhoto() {
+        viewModelScope.launch {
+            photoStore.delete(settingsRepository.profile.first().photoPath)
+            settingsRepository.setProfilePhoto(null)
+        }
+    }
+
     val language: StateFlow<AppLanguage> = settingsRepository.language
 
     fun setLanguage(language: AppLanguage) {

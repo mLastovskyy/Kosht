@@ -13,10 +13,14 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 
-/** Profile photo or initials in a circle. */
+/** Prefix marking a built-in emoji avatar instead of a photo file. */
+const val EMOJI_AVATAR_PREFIX = "emoji:"
+
+/** Profile photo, built-in emoji avatar or initials in a circle. */
 @Composable
 fun Avatar(
     photoPath: String?,
@@ -24,7 +28,13 @@ fun Avatar(
     modifier: Modifier = Modifier,
     size: Dp = 40.dp
 ) {
-    val bitmap = rememberBitmapFromPath(photoPath, maxDimension = 256)
+    val emoji = photoPath?.takeIf { it.startsWith(EMOJI_AVATAR_PREFIX) }
+        ?.removePrefix(EMOJI_AVATAR_PREFIX)
+    val bitmap = rememberBitmapFromPath(
+        photoPath?.takeIf { emoji == null },
+        maxDimension = 256
+    )
+    val density = LocalDensity.current
     Box(
         modifier = modifier
             .size(size)
@@ -32,15 +42,18 @@ fun Avatar(
             .background(MaterialTheme.colorScheme.primaryContainer),
         contentAlignment = Alignment.Center
     ) {
-        if (bitmap != null) {
-            Image(
+        when {
+            emoji != null -> Text(
+                text = emoji,
+                fontSize = with(density) { (size * 0.52f).toSp() }
+            )
+            bitmap != null -> Image(
                 bitmap = bitmap,
                 contentDescription = null,
                 contentScale = ContentScale.Crop,
                 modifier = Modifier.fillMaxSize()
             )
-        } else {
-            Text(
+            else -> Text(
                 text = fallbackText.trim().take(2).uppercase(),
                 style = MaterialTheme.typography.titleMedium,
                 color = MaterialTheme.colorScheme.onPrimaryContainer

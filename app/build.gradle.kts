@@ -4,6 +4,13 @@ plugins {
     alias(libs.plugins.ksp)
 }
 
+// Configuration-cache-friendly git commit count for automatic versioning.
+val gitCommitCount: Int = providers.exec {
+    commandLine("git", "rev-list", "--count", "HEAD")
+}.standardOutput.asText.map { it.trim().toIntOrNull() ?: 1 }.get()
+
+val appVersionName = "1.$gitCommitCount"
+
 android {
     namespace = "by.mlastovsky.kosht"
     compileSdk {
@@ -14,11 +21,15 @@ android {
         applicationId = "by.mlastovsky.kosht"
         minSdk = 26
         targetSdk = 37
-        versionCode = 1
-        versionName = "1.0"
+        // Version grows automatically with every commit/push.
+        versionCode = gitCommitCount
+        versionName = appVersionName
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
+
+    // APK artifacts are named kosht-<version>-<variant>.apk
+    base.archivesName.set("kosht-$appVersionName")
 
     buildTypes {
         release {

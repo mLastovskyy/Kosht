@@ -33,6 +33,7 @@ import androidx.navigation.navArgument
 import by.mlastovsky.kosht.R
 import by.mlastovsky.kosht.ui.achievements.AchievementsScreen
 import by.mlastovsky.kosht.ui.editor.EditorScreen
+import by.mlastovsky.kosht.ui.guide.GuideScreen
 import by.mlastovsky.kosht.ui.history.HistoryScreen
 import by.mlastovsky.kosht.ui.home.HomeScreen
 import by.mlastovsky.kosht.ui.settings.SettingsScreen
@@ -121,7 +122,21 @@ fun KoshtRoot() {
                 WalletScreen()
             }
             composable(Routes.SETTINGS) {
-                SettingsScreen()
+                SettingsScreen(
+                    onOpenGuide = { navController.navigate(Routes.GUIDE) }
+                )
+            }
+            composable(
+                route = Routes.GUIDE,
+                enterTransition = {
+                    slideInVertically(tween(300)) { it } + fadeIn(tween(300))
+                },
+                exitTransition = { fadeOut(tween(150)) },
+                popExitTransition = {
+                    slideOutVertically(tween(250)) { it } + fadeOut(tween(250))
+                }
+            ) {
+                GuideScreen(onBack = { navController.popBackStack() })
             }
             composable(
                 route = Routes.EDITOR,
@@ -156,10 +171,9 @@ private fun KoshtNavigationBar(navController: NavHostController, currentRoute: S
                 icon = {
                     Icon(
                         imageVector = if (selected) tab.selectedIcon else tab.unselectedIcon,
-                        contentDescription = null
+                        contentDescription = stringResource(tab.labelRes)
                     )
-                },
-                label = { Text(stringResource(tab.labelRes)) }
+                }
             )
         }
     }

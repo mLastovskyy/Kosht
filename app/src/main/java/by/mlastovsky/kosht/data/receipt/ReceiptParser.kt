@@ -74,6 +74,10 @@ object ReceiptParser {
 
     private fun findMerchant(lines: List<String>): String? =
         lines.take(5).firstOrNull { line ->
-            line.count { it.isLetter() } >= 4
+            val letters = line.count { it.isLetter() }
+            letters >= 4 &&
+                letters > line.count { it.isDigit() } &&
+                !line.contains(dateRegex) &&
+                line.none { it in "‹›<>|" }
         }?.take(40)
 }

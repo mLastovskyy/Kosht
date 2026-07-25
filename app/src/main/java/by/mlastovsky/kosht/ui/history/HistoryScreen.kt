@@ -299,9 +299,12 @@ fun HistoryScreen(
                 }
             }
         ) {
+            // Default title+headline wrap badly in a dialog — show the bare calendar.
             DateRangePicker(
                 state = rangeState,
                 showModeToggle = false,
+                title = null,
+                headline = null,
                 modifier = Modifier.weight(1f)
             )
         }

@@ -486,16 +486,19 @@ private fun AddChallengeDialog(
                         }
                     }
                 }
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    listOf(
-                        R.string.challenge_duration_week,
-                        R.string.challenge_duration_month_end,
-                        R.string.challenge_duration_30
-                    ).forEachIndexed { index, labelRes ->
+                LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    items(
+                        listOf(
+                            R.string.challenge_duration_week,
+                            R.string.challenge_duration_month_end,
+                            R.string.challenge_duration_30
+                        ).withIndex().toList(),
+                        key = { it.index }
+                    ) { (index, labelRes) ->
                         FilterChip(
                             selected = durationIndex == index,
                             onClick = { durationIndex = index },
-                            label = { Text(stringResource(labelRes)) }
+                            label = { Text(stringResource(labelRes), maxLines = 1) }
                         )
                     }
                 }

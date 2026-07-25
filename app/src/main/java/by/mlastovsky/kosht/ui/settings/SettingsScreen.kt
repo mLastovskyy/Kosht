@@ -5,6 +5,7 @@ import android.os.Build
 import androidx.activity.compose.LocalActivity
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
@@ -15,6 +16,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.rounded.HelpOutline
 import androidx.compose.material.icons.rounded.BrightnessMedium
 import androidx.compose.material.icons.rounded.Info
 import androidx.compose.material.icons.rounded.Language
@@ -42,6 +44,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
@@ -56,6 +59,7 @@ import java.util.Locale
 
 @Composable
 fun SettingsScreen(
+    onOpenGuide: () -> Unit,
     viewModel: SettingsViewModel = viewModel(factory = AppViewModelProvider.Factory)
 ) {
     val settings by viewModel.settings.collectAsStateWithLifecycle()
@@ -84,6 +88,7 @@ fun SettingsScreen(
         )
 
         profile?.let { p ->
+            SettingsCard {
             ListItem(
                 headlineContent = {
                     Text(
@@ -106,11 +111,12 @@ fun SettingsScreen(
                 colors = transparentListColors(),
                 modifier = Modifier.clickable { showProfileDialog = true }
             )
-            HorizontalDivider(Modifier.padding(vertical = 8.dp))
+            }
         }
 
         SectionHeader(stringResource(R.string.settings_appearance))
 
+        SettingsCard {
         ListItem(
             headlineContent = { Text(stringResource(R.string.settings_theme)) },
             supportingContent = { Text(themeLabel(current.themeMode)) },
@@ -136,11 +142,11 @@ fun SettingsScreen(
                 }
             )
         }
-
-        HorizontalDivider(Modifier.padding(vertical = 8.dp))
+        }
 
         SectionHeader(stringResource(R.string.settings_general))
 
+        SettingsCard {
         ListItem(
             headlineContent = { Text(stringResource(R.string.settings_language)) },
             supportingContent = { Text(languageLabel(language)) },
@@ -185,11 +191,11 @@ fun SettingsScreen(
                 onDismiss = { showBudgetDialog = false }
             )
         }
-
-        HorizontalDivider(Modifier.padding(vertical = 8.dp))
+        }
 
         SectionHeader(stringResource(R.string.settings_notifications))
 
+        SettingsCard {
         val permissionLauncher = rememberLauncherForActivityResult(
             ActivityResultContracts.RequestPermission()
         ) { }
@@ -229,15 +235,23 @@ fun SettingsScreen(
                 viewModel.setNotifyWeeklySummary(enabled)
             }
         )
-
-        HorizontalDivider(Modifier.padding(vertical = 8.dp))
+        }
 
         SectionHeader(stringResource(R.string.settings_about))
+
+        SettingsCard {
+        ListItem(
+            headlineContent = { Text(stringResource(R.string.guide_title)) },
+            supportingContent = { Text(stringResource(R.string.guide_settings_entry_desc)) },
+            leadingContent = { Icon(Icons.AutoMirrored.Rounded.HelpOutline, contentDescription = null) },
+            colors = transparentListColors(),
+            modifier = Modifier.clickable(onClick = onOpenGuide)
+        )
 
         val versionName = remember {
             runCatching {
                 context.packageManager.getPackageInfo(context.packageName, 0).versionName
-            }.getOrNull() ?: "1.0"
+            }.getOrNull() ?: "—"
         }
         ListItem(
             headlineContent = { Text(stringResource(R.string.settings_version)) },
@@ -245,6 +259,9 @@ fun SettingsScreen(
             leadingContent = { Icon(Icons.Rounded.Info, contentDescription = null) },
             colors = transparentListColors()
         )
+        }
+
+        androidx.compose.foundation.layout.Spacer(Modifier.padding(bottom = 24.dp))
     }
 
     if (showThemeDialog) {
@@ -277,6 +294,8 @@ fun SettingsScreen(
                 photoPath = p.photoPath,
                 defaultName = defaultName,
                 onPickPhoto = viewModel::setProfilePhoto,
+                onPickEmoji = viewModel::setProfileEmoji,
+                onRemovePhoto = viewModel::removeProfilePhoto,
                 onSave = { name, nickname ->
                     viewModel.saveProfile(name, nickname)
                     showProfileDialog = false
@@ -398,6 +417,8 @@ private fun DailyBudgetDialog(
     )
 }
 
+private val PRESET_AVATARS = listOf("🦊", "🐻", "🐼", "🦁", "🐸", "🚀", "💎", "🌟", "🔥", "🤑")
+
 @Composable
 private fun ProfileDialog(
     initialName: String,
@@ -405,6 +426,8 @@ private fun ProfileDialog(
     photoPath: String?,
     defaultName: String,
     onPickPhoto: (android.net.Uri) -> Unit,
+    onPickEmoji: (String) -> Unit,
+    onRemovePhoto: () -> Unit,
     onSave: (name: String, nickname: String) -> Unit,
     onDismiss: () -> Unit
 ) {
@@ -439,6 +462,29 @@ private fun ProfileDialog(
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
+                androidx.compose.foundation.lazy.LazyRow(
+                    horizontalArrangement =
+                        androidx.compose.foundation.layout.Arrangement.spacedBy(8.dp)
+                ) {
+                    items(PRESET_AVATARS.size) { index ->
+                        val emoji = PRESET_AVATARS[index]
+                        Avatar(
+                            photoPath = by.mlastovsky.kosht.ui.components
+                                .EMOJI_AVATAR_PREFIX + emoji,
+                            fallbackText = emoji,
+                            size = 44.dp,
+                            modifier = Modifier.clickable { onPickEmoji(emoji) }
+                        )
+                    }
+                }
+                if (photoPath != null) {
+                    TextButton(onClick = onRemovePhoto) {
+                        Text(
+                            stringResource(R.string.photo_remove),
+                            color = MaterialTheme.colorScheme.error
+                        )
+                    }
+                }
                 OutlinedTextField(
                     value = name,
                     onValueChange = { name = it.take(40) },
@@ -490,7 +536,20 @@ private fun SectionHeader(text: String) {
         text = text,
         style = MaterialTheme.typography.labelLarge,
         color = MaterialTheme.colorScheme.primary,
-        modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp)
+        modifier = Modifier.padding(start = 28.dp, end = 16.dp, top = 12.dp, bottom = 6.dp)
+    )
+}
+
+/** Rounded grouped card for a block of related settings rows. */
+@Composable
+private fun SettingsCard(content: @Composable androidx.compose.foundation.layout.ColumnScope.() -> Unit) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp)
+            .clip(MaterialTheme.shapes.large)
+            .background(MaterialTheme.colorScheme.surfaceContainer),
+        content = content
     )
 }
 

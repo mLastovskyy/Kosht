@@ -201,6 +201,29 @@
     <string name="action_cancel">Cancel</string>
     <string name="action_add">Add</string>
 
+    <!-- In-app guide -->
+    <string name="guide_title">How to use Kosht</string>
+    <string name="guide_settings_entry_desc">Every screen and button explained</string>
+    <string name="guide_intro">A quick tour of every screen. Everything works offline and your data never leaves the phone.</string>
+    <string name="guide_home_title">Home</string>
+    <string name="guide_home_body">The big card shows your total balance (all income minus all expenses) with this month\'s income and expenses below it. If your currency is not BYN, the ≈ line shows the equivalent at the live rate. In the top row: the 🔥 chip is your under-budget streak, the trophy opens Achievements, the avatar is your profile. "Recent" lists the latest records — tap one to edit, "All" jumps to History. The big + button adds a transaction.</string>
+    <string name="guide_editor_title">Adding a transaction</string>
+    <string name="guide_editor_body">Switch Expense/Income at the top. Type the amount on the keypad (comma adds cents). Pick a category in the carousel — the "New" circle creates your own with a name, icon and color. The date chip opens a calendar (defaults to today). Write an optional note. The photo icon attaches a receipt photo from camera or gallery; tap the thumbnail to view or remove it. Save finishes. When editing an existing record a trash icon appears in the top bar.</string>
+    <string name="guide_scan_title">Receipt scanning</string>
+    <string name="guide_scan_body">In the editor tap the scanner icon (top right), then shoot the receipt or pick it from the gallery. Recognition runs fully offline. A review dialog shows what was read — correct the amount and store if needed, the date is applied automatically. Apply fills the form and attaches the photo; every field stays editable afterwards.</string>
+    <string name="guide_history_title">History</string>
+    <string name="guide_history_body">Arrows switch months. The search field filters by note and custom category names. Chips: All / Expense / Income, "Category" opens a category picker (tap ✕ on the chip to clear), "Period" opens a calendar where you select a single day or a range — the period replaces month navigation until you clear it with ✕. Records are grouped by day with a net total per day. Swipe a row left to delete — an Undo snackbar appears. Tap a row to edit it.</string>
+    <string name="guide_stats_title">Statistics</string>
+    <string name="guide_stats_body">Three views via the round buttons: 1) Charts — a donut of categories with the total in the middle and daily bars below; 2) Calendar — a heatmap where a darker day means more spent; tap a day to see its records; 3) Report — the month\'s verdict, spending vs last month, income, result, daily average, no-spend days, top category and personalized tips. The Expense/Income toggle applies everywhere, arrows switch months.</string>
+    <string name="guide_wallet_title">Wallet: rates &amp; payments</string>
+    <string name="guide_wallet_body">The NBRB rates card shows official rates with the update time — the arrow button refreshes them manually. Any amount in a foreign currency shows its ≈ BYN equivalent. Changing the app currency in Settings converts all stored amounts at the current rate; each expense also freezes its BYN value at payment time, so history never drifts. Recurring payments: + adds one — title, amount, currency, the charge date picked in a calendar and a frequency (weekly / monthly / every 3 months / yearly). Nothing is charged silently: due payments appear in "Awaiting confirmation", and Confirm records the expense (for a foreign currency you can adjust the rate). The switch pauses a payment, the trash deletes it.</string>
+    <string name="guide_savings_title">Debts, goals &amp; savings</string>
+    <string name="guide_savings_body">Debts: + adds one — who, direction (I owe / owed to me), amount in any currency, note. The two tiles total both directions in BYN. Tap a debt to repay a part, close it or delete it. Goals: + creates a goal with a target amount; deposits linked to the goal fill its progress bar, and reaching the target celebrates 🎉. Savings: "Set aside" and "Withdraw" record movements (optionally toward a goal), the journal below lists them with BYN equivalents; the trash removes an entry.</string>
+    <string name="guide_achievements_title">Achievements</string>
+    <string name="guide_achievements_body">Open with the trophy on Home. The streak card counts consecutive days you stayed within the daily budget (set it in Settings, auto = last month\'s average). Challenges: + creates one — Limit (spend under X, optionally in one category), No spend, or Save up (set aside X) — for a week, until month end or 30 days. Progress updates live; the trash removes a challenge. Badges below unlock automatically as you use the app.</string>
+    <string name="guide_settings_title">Settings</string>
+    <string name="guide_settings_body">Profile — tap to set a photo from the gallery or one of the built-in avatars, remove it, and set your name and nickname (used in greetings and reports). Theme: system/light/dark plus Material You dynamic colors. Language: system, Russian or English. Currency — switching converts every stored amount at the live NBRB rate. Daily budget powers the streak. Notifications: an evening reminder (only if nothing was logged), payments awaiting confirmation and a Monday summary — each with its own switch.</string>
+
     <!-- Built-in categories -->
     <string name="category_groceries">Groceries</string>
     <string name="category_cafe">Eating out</string>
