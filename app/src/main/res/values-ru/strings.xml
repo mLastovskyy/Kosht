@@ -46,6 +46,9 @@
     <string name="history_empty_title">Ничего не найдено</string>
     <string name="history_empty_subtitle">Измените фильтры или добавьте новую операцию</string>
     <string name="filter_all">Все</string>
+    <string name="filter_category">Категория</string>
+    <string name="filter_all_categories">Все категории</string>
+    <string name="filter_period">Период</string>
     <string name="transaction_deleted">Операция удалена</string>
     <string name="undo">Отменить</string>
 

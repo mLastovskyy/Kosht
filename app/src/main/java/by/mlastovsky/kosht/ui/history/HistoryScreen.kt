@@ -1,6 +1,7 @@
 package by.mlastovsky.kosht.ui.history
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -9,20 +10,29 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Close
+import androidx.compose.material.icons.rounded.DateRange
 import androidx.compose.material.icons.rounded.DeleteOutline
 import androidx.compose.material.icons.rounded.Search
 import androidx.compose.material.icons.rounded.SearchOff
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.DatePickerDialog
+import androidx.compose.material3.DateRangePicker
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.rememberDateRangePickerState
 import androidx.compose.material3.SnackbarDuration
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
@@ -30,13 +40,17 @@ import androidx.compose.material3.SnackbarResult
 import androidx.compose.material3.SwipeToDismissBox
 import androidx.compose.material3.SwipeToDismissBoxValue
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.rememberSwipeToDismissBoxState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -44,6 +58,8 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import by.mlastovsky.kosht.R
 import by.mlastovsky.kosht.model.TransactionType
 import by.mlastovsky.kosht.ui.AppViewModelProvider
+import by.mlastovsky.kosht.ui.CategoryVisuals
+import by.mlastovsky.kosht.ui.components.CategoryBadge
 import by.mlastovsky.kosht.ui.components.EmptyState
 import by.mlastovsky.kosht.ui.components.MonthSelector
 import by.mlastovsky.kosht.ui.components.TransactionRow
@@ -51,6 +67,11 @@ import by.mlastovsky.kosht.ui.relativeDate
 import by.mlastovsky.kosht.ui.theme.KoshtTheme
 import by.mlastovsky.kosht.util.Money
 import kotlinx.coroutines.launch
+import java.time.Instant
+import java.time.LocalDate
+import java.time.ZoneOffset
+import java.time.format.DateTimeFormatter
+import java.util.Locale
 
 @Composable
 fun HistoryScreen(
@@ -62,6 +83,8 @@ fun HistoryScreen(
     val scope = rememberCoroutineScope()
     val deletedMessage = stringResource(R.string.transaction_deleted)
     val undoLabel = stringResource(R.string.undo)
+    var showCategoryFilter by remember { mutableStateOf(false) }
+    var showRangePicker by remember { mutableStateOf(false) }
 
     Box(Modifier.fillMaxSize()) {
         Column(
@@ -69,12 +92,30 @@ fun HistoryScreen(
                 .fillMaxSize()
                 .statusBarsPadding()
         ) {
-            MonthSelector(
-                month = state.month,
-                nextEnabled = !state.isCurrentMonth,
-                onPrevious = viewModel::previousMonth,
-                onNext = viewModel::nextMonth
-            )
+            if (!state.hasCustomRange) {
+                MonthSelector(
+                    month = state.month,
+                    nextEnabled = !state.isCurrentMonth,
+                    onPrevious = viewModel::previousMonth,
+                    onNext = viewModel::nextMonth
+                )
+            } else {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp, vertical = 8.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = rangeLabel(state.rangeStart!!, state.rangeEnd),
+                        style = MaterialTheme.typography.titleLarge,
+                        modifier = Modifier.weight(1f)
+                    )
+                    IconButton(onClick = viewModel::clearDateRange) {
+                        Icon(Icons.Rounded.Close, contentDescription = null)
+                    }
+                }
+            }
 
             OutlinedTextField(
                 value = state.query,
@@ -95,25 +136,74 @@ fun HistoryScreen(
                     .padding(horizontal = 16.dp)
             )
 
-            Row(
+            LazyRow(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 16.dp, vertical = 8.dp),
+                    .padding(vertical = 8.dp),
+                contentPadding = PaddingValues(horizontal = 16.dp),
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                TypeFilterChip(null, state.typeFilter, R.string.filter_all, viewModel::setTypeFilter)
-                TypeFilterChip(
-                    TransactionType.EXPENSE,
-                    state.typeFilter,
-                    R.string.type_expense,
-                    viewModel::setTypeFilter
-                )
-                TypeFilterChip(
-                    TransactionType.INCOME,
-                    state.typeFilter,
-                    R.string.type_income,
-                    viewModel::setTypeFilter
-                )
+                item {
+                    TypeFilterChip(
+                        null, state.typeFilter, R.string.filter_all, viewModel::setTypeFilter
+                    )
+                }
+                item {
+                    TypeFilterChip(
+                        TransactionType.EXPENSE,
+                        state.typeFilter,
+                        R.string.type_expense,
+                        viewModel::setTypeFilter
+                    )
+                }
+                item {
+                    TypeFilterChip(
+                        TransactionType.INCOME,
+                        state.typeFilter,
+                        R.string.type_income,
+                        viewModel::setTypeFilter
+                    )
+                }
+                item {
+                    val category = state.categoryFilter
+                    FilterChip(
+                        selected = category != null,
+                        onClick = { showCategoryFilter = true },
+                        label = {
+                            Text(
+                                category?.let { CategoryVisuals.displayName(it) }
+                                    ?: stringResource(R.string.filter_category)
+                            )
+                        },
+                        trailingIcon = if (category != null) {
+                            {
+                                Icon(
+                                    Icons.Rounded.Close,
+                                    contentDescription = null,
+                                    modifier = Modifier
+                                        .size(16.dp)
+                                        .clickable { viewModel.setCategoryFilter(null) }
+                                )
+                            }
+                        } else {
+                            null
+                        }
+                    )
+                }
+                item {
+                    FilterChip(
+                        selected = state.hasCustomRange,
+                        onClick = { showRangePicker = true },
+                        leadingIcon = {
+                            Icon(
+                                Icons.Rounded.DateRange,
+                                contentDescription = null,
+                                modifier = Modifier.size(16.dp)
+                            )
+                        },
+                        label = { Text(stringResource(R.string.filter_period)) }
+                    )
+                }
             }
 
             if (state.loaded && state.groups.isEmpty()) {
@@ -173,6 +263,111 @@ fun HistoryScreen(
                 .padding(bottom = 8.dp)
         )
     }
+
+    if (showCategoryFilter) {
+        CategoryFilterDialog(
+            categories = state.categories,
+            onSelect = { id ->
+                viewModel.setCategoryFilter(id)
+                showCategoryFilter = false
+            },
+            onDismiss = { showCategoryFilter = false }
+        )
+    }
+
+    if (showRangePicker) {
+        val rangeState = rememberDateRangePickerState()
+        DatePickerDialog(
+            onDismissRequest = { showRangePicker = false },
+            confirmButton = {
+                TextButton(
+                    enabled = rangeState.selectedStartDateMillis != null,
+                    onClick = {
+                        val start = rangeState.selectedStartDateMillis
+                        if (start != null) {
+                            viewModel.setDateRange(
+                                start = utcMillisToDate(start),
+                                end = rangeState.selectedEndDateMillis?.let(::utcMillisToDate)
+                            )
+                        }
+                        showRangePicker = false
+                    }
+                ) { Text(stringResource(R.string.action_apply)) }
+            },
+            dismissButton = {
+                TextButton(onClick = { showRangePicker = false }) {
+                    Text(stringResource(R.string.action_cancel))
+                }
+            }
+        ) {
+            DateRangePicker(
+                state = rangeState,
+                showModeToggle = false,
+                modifier = Modifier.weight(1f)
+            )
+        }
+    }
+}
+
+private fun utcMillisToDate(millis: Long): LocalDate =
+    Instant.ofEpochMilli(millis).atZone(ZoneOffset.UTC).toLocalDate()
+
+@Composable
+private fun rangeLabel(start: LocalDate, end: LocalDate?): String {
+    val formatter = DateTimeFormatter.ofPattern("d MMM", Locale.getDefault())
+    val effectiveEnd = end ?: start
+    return if (start == effectiveEnd) {
+        relativeDate(start)
+    } else {
+        "${start.format(formatter)} – ${effectiveEnd.format(formatter)}"
+    }
+}
+
+@Composable
+private fun CategoryFilterDialog(
+    categories: List<by.mlastovsky.kosht.data.db.CategoryEntity>,
+    onSelect: (Long?) -> Unit,
+    onDismiss: () -> Unit
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(stringResource(R.string.filter_category)) },
+        text = {
+            Column(Modifier.verticalScroll(rememberScrollState())) {
+                Text(
+                    text = stringResource(R.string.filter_all_categories),
+                    style = MaterialTheme.typography.bodyLarge,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable { onSelect(null) }
+                        .padding(vertical = 12.dp)
+                )
+                categories.forEach { category ->
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable { onSelect(category.id) }
+                            .padding(vertical = 8.dp),
+                        horizontalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        CategoryBadge(
+                            iconKey = category.iconKey,
+                            color = Color(category.colorArgb),
+                            size = 36.dp
+                        )
+                        Text(
+                            text = CategoryVisuals.displayName(category),
+                            style = MaterialTheme.typography.bodyLarge
+                        )
+                    }
+                }
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = onDismiss) { Text(stringResource(R.string.action_cancel)) }
+        }
+    )
 }
 
 @Composable
