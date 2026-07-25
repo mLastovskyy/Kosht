@@ -111,7 +111,17 @@ fun AddDebtDialog(
                 OutlinedTextField(
                     value = name,
                     onValueChange = { name = it.take(40) },
-                    placeholder = { Text(stringResource(R.string.debt_person)) },
+                    placeholder = {
+                        Text(
+                            stringResource(
+                                if (direction == DebtDirection.I_OWE) {
+                                    R.string.debt_person_owe
+                                } else {
+                                    R.string.debt_person_owed
+                                }
+                            )
+                        )
+                    },
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth()
                 )

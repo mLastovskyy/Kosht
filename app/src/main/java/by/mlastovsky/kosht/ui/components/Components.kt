@@ -25,6 +25,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import by.mlastovsky.kosht.ui.CategoryVisuals
@@ -65,7 +66,8 @@ fun AnimatedAmountText(
     text: String,
     style: TextStyle,
     modifier: Modifier = Modifier,
-    color: Color = Color.Unspecified
+    color: Color = Color.Unspecified,
+    maxLines: Int = 1
 ) {
     AnimatedContent(
         targetState = text,
@@ -75,7 +77,14 @@ fun AnimatedAmountText(
         },
         label = "amount"
     ) { value ->
-        Text(text = value, style = style, color = color, modifier = modifier)
+        Text(
+            text = value,
+            style = style,
+            color = color,
+            maxLines = maxLines,
+            overflow = TextOverflow.Ellipsis,
+            modifier = modifier
+        )
     }
 }
 

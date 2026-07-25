@@ -46,9 +46,13 @@ data class EditorUiState(
     val photoPath: String? = null,
     val pendingScan: PendingScan? = null
 ) {
+    /** An arithmetic operation is typed but not evaluated yet. */
+    val hasPendingOperation: Boolean
+        get() = by.mlastovsky.kosht.util.Expr.hasPendingOperation(amountInput)
+
     val canSave: Boolean
         get() = categoryId != null &&
-            (Money.parseToMinor(amountInput, currencyCode) ?: 0L) > 0L
+            (by.mlastovsky.kosht.util.Expr.evaluateToMinor(amountInput, currencyCode) ?: 0L) > 0L
 }
 
 /** OCR result awaiting user review before it is applied to the draft. */
@@ -162,16 +166,22 @@ class EditorViewModel(
         draft.update { it.copy(date = date) }
     }
 
+    /** The operand after the last operator — keypad rules apply per operand. */
+    private fun lastOperand(input: String): String =
+        input.takeLastWhile { it.isDigit() || it == '.' }
+
     fun onDigit(digit: Char) {
         draft.update { d ->
-            val input = d.amountInput
+            val operand = lastOperand(d.amountInput)
             val fractionDigits = Money.fractionDigits(currentCurrency())
-            val decimalIndex = input.indexOf('.')
+            val decimalIndex = operand.indexOf('.')
             val next = when {
-                decimalIndex >= 0 && input.length - decimalIndex - 1 >= fractionDigits -> input
-                decimalIndex < 0 && input.trimStart('0').length >= MAX_INTEGER_DIGITS -> input
-                input == "0" -> digit.toString()
-                else -> input + digit
+                decimalIndex >= 0 && operand.length - decimalIndex - 1 >= fractionDigits ->
+                    d.amountInput
+                decimalIndex < 0 && operand.trimStart('0').length >= MAX_INTEGER_DIGITS ->
+                    d.amountInput
+                operand == "0" -> d.amountInput.dropLast(1) + digit
+                else -> d.amountInput + digit
             }
             d.copy(amountInput = next)
         }
@@ -180,12 +190,40 @@ class EditorViewModel(
     fun onDecimal() {
         if (Money.fractionDigits(currentCurrency()) == 0) return
         draft.update { d ->
+            val operand = lastOperand(d.amountInput)
             val next = when {
-                d.amountInput.contains('.') -> d.amountInput
-                d.amountInput.isEmpty() -> "0."
+                operand.contains('.') -> d.amountInput
+                operand.isEmpty() -> d.amountInput + "0."
                 else -> d.amountInput + "."
             }
             d.copy(amountInput = next)
+        }
+    }
+
+    /** Appends a calculator operator (＋ − × ÷) after a digit. */
+    fun onOperator(op: Char) {
+        draft.update { d ->
+            val input = d.amountInput
+            val next = when {
+                input.isEmpty() -> input
+                input.last() == '.' -> input
+                input.last().isDigit() -> input + op
+                else -> input.dropLast(1) + op
+            }
+            d.copy(amountInput = next)
+        }
+    }
+
+    /** Evaluates the typed expression and replaces it with the result. */
+    fun onEquals() {
+        draft.update { d ->
+            val minor = by.mlastovsky.kosht.util.Expr
+                .evaluateToMinor(d.amountInput, currentCurrency())
+            if (minor == null || minor < 0) {
+                d
+            } else {
+                d.copy(amountInput = minorToInput(minor))
+            }
         }
     }
 
@@ -272,7 +310,8 @@ class EditorViewModel(
 
     fun save(onDone: () -> Unit) {
         val state = uiState.value
-        val amountMinor = Money.parseToMinor(state.amountInput, state.currencyCode) ?: return
+        val amountMinor = by.mlastovsky.kosht.util.Expr
+            .evaluateToMinor(state.amountInput, state.currencyCode) ?: return
         val categoryId = state.categoryId ?: return
         if (amountMinor <= 0) return
 

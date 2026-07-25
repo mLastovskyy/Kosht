@@ -92,7 +92,7 @@ fun HomeScreen(
                         style = MaterialTheme.typography.titleLarge,
                         modifier = Modifier.weight(1f)
                     )
-                    if (state.streakDays > 1) {
+                    if (state.loaded) {
                         Row(
                             verticalAlignment = Alignment.CenterVertically,
                             modifier = Modifier

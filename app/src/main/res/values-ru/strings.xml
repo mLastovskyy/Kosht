@@ -139,6 +139,8 @@
     <string name="section_debts">Долги</string>
     <string name="debt_new">Новый долг</string>
     <string name="debt_person">Кто</string>
+    <string name="debt_person_owe">Кому я должен</string>
+    <string name="debt_person_owed">Кто мне должен</string>
     <string name="debt_i_owe">Я должен</string>
     <string name="debt_owed_to_me">Мне должны</string>
     <string name="debt_repay">Погасить часть</string>

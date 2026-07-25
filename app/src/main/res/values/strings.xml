@@ -139,6 +139,8 @@
     <string name="section_debts">Debts</string>
     <string name="debt_new">New debt</string>
     <string name="debt_person">Who</string>
+    <string name="debt_person_owe">Who I owe</string>
+    <string name="debt_person_owed">Who owes me</string>
     <string name="debt_i_owe">I owe</string>
     <string name="debt_owed_to_me">Owed to me</string>
     <string name="debt_repay">Repay part</string>

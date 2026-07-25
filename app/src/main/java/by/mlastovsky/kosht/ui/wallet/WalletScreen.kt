@@ -522,7 +522,9 @@ private fun RecurringRow(
                     " · " + frequencyLabel(item.recurring.frequency) +
                     " · " + Money.format(item.recurring.amountMinor, item.recurring.currencyCode),
                 style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
             )
         }
         IconButton(onClick = onDelete) {
@@ -675,7 +677,8 @@ private fun GoalCard(
                 text = Money.format(goalUi.savedMinor, goal.currencyCode) + " / " +
                     Money.format(goal.targetMinor, goal.currencyCode),
                 style = MaterialTheme.typography.labelLarge,
-                color = accent
+                color = accent,
+                maxLines = 1
             )
             IconButton(onClick = onDelete) {
                 Icon(
@@ -734,7 +737,9 @@ private fun SavingsSummary(
             Text(
                 text = perCurrency.joinToString(" · "),
                 style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
             )
         }
         Row(

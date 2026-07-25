@@ -295,6 +295,10 @@ fun EditorScreen(
                 view.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP)
                 viewModel.onDecimal()
             },
+            onOperator = { op ->
+                view.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP)
+                viewModel.onOperator(op)
+            },
             onBackspace = {
                 view.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP)
                 viewModel.onBackspace()
@@ -304,16 +308,23 @@ fun EditorScreen(
         Button(
             onClick = {
                 view.performHapticFeedback(HapticFeedbackConstants.VIRTUAL_KEY)
-                viewModel.save(onClose)
+                if (state.hasPendingOperation) viewModel.onEquals() else viewModel.save(onClose)
             },
-            enabled = state.canSave,
+            enabled = if (state.hasPendingOperation) true else state.canSave,
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(horizontal = 16.dp, vertical = 12.dp)
                 .height(56.dp),
             shape = MaterialTheme.shapes.large
         ) {
-            Text(stringResource(R.string.editor_save), style = MaterialTheme.typography.titleMedium)
+            Text(
+                text = if (state.hasPendingOperation) {
+                    "="
+                } else {
+                    stringResource(R.string.editor_save)
+                },
+                style = MaterialTheme.typography.titleMedium
+            )
         }
     }
 
@@ -712,6 +723,7 @@ private fun CategoryPicker(
 private fun Keypad(
     onDigit: (Char) -> Unit,
     onDecimal: () -> Unit,
+    onOperator: (Char) -> Unit,
     onBackspace: () -> Unit
 ) {
     Column(
@@ -720,7 +732,8 @@ private fun Keypad(
             .padding(horizontal = 24.dp),
         verticalArrangement = Arrangement.spacedBy(4.dp)
     ) {
-        listOf("123", "456", "789").forEach { rowDigits ->
+        // A slim calculator column on the right: sum up items on the fly.
+        listOf("123" to '÷', "456" to '×', "789" to '−').forEach { (rowDigits, op) ->
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(4.dp)
@@ -737,6 +750,7 @@ private fun Keypad(
                         )
                     }
                 }
+                OperatorButton(op, onOperator, Modifier.weight(0.7f))
             }
         }
         Row(
@@ -764,7 +778,31 @@ private fun Keypad(
                     tint = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
+            OperatorButton('+', onOperator, Modifier.weight(0.7f))
         }
+    }
+}
+
+@Composable
+private fun OperatorButton(
+    op: Char,
+    onOperator: (Char) -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Box(
+        modifier = modifier
+            .height(56.dp)
+            .clip(MaterialTheme.shapes.medium)
+            .background(MaterialTheme.colorScheme.surfaceContainerHigh)
+            .clickable { onOperator(op) },
+        contentAlignment = Alignment.Center
+    ) {
+        Text(
+            text = op.toString(),
+            style = MaterialTheme.typography.headlineSmall,
+            color = MaterialTheme.colorScheme.primary,
+            textAlign = TextAlign.Center
+        )
     }
 }
 
