@@ -10,6 +10,7 @@ import by.mlastovsky.kosht.MainViewModel
 import by.mlastovsky.kosht.ui.editor.EditorViewModel
 import by.mlastovsky.kosht.ui.history.HistoryViewModel
 import by.mlastovsky.kosht.ui.home.HomeViewModel
+import by.mlastovsky.kosht.ui.settings.SettingsViewModel
 import by.mlastovsky.kosht.ui.stats.StatsViewModel
 
 /**
@@ -38,6 +39,9 @@ object AppViewModelProvider {
                 app().container.transactionRepository,
                 app().container.settingsRepository
             )
+        }
+        initializer {
+            SettingsViewModel(app().container.settingsRepository)
         }
         initializer {
             EditorViewModel(

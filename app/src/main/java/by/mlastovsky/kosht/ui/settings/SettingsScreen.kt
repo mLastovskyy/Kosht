@@ -1,0 +1,252 @@
+package by.mlastovsky.kosht.ui.settings
+
+import android.os.Build
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.statusBarsPadding
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.selection.selectable
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.BrightnessMedium
+import androidx.compose.material.icons.rounded.Info
+import androidx.compose.material.icons.rounded.Palette
+import androidx.compose.material.icons.rounded.Payments
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.Icon
+import androidx.compose.material3.ListItem
+import androidx.compose.material3.ListItemDefaults
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.RadioButton
+import androidx.compose.material3.Switch
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.unit.dp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.lifecycle.viewmodel.compose.viewModel
+import by.mlastovsky.kosht.R
+import by.mlastovsky.kosht.model.ThemeMode
+import by.mlastovsky.kosht.ui.AppViewModelProvider
+import java.util.Currency
+import java.util.Locale
+
+@Composable
+fun SettingsScreen(
+    viewModel: SettingsViewModel = viewModel(factory = AppViewModelProvider.Factory)
+) {
+    val settings by viewModel.settings.collectAsStateWithLifecycle()
+    val current = settings ?: return
+    var showThemeDialog by remember { mutableStateOf(false) }
+    var showCurrencyDialog by remember { mutableStateOf(false) }
+    val context = LocalContext.current
+
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .statusBarsPadding()
+            .verticalScroll(rememberScrollState())
+    ) {
+        Text(
+            text = stringResource(R.string.nav_settings),
+            style = MaterialTheme.typography.headlineMedium,
+            modifier = Modifier.padding(horizontal = 16.dp, vertical = 16.dp)
+        )
+
+        SectionHeader(stringResource(R.string.settings_appearance))
+
+        ListItem(
+            headlineContent = { Text(stringResource(R.string.settings_theme)) },
+            supportingContent = { Text(themeLabel(current.themeMode)) },
+            leadingContent = { Icon(Icons.Rounded.BrightnessMedium, contentDescription = null) },
+            colors = transparentListColors(),
+            modifier = Modifier.clickable { showThemeDialog = true }
+        )
+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            ListItem(
+                headlineContent = { Text(stringResource(R.string.settings_dynamic_colors)) },
+                supportingContent = { Text(stringResource(R.string.settings_dynamic_colors_desc)) },
+                leadingContent = { Icon(Icons.Rounded.Palette, contentDescription = null) },
+                trailingContent = {
+                    Switch(
+                        checked = current.dynamicColors,
+                        onCheckedChange = viewModel::setDynamicColors
+                    )
+                },
+                colors = transparentListColors(),
+                modifier = Modifier.clickable {
+                    viewModel.setDynamicColors(!current.dynamicColors)
+                }
+            )
+        }
+
+        HorizontalDivider(Modifier.padding(vertical = 8.dp))
+
+        SectionHeader(stringResource(R.string.settings_general))
+
+        ListItem(
+            headlineContent = { Text(stringResource(R.string.settings_currency)) },
+            supportingContent = { Text(currencyLabel(current.currencyCode)) },
+            leadingContent = { Icon(Icons.Rounded.Payments, contentDescription = null) },
+            colors = transparentListColors(),
+            modifier = Modifier.clickable { showCurrencyDialog = true }
+        )
+
+        HorizontalDivider(Modifier.padding(vertical = 8.dp))
+
+        SectionHeader(stringResource(R.string.settings_about))
+
+        val versionName = remember {
+            runCatching {
+                context.packageManager.getPackageInfo(context.packageName, 0).versionName
+            }.getOrNull() ?: "1.0"
+        }
+        ListItem(
+            headlineContent = { Text(stringResource(R.string.settings_version)) },
+            supportingContent = { Text(versionName) },
+            leadingContent = { Icon(Icons.Rounded.Info, contentDescription = null) },
+            colors = transparentListColors()
+        )
+    }
+
+    if (showThemeDialog) {
+        ThemeDialog(
+            current = current.themeMode,
+            onSelect = { mode ->
+                viewModel.setThemeMode(mode)
+                showThemeDialog = false
+            },
+            onDismiss = { showThemeDialog = false }
+        )
+    }
+
+    if (showCurrencyDialog) {
+        CurrencyDialog(
+            current = current.currencyCode,
+            onSelect = { code ->
+                viewModel.setCurrency(code)
+                showCurrencyDialog = false
+            },
+            onDismiss = { showCurrencyDialog = false }
+        )
+    }
+}
+
+@Composable
+private fun SectionHeader(text: String) {
+    Text(
+        text = text,
+        style = MaterialTheme.typography.labelLarge,
+        color = MaterialTheme.colorScheme.primary,
+        modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp)
+    )
+}
+
+@Composable
+private fun transparentListColors() =
+    ListItemDefaults.colors(containerColor = androidx.compose.ui.graphics.Color.Transparent)
+
+@Composable
+private fun themeLabel(mode: ThemeMode): String = stringResource(
+    when (mode) {
+        ThemeMode.SYSTEM -> R.string.theme_system
+        ThemeMode.LIGHT -> R.string.theme_light
+        ThemeMode.DARK -> R.string.theme_dark
+    }
+)
+
+private fun currencyLabel(code: String): String {
+    val name = runCatching {
+        Currency.getInstance(code).getDisplayName(Locale.getDefault())
+            .replaceFirstChar { it.titlecase(Locale.getDefault()) }
+    }.getOrNull()
+    return if (name != null) "$code · $name" else code
+}
+
+@Composable
+private fun ThemeDialog(
+    current: ThemeMode,
+    onSelect: (ThemeMode) -> Unit,
+    onDismiss: () -> Unit
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(stringResource(R.string.settings_theme)) },
+        text = {
+            Column {
+                ThemeMode.entries.forEach { mode ->
+                    androidx.compose.foundation.layout.Row(
+                        verticalAlignment = androidx.compose.ui.Alignment.CenterVertically,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .selectable(
+                                selected = current == mode,
+                                onClick = { onSelect(mode) }
+                            )
+                            .padding(vertical = 10.dp)
+                    ) {
+                        RadioButton(selected = current == mode, onClick = null)
+                        Text(
+                            text = themeLabel(mode),
+                            style = MaterialTheme.typography.bodyLarge,
+                            modifier = Modifier.padding(start = 12.dp)
+                        )
+                    }
+                }
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = onDismiss) { Text(stringResource(R.string.action_cancel)) }
+        }
+    )
+}
+
+@Composable
+private fun CurrencyDialog(
+    current: String,
+    onSelect: (String) -> Unit,
+    onDismiss: () -> Unit
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(stringResource(R.string.settings_currency)) },
+        text = {
+            Column(Modifier.verticalScroll(rememberScrollState())) {
+                SettingsViewModel.SUPPORTED_CURRENCIES.forEach { code ->
+                    androidx.compose.foundation.layout.Row(
+                        verticalAlignment = androidx.compose.ui.Alignment.CenterVertically,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .selectable(
+                                selected = current == code,
+                                onClick = { onSelect(code) }
+                            )
+                            .padding(vertical = 10.dp)
+                    ) {
+                        RadioButton(selected = current == code, onClick = null)
+                        Text(
+                            text = currencyLabel(code),
+                            style = MaterialTheme.typography.bodyLarge,
+                            modifier = Modifier.padding(start = 12.dp)
+                        )
+                    }
+                }
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = onDismiss) { Text(stringResource(R.string.action_cancel)) }
+        }
+    )
+}

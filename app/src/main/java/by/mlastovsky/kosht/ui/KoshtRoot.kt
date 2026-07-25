@@ -8,8 +8,6 @@ import androidx.compose.animation.scaleIn
 import androidx.compose.animation.scaleOut
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Add
@@ -22,10 +20,8 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.unit.dp
 import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.NavHostController
 import androidx.navigation.NavType
@@ -38,6 +34,7 @@ import by.mlastovsky.kosht.R
 import by.mlastovsky.kosht.ui.editor.EditorScreen
 import by.mlastovsky.kosht.ui.history.HistoryScreen
 import by.mlastovsky.kosht.ui.home.HomeScreen
+import by.mlastovsky.kosht.ui.settings.SettingsScreen
 import by.mlastovsky.kosht.ui.stats.StatsScreen
 import by.mlastovsky.kosht.ui.navigation.MainTabs
 import by.mlastovsky.kosht.ui.navigation.Routes
@@ -104,7 +101,7 @@ fun KoshtRoot() {
                 StatsScreen()
             }
             composable(Routes.SETTINGS) {
-                PlaceholderScreen(stringResource(R.string.nav_settings))
+                SettingsScreen()
             }
             composable(
                 route = Routes.EDITOR,
@@ -153,17 +150,5 @@ private fun NavHostController.navigateToTab(route: String) {
         popUpTo(graph.findStartDestination().id) { saveState = true }
         launchSingleTop = true
         restoreState = true
-    }
-}
-
-@Composable
-private fun PlaceholderScreen(title: String) {
-    Box(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(24.dp),
-        contentAlignment = Alignment.Center
-    ) {
-        Text(text = title, style = MaterialTheme.typography.titleLarge)
     }
 }
