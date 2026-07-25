@@ -1,0 +1,87 @@
+<resources>
+    <string name="app_name">Кошт</string>
+
+    <!-- Навигация -->
+    <string name="nav_home">Главная</string>
+    <string name="nav_history">История</string>
+    <string name="nav_stats">Статистика</string>
+    <string name="nav_settings">Настройки</string>
+    <string name="cd_add_transaction">Добавить операцию</string>
+    <string name="cd_back">Назад</string>
+
+    <!-- Главная -->
+    <string name="home_balance">Общий баланс</string>
+    <string name="home_income">Доходы</string>
+    <string name="home_expenses">Расходы</string>
+    <string name="home_recent">Недавние</string>
+    <string name="home_see_all">Все</string>
+    <string name="home_empty_title">Пока нет операций</string>
+    <string name="home_empty_subtitle">Нажмите +, чтобы добавить первую</string>
+
+    <!-- Редактор операции -->
+    <string name="editor_title_new">Новая операция</string>
+    <string name="editor_title_edit">Редактирование</string>
+    <string name="type_expense">Расход</string>
+    <string name="type_income">Доход</string>
+    <string name="editor_category">Категория</string>
+    <string name="editor_note_hint">Заметка</string>
+    <string name="editor_date">Дата</string>
+    <string name="editor_save">Сохранить</string>
+    <string name="editor_delete">Удалить</string>
+    <string name="date_today">Сегодня</string>
+    <string name="date_yesterday">Вчера</string>
+
+    <!-- История -->
+    <string name="history_search_hint">Поиск</string>
+    <string name="history_empty_title">Ничего не найдено</string>
+    <string name="history_empty_subtitle">Измените фильтры или добавьте новую операцию</string>
+    <string name="filter_all">Все</string>
+    <string name="transaction_deleted">Операция удалена</string>
+    <string name="undo">Отменить</string>
+
+    <!-- Статистика -->
+    <string name="stats_total">Итого</string>
+    <string name="stats_no_data_title">Нет данных за этот месяц</string>
+    <string name="stats_no_data_subtitle">Операции появятся здесь после добавления</string>
+    <string name="stats_by_day">Траты по дням</string>
+
+    <!-- Настройки -->
+    <string name="settings_appearance">Внешний вид</string>
+    <string name="settings_theme">Тема</string>
+    <string name="theme_system">Как в системе</string>
+    <string name="theme_light">Светлая</string>
+    <string name="theme_dark">Тёмная</string>
+    <string name="settings_dynamic_colors">Динамические цвета</string>
+    <string name="settings_dynamic_colors_desc">Цвета из обоев системы (Android 12+)</string>
+    <string name="settings_general">Общие</string>
+    <string name="settings_currency">Валюта</string>
+    <string name="settings_about">О приложении</string>
+    <string name="settings_version">Версия</string>
+
+    <!-- Категории: управление -->
+    <string name="category_new">Новая категория</string>
+    <string name="category_name_hint">Название</string>
+    <string name="category_icon">Иконка</string>
+    <string name="category_color">Цвет</string>
+    <string name="action_cancel">Отмена</string>
+    <string name="action_add">Добавить</string>
+
+    <!-- Встроенные категории -->
+    <string name="category_groceries">Продукты</string>
+    <string name="category_cafe">Кафе и рестораны</string>
+    <string name="category_transport">Транспорт</string>
+    <string name="category_housing">Жильё</string>
+    <string name="category_health">Здоровье</string>
+    <string name="category_clothes">Одежда</string>
+    <string name="category_entertainment">Развлечения</string>
+    <string name="category_subscriptions">Подписки</string>
+    <string name="category_gifts">Подарки</string>
+    <string name="category_education">Образование</string>
+    <string name="category_travel">Путешествия</string>
+    <string name="category_other_expense">Прочее</string>
+    <string name="category_salary">Зарплата</string>
+    <string name="category_freelance">Подработка</string>
+    <string name="category_gift_income">Подарки</string>
+    <string name="category_investments">Инвестиции</string>
+    <string name="category_other_income">Прочее</string>
+</resources>
