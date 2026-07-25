@@ -737,7 +737,8 @@ fun frequencyLabel(frequency: RecurringFrequency): String = stringResource(
 
 /**
  * Confirmation of a due charge: the amount is editable (this month's bill may
- * differ), and a foreign-currency charge also exposes the rate.
+ * differ), a foreign-currency charge also exposes the rate, and with several
+ * accounts the user picks which one the charge is deducted from.
  */
 @Composable
 fun ConfirmRecurringDialog(
@@ -746,7 +747,8 @@ fun ConfirmRecurringDialog(
     currencyCode: String,
     appCurrencyCode: String,
     suggestedRate: Double?,
-    onConfirm: (amountMinor: Long, rate: Double) -> Unit,
+    accounts: List<by.mlastovsky.kosht.data.db.AccountEntity>,
+    onConfirm: (amountMinor: Long, rate: Double, accountId: Long?) -> Unit,
     onDismiss: () -> Unit
 ) {
     val sameCurrency = currencyCode == appCurrencyCode
@@ -759,6 +761,7 @@ fun ConfirmRecurringDialog(
     var rateText by remember {
         mutableStateOf(suggestedRate?.let { "%.4f".format(it).replace(',', '.') } ?: "")
     }
+    var accountId by remember { mutableStateOf(accounts.firstOrNull()?.id) }
     val amountMinor = Money.parseToMinor(amountText, currencyCode) ?: 0L
     val rate = if (sameCurrency) 1.0 else rateText.replace(',', '.').toDoubleOrNull() ?: 0.0
     val convertedMinor = if (rate > 0) Math.round(amountMinor * rate) else 0L
@@ -776,6 +779,35 @@ fun ConfirmRecurringDialog(
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                     modifier = Modifier.fillMaxWidth()
                 )
+                if (accounts.size > 1) {
+                    Text(
+                        stringResource(R.string.editor_account),
+                        style = MaterialTheme.typography.labelLarge
+                    )
+                    LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        items(accounts, key = { it.id }) { account ->
+                            FilterChip(
+                                selected = accountId == account.id,
+                                onClick = { accountId = account.id },
+                                leadingIcon = {
+                                    Icon(
+                                        CategoryVisuals.icon(account.iconKey),
+                                        contentDescription = null,
+                                        tint = Color(account.colorArgb),
+                                        modifier = Modifier.size(18.dp)
+                                    )
+                                },
+                                label = {
+                                    Text(
+                                        by.mlastovsky.kosht.ui.AccountVisuals
+                                            .displayName(account),
+                                        maxLines = 1
+                                    )
+                                }
+                            )
+                        }
+                    }
+                }
                 if (!sameCurrency) {
                     OutlinedTextField(
                         value = rateText,
@@ -809,7 +841,7 @@ fun ConfirmRecurringDialog(
         confirmButton = {
             TextButton(
                 enabled = amountMinor > 0 && rate > 0,
-                onClick = { onConfirm(amountMinor, rate) }
+                onClick = { onConfirm(amountMinor, rate, accountId) }
             ) { Text(stringResource(R.string.action_confirm)) }
         },
         dismissButton = {

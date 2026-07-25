@@ -37,7 +37,7 @@ A clean editor, smart category carousel and haptic feedback make adding a transa
 Tap the amount and a calculator pops up in its own dialog — the editor itself stays uncluttered. Type `12,50+3,90+8`, hit the smart **=** to evaluate (with proper operator precedence), and **Apply** writes the sum into the amount field.
 
 ### 💳 Multiple accounts
-Cards, cash, whatever you use. One account by default keeps the app dead simple; add more and Kosht unlocks per-account balances on Home, an account picker in the editor and an account filter in Statistics.
+Cards, cash, whatever you use. One account by default keeps the app dead simple; add more and Kosht unlocks per-account balances on Home, an account picker in the editor, an account choice when confirming a recurring payment and an account filter in Statistics.
 
 ### 📸 Receipt scanning — fully offline
 Snap a photo of a receipt and Kosht reads the total, date and store name for you, then attaches the photo to the record. Recognition runs 100% on your device — receipts never leave your phone. Review and correct anything before saving.
@@ -58,7 +58,7 @@ Snap a photo of a receipt and Kosht reads the total, date and store name for you
 - **Debts** — who owes whom, in any currency, with partial repayments
 - **Savings** — a journal of every "set aside" moment, with per-currency totals
 - **Savings goals** — name a goal, set a target, watch the progress bar fill 🎉
-- **Recurring payments** — pick the charge date and frequency; nothing is charged silently, you always confirm. Foreign-currency charges let you set the exact rate.
+- **Recurring payments** — pick the charge date and frequency; nothing is charged silently, you always confirm. Foreign-currency charges let you set the exact rate, and with several accounts you pick which one to pay from.
 
 ### 🏆 Gamification that helps, not annoys
 - **Under-budget streak** — days in a row you stayed within your daily budget (auto-calculated or set your own)

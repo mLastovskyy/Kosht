@@ -192,13 +192,14 @@ class WalletRepository(
 
     /**
      * Confirms a due charge: records the expense transaction (already
-     * converted to the app currency by the caller when needed) and advances
-     * the next due date by one period.
+     * converted to the app currency by the caller when needed) against the
+     * chosen account and advances the next due date by one period.
      */
     suspend fun confirmRecurring(
         recurring: RecurringEntity,
         chargeAmountMinor: Long,
-        bynMinor: Long?
+        bynMinor: Long?,
+        accountId: Long? = null
     ) {
         val now = System.currentTimeMillis()
         transactionDao.insert(
@@ -209,7 +210,8 @@ class WalletRepository(
                 note = recurring.title,
                 timestamp = now,
                 createdAt = now,
-                bynMinor = bynMinor
+                bynMinor = bynMinor,
+                accountId = accountId
             )
         )
         recurringDao.update(recurring.advanced())

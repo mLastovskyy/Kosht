@@ -288,15 +288,21 @@ class WalletViewModel(
 
     /**
      * Confirms a due charge with a user-checked amount (in the charge's own
-     * currency) and rate: charged = amount × rate, in the app currency.
+     * currency) and rate: charged = amount × rate, in the app currency,
+     * deducted from the chosen account.
      */
-    fun confirmRecurring(item: RecurringWithCategory, amountMinor: Long, rate: Double) {
+    fun confirmRecurring(
+        item: RecurringWithCategory,
+        amountMinor: Long,
+        rate: Double,
+        accountId: Long? = null
+    ) {
         if (amountMinor <= 0 || rate <= 0.0) return
         viewModelScope.launch {
             val state = uiState.value
             val converted = Math.round(amountMinor * rate)
             val byn = RatesRepository.toBynMinor(converted, state.currencyCode, state.rates)
-            walletRepository.confirmRecurring(item.recurring, converted, byn)
+            walletRepository.confirmRecurring(item.recurring, converted, byn, accountId)
         }
     }
 

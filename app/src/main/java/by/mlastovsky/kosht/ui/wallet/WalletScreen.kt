@@ -411,8 +411,14 @@ fun WalletScreen(
                 from = item.recurring.currencyCode,
                 to = state.currencyCode
             ),
-            onConfirm = { amountMinor, rate ->
-                viewModel.confirmRecurring(item, amountMinor, rate)
+            // The picker shows up only with several accounts to choose from.
+            accounts = if (state.multiAccount) {
+                state.accountsWithBalances.map { it.first }
+            } else {
+                emptyList()
+            },
+            onConfirm = { amountMinor, rate, accountId ->
+                viewModel.confirmRecurring(item, amountMinor, rate, accountId)
                 recurringToConfirm = null
             },
             onDismiss = { recurringToConfirm = null }
