@@ -68,6 +68,10 @@ interface TransactionDao {
     @Query("UPDATE transactions SET categoryId = :to WHERE categoryId = :from")
     suspend fun reassignCategory(from: Long, to: Long)
 
+    /** Rescales every amount when the app currency changes. */
+    @Query("UPDATE transactions SET amountMinor = CAST(ROUND(amountMinor * :factor) AS INTEGER)")
+    suspend fun rescaleAmounts(factor: Double)
+
     @Insert
     suspend fun insert(transaction: TransactionEntity): Long
 

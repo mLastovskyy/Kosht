@@ -17,7 +17,8 @@ import kotlinx.coroutines.launch
 
 class SettingsViewModel(
     private val settingsRepository: SettingsRepository,
-    private val photoStore: PhotoStore
+    private val photoStore: PhotoStore,
+    private val currencyChanger: by.mlastovsky.kosht.data.CurrencyChanger
 ) : ViewModel() {
 
     val settings: StateFlow<AppSettings?> = settingsRepository.settings
@@ -53,8 +54,9 @@ class SettingsViewModel(
         viewModelScope.launch { settingsRepository.setDynamicColors(enabled) }
     }
 
+    /** Switches the app currency, rescaling stored amounts by the NBRB rate. */
     fun setCurrency(code: String) {
-        viewModelScope.launch { settingsRepository.setCurrencyCode(code) }
+        viewModelScope.launch { currencyChanger.change(code) }
     }
 
     fun setNotifyDailyReminder(enabled: Boolean) {

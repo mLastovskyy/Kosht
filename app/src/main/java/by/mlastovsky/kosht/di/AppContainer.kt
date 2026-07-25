@@ -1,6 +1,7 @@
 package by.mlastovsky.kosht.di
 
 import android.content.Context
+import by.mlastovsky.kosht.data.CurrencyChanger
 import by.mlastovsky.kosht.data.PhotoStore
 import by.mlastovsky.kosht.data.RatesRepository
 import by.mlastovsky.kosht.data.SettingsRepository
@@ -42,6 +43,15 @@ class AppContainer(context: Context) {
     }
 
     val receiptScanner: ReceiptScanner by lazy { ReceiptScanner(appContext) }
+
+    val currencyChanger: CurrencyChanger by lazy {
+        CurrencyChanger(
+            database.transactionDao(),
+            database.challengeDao(),
+            settingsRepository,
+            ratesRepository
+        )
+    }
 
     val photoStore: PhotoStore by lazy { PhotoStore(appContext) }
 

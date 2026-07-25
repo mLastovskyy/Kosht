@@ -71,7 +71,6 @@ import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneOffset
 import java.time.format.DateTimeFormatter
-import java.util.Locale
 
 @Composable
 fun HistoryScreen(
@@ -314,7 +313,8 @@ private fun utcMillisToDate(millis: Long): LocalDate =
 
 @Composable
 private fun rangeLabel(start: LocalDate, end: LocalDate?): String {
-    val formatter = DateTimeFormatter.ofPattern("d MMM", Locale.getDefault())
+    val locale = androidx.compose.ui.platform.LocalLocale.current.platformLocale
+    val formatter = DateTimeFormatter.ofPattern("d MMM", locale)
     val effectiveEnd = end ?: start
     return if (start == effectiveEnd) {
         relativeDate(start)

@@ -564,6 +564,12 @@ private fun CurrencyDialog(
         title = { Text(stringResource(R.string.settings_currency)) },
         text = {
             Column(Modifier.verticalScroll(rememberScrollState())) {
+                Text(
+                    text = stringResource(R.string.currency_convert_hint),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(bottom = 8.dp)
+                )
                 SettingsViewModel.SUPPORTED_CURRENCIES.forEach { code ->
                     androidx.compose.foundation.layout.Row(
                         verticalAlignment = androidx.compose.ui.Alignment.CenterVertically,

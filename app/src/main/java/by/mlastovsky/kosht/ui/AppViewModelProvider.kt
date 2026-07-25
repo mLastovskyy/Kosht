@@ -47,7 +47,8 @@ object AppViewModelProvider {
         initializer {
             SettingsViewModel(
                 app().container.settingsRepository,
-                app().container.photoStore
+                app().container.photoStore,
+                app().container.currencyChanger
             )
         }
         initializer {
