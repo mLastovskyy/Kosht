@@ -53,6 +53,7 @@ import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.rememberDatePickerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -197,7 +198,7 @@ fun EditorScreen(
 
         Button(
             onClick = {
-                view.performHapticFeedback(HapticFeedbackConstants.CONFIRM)
+                view.performHapticFeedback(HapticFeedbackConstants.VIRTUAL_KEY)
                 viewModel.save(onClose)
             },
             enabled = state.canSave,
@@ -485,7 +486,7 @@ private fun NewCategoryDialog(
 ) {
     var name by remember { mutableStateOf("") }
     var iconKey by remember { mutableStateOf(CategoryVisuals.pickableIconKeys.first()) }
-    var colorArgb by remember { mutableStateOf(CategoryVisuals.pickableColors.first()) }
+    var colorArgb by remember { mutableLongStateOf(CategoryVisuals.pickableColors.first()) }
 
     AlertDialog(
         onDismissRequest = onDismiss,

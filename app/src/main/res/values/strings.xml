@@ -23,9 +23,7 @@
     <string name="editor_title_edit">Edit transaction</string>
     <string name="type_expense">Expense</string>
     <string name="type_income">Income</string>
-    <string name="editor_category">Category</string>
     <string name="editor_note_hint">Note</string>
-    <string name="editor_date">Date</string>
     <string name="editor_save">Save</string>
     <string name="editor_delete">Delete</string>
     <string name="date_today">Today</string>

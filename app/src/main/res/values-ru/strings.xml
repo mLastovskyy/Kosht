@@ -23,9 +23,7 @@
     <string name="editor_title_edit">Редактирование</string>
     <string name="type_expense">Расход</string>
     <string name="type_income">Доход</string>
-    <string name="editor_category">Категория</string>
     <string name="editor_note_hint">Заметка</string>
-    <string name="editor_date">Дата</string>
     <string name="editor_save">Сохранить</string>
     <string name="editor_delete">Удалить</string>
     <string name="date_today">Сегодня</string>

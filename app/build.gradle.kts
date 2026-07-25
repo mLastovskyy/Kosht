@@ -29,6 +29,9 @@ android {
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
             )
+            // Personal app installed directly on the developer's phone:
+            // sign release builds with the debug key so they are installable.
+            signingConfig = signingConfigs.getByName("debug")
         }
     }
     compileOptions {
