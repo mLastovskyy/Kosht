@@ -212,6 +212,39 @@
     <string name="update_signature_text">This release is signed with a different key, so Android refuses to install it over the current build. Sync your account first, then reinstall Kosht — signing in restores your data.</string>
     <string name="rates_offline">No connection. Showing the rates from the last update.</string>
 
+    <!-- App lock: a code of your own, and the phone's own finger -->
+    <string name="settings_security">Security</string>
+    <string name="lock_setting">App lock</string>
+    <string name="lock_setting_desc">Ask for a code on opening</string>
+    <string name="lock_change">Change the code</string>
+    <string name="lock_biometrics">Unlock with biometrics</string>
+    <string name="lock_timeout">Ask for the code</string>
+    <string name="lock_timeout_field">Minutes away</string>
+    <string name="lock_timeout_unit">min</string>
+    <string name="lock_timeout_immediately">As soon as you leave</string>
+    <plurals name="lock_timeout_minutes">
+        <item quantity="one">After %1$d minute away</item>
+        <item quantity="other">After %1$d minutes away</item>
+    </plurals>
+    <string name="lock_enter_code">Enter your code</string>
+    <string name="lock_enter_current">Enter your current code</string>
+    <string name="lock_confirm_off">Enter the code to switch the lock off</string>
+    <string name="lock_current_hint">Just to be sure it is you</string>
+    <string name="lock_enter_new">Make up a code</string>
+    <string name="lock_repeat_new">Repeat the code</string>
+    <string name="lock_new_hint">From 4 to 8 digits. There will be nowhere to look it up.</string>
+    <string name="lock_err_wrong">Wrong code</string>
+    <string name="lock_err_mismatch">The codes are different — try again</string>
+    <string name="lock_err_short">At least 4 digits</string>
+    <string name="lock_wait">Wrong code. Try again in %1$s</string>
+    <string name="lock_forgot">Forgot the code?</string>
+    <string name="lock_forgot_title">A forgotten code</string>
+    <string name="lock_forgot_text">There is no way round it, and that is deliberate: the code is not stored anywhere — not even in a form anything could read back — so there is nothing to send you.\n\nWhat does work is reinstalling Kosht: that clears the lock along with the app\'s data. If you were signed in, the records come back with the first sync; without an account they only ever lived on this phone.</string>
+    <string name="lock_prompt_title">Unlock Kosht</string>
+    <string name="lock_prompt_subtitle">Biometrics instead of the code</string>
+    <string name="lock_use_code">Use the code</string>
+    <string name="cd_backspace">Delete the last digit</string>
+
     <!-- Electronic receipts behind a QR -->
     <string name="ereceipt_title">Electronic receipt</string>
     <string name="ereceipt_open">Open the electronic receipt</string>
@@ -538,8 +571,20 @@ Scanning a receipt fills the list in by itself where the slip lists its lines (s
 What it is for: Statistics → Charts → Products shows every product of the month with what it cost you in total, how many times it turned up and how much of the month\'s shopping it is. That is where "we spend how much on coffee?" gets an answer.</string>
     <string name="guide_calc_title">Amount calculator</string>
     <string name="guide_calc_body">The calculator lives in a full-width bottom sheet: it opens by itself for a new record and whenever you tap the amount. The right column of the keypad holds ÷ × − +. Type expressions like 12,50+3,90+8. While an operation is unfinished the big button turns into = — tap it to evaluate. Apply writes the result into the amount field and closes the sheet; Cancel or a swipe down leaves the amount untouched. Multiplication and division take precedence, as they should.</string>
+    <string name="guide_lock_title">App lock</string>
+    <string name="guide_lock_body">Kosht can ask for a code before it opens: Settings → Security → "App lock". Make up 4 to 8 digits, repeat them, and that is the lock on.
+
+The code is typed on the app\'s own keypad and shown as dots — never as digits, so a glance over your shoulder gets nothing. It is not kept anywhere as a code either: only a deliberately slow one-way digest of it, salted with random bytes of its own, which is why nobody can look it up or send it back to you (see "Forgot the code?" on the lock screen).
+
+If the phone has a finger or a face on file, "Unlock with biometrics" appears. Switching it on asks for the finger once, to prove it works before you rely on it. After that the sensor key sits in the keypad itself — bottom left, under your thumb — and the phone\'s own prompt comes up by itself the moment the lock appears; dismiss it and the code still works.
+
+Four wrong codes cost nothing. From the fifth the keypad goes cold, and each try after that waits longer — half a minute, a minute, five, fifteen — counted on disk, so force-closing the app does not hand the attempts back. A finger is never made to wait: a fingerprint is not a guess.
+
+"Ask for the code" decides how long being away counts for — type the number of minutes yourself, or tap "As soon as you leave" for none at all. Whatever it says, a screen Kosht opened itself — the camera, the gallery, the install-permission page — is not treated as leaving; photographing a receipt should not cost you a code.
+
+With the lock on, the task switcher stops keeping a picture of the app, so the balance is not readable there either. And the code stays on this phone: it is kept apart from the settings that travel, so a second device never receives it and sets its own.</string>
     <string name="guide_settings_title">Settings</string>
-    <string name="guide_settings_body">Profile — tap to set a photo from the gallery or one of the built-in avatars, press and hold the avatar to remove the photo, and set your name and nickname (used in greetings and reports). Interface toggles hide anything you do not need, control whether the calculator opens by itself when adding a record, whether a transfer between accounts offers a fee field. The Report block sets the period the statistics report covers and ticks off exactly which metric rows it shows. Notifications: an evening reminder (only if nothing was logged), payments awaiting confirmation, a Monday summary, awards you earn, and — once signed in — whether Kosht may email you about new features. Each of them arrives with the phone\'s notification sound and a short vibration; Android\'s own per-channel settings can quiet any of them down again. The Account block follows: tap the address row to see the full address, the exact time of the last sync and whether automatic sync is on; sign out asks first. Deleting the account and its data no longer sits next to it — one is a door and the other a demolition — it waits at the very bottom of the screen under "Point of no return", with a confirmation of its own. About holds the guide, the Terms, the Personal data policy and the full manual — each tap saves the PDF into your phone\'s Downloads and opens it, so it stays yours to read, print or forward. When either document gets a new version, Kosht says so on the next launch and offers both right there rather than leaving you to notice it here. Tap Version to check for a newer build: Kosht either says you are up to date or downloads and installs the update right there — no browser, nothing left in Downloads, and your data stays in place. Android asks once for permission to let Kosht install its own updates. Offline it just says the check is not possible right now. Theme: system/light/dark plus Material You dynamic colors. Language: system, Russian or English. Currency — switching converts everything at the live NBRB rate: records, the daily budget, balance corrections, challenge limits, savings, goals, debts and recurring charges. Daily budget powers the streak.</string>
+    <string name="guide_settings_body">Profile — tap to set a photo from the gallery or one of the built-in avatars, press and hold the avatar to remove the photo, and set your name and nickname (used in greetings and reports). Interface toggles hide anything you do not need, control whether the calculator opens by itself when adding a record, whether a transfer between accounts offers a fee field. The Report block sets the period the statistics report covers and ticks off exactly which metric rows it shows. Security puts a code between the phone and your figures, with the phone\'s own fingerprint to save the typing — see “App lock”. Notifications: an evening reminder (only if nothing was logged), payments awaiting confirmation, a Monday summary, awards you earn, and — once signed in — whether Kosht may email you about new features. Each of them arrives with the phone\'s notification sound and a short vibration; Android\'s own per-channel settings can quiet any of them down again. The Account block follows: tap the address row to see the full address, the exact time of the last sync and whether automatic sync is on; sign out asks first. Deleting the account and its data no longer sits next to it — one is a door and the other a demolition — it waits at the very bottom of the screen under "Point of no return", with a confirmation of its own. About holds the guide, the Terms, the Personal data policy and the full manual — each tap saves the PDF into your phone\'s Downloads and opens it, so it stays yours to read, print or forward. When either document gets a new version, Kosht says so on the next launch and offers both right there rather than leaving you to notice it here. Tap Version to check for a newer build: Kosht either says you are up to date or downloads and installs the update right there — no browser, nothing left in Downloads, and your data stays in place. Android asks once for permission to let Kosht install its own updates. Offline it just says the check is not possible right now. Theme: system/light/dark plus Material You dynamic colors. Language: system, Russian or English. Currency — switching converts everything at the live NBRB rate: records, the daily budget, balance corrections, challenge limits, savings, goals, debts and recurring charges. Daily budget powers the streak.</string>
 
     <!-- Built-in categories -->
     <string name="category_groceries">Groceries</string>

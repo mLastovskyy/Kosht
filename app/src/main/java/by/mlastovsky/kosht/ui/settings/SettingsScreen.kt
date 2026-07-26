@@ -39,6 +39,10 @@ import androidx.compose.material.icons.rounded.BrightnessMedium
 import androidx.compose.material.icons.rounded.Calculate
 import androidx.compose.material.icons.rounded.DateRange
 import androidx.compose.material.icons.rounded.DeleteOutline
+import androidx.compose.material.icons.rounded.Dialpad
+import androidx.compose.material.icons.rounded.Fingerprint
+import androidx.compose.material.icons.rounded.Lock
+import androidx.compose.material.icons.rounded.Timer
 import androidx.compose.material.icons.rounded.CurrencyExchange
 import androidx.compose.material.icons.rounded.Tune
 import androidx.compose.material.icons.rounded.Info
@@ -228,6 +232,10 @@ fun SettingsScreen(
             )
         }
         }
+
+        SectionHeader(stringResource(R.string.settings_security))
+
+        SettingsCard { SecuritySettings() }
 
         SectionHeader(stringResource(R.string.settings_display))
 
@@ -683,6 +691,198 @@ private fun DailyBudgetDialog(
             TextButton(
                 enabled = minor > 0,
                 onClick = { onSet(minor) }
+            ) { Text(stringResource(R.string.editor_save)) }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) { Text(stringResource(R.string.action_cancel)) }
+        }
+    )
+}
+
+/**
+ * The lock block: a code to get in, the phone's own finger instead of typing
+ * it, and how long being away counts for. Nothing but the switch is shown until
+ * there is a code — an app with no lock has nothing to configure about one.
+ *
+ * The code never travels to another device, and neither does this block's state:
+ * it is kept in a store of its own, away from the settings that do sync.
+ */
+@Composable
+private fun SecuritySettings(
+    viewModel: by.mlastovsky.kosht.ui.lock.AppLockViewModel =
+        viewModel(factory = AppViewModelProvider.Factory)
+) {
+    val lock by viewModel.settings.collectAsStateWithLifecycle()
+    val setup by viewModel.setup.collectAsStateWithLifecycle()
+    val current = lock ?: return
+    val context = LocalContext.current
+    val activity = LocalActivity.current as? androidx.fragment.app.FragmentActivity
+    var showTimeout by remember { mutableStateOf(false) }
+    // Whether this phone has a finger or a face on file at all.
+    val fingerAvailable = remember {
+        by.mlastovsky.kosht.data.lock.Biometrics.enrolled(context)
+    }
+    val promptTitle = stringResource(R.string.lock_prompt_title)
+    val promptSubtitle = stringResource(R.string.lock_prompt_subtitle)
+    val cancelLabel = stringResource(R.string.action_cancel)
+
+    ListItem(
+        headlineContent = { Text(stringResource(R.string.lock_setting)) },
+        supportingContent = { Text(stringResource(R.string.lock_setting_desc)) },
+        leadingContent = { Icon(Icons.Rounded.Lock, contentDescription = null) },
+        trailingContent = {
+            Switch(
+                checked = current.enabled,
+                onCheckedChange = { on ->
+                    if (on) viewModel.startCreate() else viewModel.startDisable()
+                }
+            )
+        },
+        colors = transparentListColors(),
+        modifier = Modifier.clickable {
+            if (current.enabled) viewModel.startDisable() else viewModel.startCreate()
+        }
+    )
+
+    if (current.enabled) {
+        // No second line: "Change the code" is the whole of it, and the sheet
+        // that opens says it asks for the current one first.
+        ListItem(
+            headlineContent = { Text(stringResource(R.string.lock_change)) },
+            leadingContent = { Icon(Icons.Rounded.Dialpad, contentDescription = null) },
+            colors = transparentListColors(),
+            modifier = Modifier.clickable { viewModel.startChange() }
+        )
+        // Offered only where there is something to offer: no sensor, no row.
+        if (fingerAvailable) {
+            // Switching it on proves it works first — a switch that turns out
+            // to unlock nothing is worse than no switch.
+            val toggleFinger = { enabled: Boolean ->
+                if (!enabled || activity == null) {
+                    viewModel.setBiometrics(false)
+                } else {
+                    by.mlastovsky.kosht.data.lock.Biometrics.prompt(
+                        activity = activity,
+                        title = promptTitle,
+                        subtitle = promptSubtitle,
+                        negativeButton = cancelLabel,
+                        onSuccess = { viewModel.setBiometrics(true) },
+                        onError = { message ->
+                            message?.let {
+                                android.widget.Toast
+                                    .makeText(context, it, android.widget.Toast.LENGTH_LONG)
+                                    .show()
+                            }
+                        }
+                    )
+                }
+            }
+            // The row is its own explanation, and which sensor the phone has is
+            // the phone's business — the switch borrows whatever is there.
+            ListItem(
+                headlineContent = { Text(stringResource(R.string.lock_biometrics)) },
+                leadingContent = { Icon(Icons.Rounded.Fingerprint, contentDescription = null) },
+                trailingContent = {
+                    Switch(checked = current.biometrics, onCheckedChange = toggleFinger)
+                },
+                colors = transparentListColors(),
+                modifier = Modifier.clickable { toggleFinger(!current.biometrics) }
+            )
+        }
+        ListItem(
+            headlineContent = { Text(stringResource(R.string.lock_timeout)) },
+            supportingContent = { Text(lockTimeoutLabel(current.timeoutMinutes)) },
+            leadingContent = { Icon(Icons.Rounded.Timer, contentDescription = null) },
+            colors = transparentListColors(),
+            modifier = Modifier.clickable { showTimeout = true }
+        )
+    }
+
+    if (showTimeout) {
+        LockTimeoutDialog(
+            minutes = current.timeoutMinutes,
+            onSet = { chosen ->
+                viewModel.setTimeoutMinutes(chosen)
+                showTimeout = false
+            },
+            onDismiss = { showTimeout = false }
+        )
+    }
+
+    setup?.let { flow ->
+        by.mlastovsky.kosht.ui.lock.PinSetupSheet(
+            setup = flow,
+            storedLength = current.pinLength,
+            viewModel = viewModel
+        )
+    }
+}
+
+@Composable
+private fun lockTimeoutLabel(minutes: Int): String =
+    if (minutes <= by.mlastovsky.kosht.model.LockTimeout.AT_ONCE) {
+        stringResource(R.string.lock_timeout_immediately)
+    } else {
+        androidx.compose.ui.res.pluralStringResource(
+            R.plurals.lock_timeout_minutes,
+            minutes,
+            minutes
+        )
+    }
+
+/**
+ * How long away is still "just away". Typed in rather than picked from a list:
+ * the right number is a matter of habit, and three canned options always leave
+ * out somebody's. "At once" keeps its own line — it is the one answer that is
+ * not a number. No paragraph of explanation: the field says what it wants, and
+ * anyone who wants the reasoning has the guide.
+ */
+@Composable
+private fun LockTimeoutDialog(
+    minutes: Int,
+    onSet: (Int) -> Unit,
+    onDismiss: () -> Unit
+) {
+    var text by remember {
+        mutableStateOf(if (minutes > 0) minutes.toString() else "")
+    }
+    val typed = text.toIntOrNull()
+    val valid = typed != null &&
+        typed in 1..by.mlastovsky.kosht.model.LockTimeout.MAX_MINUTES
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(stringResource(R.string.lock_timeout)) },
+        text = {
+            Column {
+                OutlinedTextField(
+                    value = text,
+                    onValueChange = { input ->
+                        text = input.filter { it.isDigit() }.take(4)
+                    },
+                    label = { Text(stringResource(R.string.lock_timeout_field)) },
+                    suffix = { Text(stringResource(R.string.lock_timeout_unit)) },
+                    keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(
+                        keyboardType = androidx.compose.ui.text.input.KeyboardType.Number
+                    ),
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth()
+                )
+                Text(
+                    text = stringResource(R.string.lock_timeout_immediately),
+                    style = MaterialTheme.typography.bodyLarge,
+                    color = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable { onSet(by.mlastovsky.kosht.model.LockTimeout.AT_ONCE) }
+                        .padding(vertical = 12.dp)
+                )
+            }
+        },
+        confirmButton = {
+            TextButton(
+                enabled = valid,
+                onClick = { typed?.let(onSet) }
             ) { Text(stringResource(R.string.editor_save)) }
         },
         dismissButton = {

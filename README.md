@@ -126,6 +126,15 @@ An evening nudge only if nothing is logged, planned payments awaiting confirmati
 ### 🎨 Made for you
 Light & dark themes, Material You dynamic colors, English & Russian interface, a profile with photo or built-in avatars — tap the avatar anywhere, on Home as well as in Settings, and the same profile dialog opens — and interface toggles to hide anything you don't need. Without an account nothing ever leaves the phone; with one, only you can read it.
 
+### 🔐 A lock of your own, if you want one
+Switch on *Settings → Security → App lock*, make up a code of 4 to 8 digits, and Kosht asks for it before it opens.
+
+- **The code is never shown and never stored.** It is typed on the app's own keypad and drawn as dots, not digits; what is kept is a deliberately slow one-way digest of it with a random salt of its own — so a copy of the app's files is not a copy of the code, and nobody can look it up or mail it back to you.
+- **Biometrics where a phone keeps them.** If the phone has a finger or a face on file, the sensor key sits *in the keypad itself, bottom left*, and the system prompt comes up by itself the moment the lock appears — dismiss it and the code still works. Switching the option on asks for the finger once, to prove it works before you rely on it.
+- **Guessing gets slower, fast.** Four wrong codes are free; from the fifth the keypad waits, and each try after that waits longer — half a minute, a minute, five, fifteen — counted on disk, so force-closing the app does not hand the attempts back. A finger never waits: a fingerprint is not a guess.
+- **You decide what "away" means.** Type the number of minutes yourself, or tap *As soon as you leave*. Either way a screen Kosht opened itself — the camera, the gallery, the install-permission page — is not treated as leaving, because photographing a receipt should not cost you a code.
+- **The task switcher stops keeping a picture** of the app while the lock is on, so the balance is not readable over a shoulder there either. And the code stays on this phone: it lives apart from the settings that sync, so a second device never receives it and sets its own.
+
 ### 🔒 Consent you can actually withdraw
 Collecting an email address makes this an operator of personal data under the Belarusian law of 07.05.2021 No. 99-З, and the app is built to match rather than to look like it does.
 

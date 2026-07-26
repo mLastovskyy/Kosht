@@ -90,6 +90,18 @@ class AppContainer(
 
     val photoStore: PhotoStore by lazy { PhotoStore(appContext) }
 
+    val appLockRepository: by.mlastovsky.kosht.data.lock.AppLockRepository by lazy {
+        by.mlastovsky.kosht.data.lock.AppLockRepository(appContext)
+    }
+
+    /**
+     * Eager, and outside the activity on purpose: whether the app is locked has
+     * to be known before the first frame, and must survive the activity being
+     * recreated — otherwise a language change would count as a way in.
+     */
+    val appLock: by.mlastovsky.kosht.data.lock.AppLock =
+        by.mlastovsky.kosht.data.lock.AppLock(appLockRepository, appScope)
+
     /** Sweeps out attachments and tombstones nothing points at any more. */
     val housekeeping: by.mlastovsky.kosht.data.Housekeeping by lazy {
         by.mlastovsky.kosht.data.Housekeeping(database, photoStore, settingsRepository)

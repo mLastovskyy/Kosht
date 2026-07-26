@@ -23,6 +23,7 @@ import androidx.compose.material.icons.rounded.CreditCard
 import androidx.compose.material.icons.rounded.DocumentScanner
 import androidx.compose.material.icons.rounded.EmojiEvents
 import androidx.compose.material.icons.rounded.Home
+import androidx.compose.material.icons.rounded.Lock
 import androidx.compose.material.icons.rounded.PieChart
 import androidx.compose.material.icons.rounded.Savings
 import androidx.compose.material.icons.rounded.Settings
@@ -99,6 +100,11 @@ private val sections = listOf(
         Icons.Rounded.CloudSync,
         R.string.guide_sync_title,
         R.string.guide_sync_body
+    ),
+    GuideSection(
+        Icons.Rounded.Lock,
+        R.string.guide_lock_title,
+        R.string.guide_lock_body
     ),
     GuideSection(
         Icons.Rounded.Settings,

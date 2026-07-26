@@ -143,6 +143,8 @@ dependencies {
     implementation(libs.androidx.room.ktx)
     ksp(libs.androidx.room.compiler)
     implementation(libs.androidx.datastore.preferences)
+    // Fingerprint/face unlock through one API across every version we support.
+    implementation(libs.androidx.biometric)
     implementation(libs.tesseract4android)
     implementation(libs.zxing.core)
     implementation(libs.androidx.work.runtime)

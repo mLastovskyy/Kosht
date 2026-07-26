@@ -78,6 +78,12 @@ object AppViewModelProvider {
             by.mlastovsky.kosht.ui.awards.AwardsViewModel(app().container.awardTracker)
         }
         initializer {
+            by.mlastovsky.kosht.ui.lock.AppLockViewModel(
+                app().container.appLock,
+                app().container.appLockRepository
+            )
+        }
+        initializer {
             by.mlastovsky.kosht.ui.components.UndoDeleteViewModel(
                 app().container.transactionRepository,
                 app().container.photoStore
