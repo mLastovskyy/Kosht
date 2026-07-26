@@ -234,6 +234,29 @@ class WalletViewModel(
         viewModelScope.launch { walletRepository.deleteDebt(debt.id) }
     }
 
+    /** Corrects a debt: who, which way, how much, in what, and the note. */
+    fun updateDebt(
+        debt: DebtEntity,
+        personName: String,
+        direction: DebtDirection,
+        amountMinor: Long,
+        currencyCode: String,
+        note: String
+    ) {
+        if (personName.isBlank() || amountMinor <= 0) return
+        viewModelScope.launch {
+            walletRepository.updateDebt(
+                debt.copy(
+                    personName = personName.trim(),
+                    direction = direction,
+                    amountMinor = amountMinor,
+                    currencyCode = currencyCode,
+                    note = note.trim()
+                )
+            )
+        }
+    }
+
     fun setMultiAccount(enabled: Boolean) {
         viewModelScope.launch { settingsRepository.setMultiAccount(enabled) }
     }
@@ -289,6 +312,37 @@ class WalletViewModel(
 
     fun deleteGoal(goal: GoalUi) {
         viewModelScope.launch { walletRepository.deleteGoal(goal.goal.id) }
+    }
+
+    /**
+     * Renames a goal, moves its target or changes its currency. Switching the
+     * currency carries what is already set aside toward it across at the
+     * official rate — the same thing changing the app currency does — so the
+     * progress bar keeps meaning what it says.
+     */
+    fun updateGoal(
+        goalUi: GoalUi,
+        title: String,
+        targetMinor: Long,
+        currencyCode: String
+    ) {
+        if (title.isBlank() || targetMinor <= 0) return
+        val goal = goalUi.goal
+        val factor = if (currencyCode != goal.currencyCode) {
+            suggestedRate(goal.currencyCode, currencyCode)
+        } else {
+            null
+        }
+        viewModelScope.launch {
+            walletRepository.updateGoal(
+                goal.copy(
+                    title = title.trim(),
+                    targetMinor = targetMinor,
+                    currencyCode = currencyCode
+                ),
+                savingsFactor = factor
+            )
+        }
     }
 
     fun deleteSaving(saving: SavingEntity) {

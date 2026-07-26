@@ -44,6 +44,14 @@ class MainViewModel(
                 settingsRepository.setPolicyVersionSeen(SyncAccountRepository.POLICY_VERSION)
             }
         }
+        // A face out of the box, dealt once. An avatar that arrives from the
+        // account later still wins: applySynced prefers the remote emoji.
+        viewModelScope.launch {
+            settingsRepository.seedAvatarOnce {
+                by.mlastovsky.kosht.ui.components.EMOJI_AVATAR_PREFIX +
+                    by.mlastovsky.kosht.ui.components.PRESET_AVATARS.random()
+            }
+        }
     }
 
     fun markNotificationsAsked() {

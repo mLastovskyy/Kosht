@@ -119,6 +119,7 @@ class SettingsRepository(private val context: Context) {
         val profileName = stringPreferencesKey("profile_name")
         val profileNickname = stringPreferencesKey("profile_nickname")
         val profilePhotoPath = stringPreferencesKey("profile_photo_path")
+        val avatarSeeded = booleanPreferencesKey("avatar_seeded")
         val dailyBudgetMinor = longPreferencesKey("daily_budget_minor")
         val showGreeting = booleanPreferencesKey("show_greeting")
         val showStreak = booleanPreferencesKey("show_streak")
@@ -212,6 +213,23 @@ class SettingsRepository(private val context: Context) {
 
     suspend fun setProfilePhoto(path: String?) {
         bumped { it[Keys.profilePhotoPath] = path.orEmpty() }
+    }
+
+    /**
+     * Deals out one of the built-in avatars on the very first launch, so the app
+     * wears a face everywhere instead of two grey letters. Done exactly once:
+     * someone who then clears their avatar meant to clear it, and a new random
+     * face on the next launch would be the app arguing back.
+     */
+    suspend fun seedAvatarOnce(pick: () -> String) {
+        context.dataStore.edit { prefs ->
+            if (prefs[Keys.avatarSeeded] == true) return@edit
+            prefs[Keys.avatarSeeded] = true
+            if (prefs[Keys.profilePhotoPath].isNullOrBlank()) {
+                prefs[Keys.profilePhotoPath] = pick()
+                prefs[Keys.updatedAt] = System.currentTimeMillis()
+            }
+        }
     }
 
     val settings: Flow<AppSettings> = context.dataStore.data.map { prefs ->

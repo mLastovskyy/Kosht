@@ -33,7 +33,7 @@ import by.mlastovsky.kosht.ui.components.EMOJI_AVATAR_PREFIX
 import by.mlastovsky.kosht.ui.components.TextInput
 
 /** Built-in avatars, for anyone who would rather not use a photo. */
-private val PRESET_AVATARS = listOf("🦊", "🐻", "🐼", "🦁", "🐸", "🚀", "💎", "🌟", "🔥", "🤑")
+private val PRESET_AVATARS = by.mlastovsky.kosht.ui.components.PRESET_AVATARS
 
 /**
  * Name, nickname and avatar in one dialog — the same one wherever the avatar is

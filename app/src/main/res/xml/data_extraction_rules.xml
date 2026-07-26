@@ -1,19 +1,14 @@
 <?xml version="1.0" encoding="utf-8"?><!--
-   Sample data extraction rules file; uncomment and customize as necessary.
-   See https://developer.android.com/about/versions/12/backup-restore#xml-changes
-   for details.
+   The app lock stays out of both a cloud backup and a phone-to-phone transfer:
+   the code belongs to the device it was chosen on. Everything else may travel,
+   and the records themselves go through the account — a choice, not something
+   inherited from a restore.
 -->
 <data-extraction-rules>
     <cloud-backup>
-        <!-- TODO: Use <include> and <exclude> to control what is backed up.
-        <include .../>
-        <exclude .../>
-        -->
+        <exclude domain="file" path="datastore/app_lock.preferences_pb" />
     </cloud-backup>
-    <!--
     <device-transfer>
-        <include .../>
-        <exclude .../>
+        <exclude domain="file" path="datastore/app_lock.preferences_pb" />
     </device-transfer>
-    -->
 </data-extraction-rules>

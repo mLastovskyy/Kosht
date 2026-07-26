@@ -546,10 +546,7 @@ private fun EditChallengeDialog(
 ) {
     var title by remember { mutableStateOf(challenge.entity.title) }
     var amountText by remember {
-        mutableStateOf(
-            Money.format(challenge.entity.amountMinor, currencyCode)
-                .filter { it.isDigit() || it == ',' }
-        )
+        mutableStateOf(Money.editableText(challenge.entity.amountMinor, currencyCode))
     }
     var categoryId by remember { mutableStateOf(challenge.entity.categoryId) }
     var end by remember { mutableStateOf(LocalDate.ofEpochDay(challenge.entity.endEpochDay)) }

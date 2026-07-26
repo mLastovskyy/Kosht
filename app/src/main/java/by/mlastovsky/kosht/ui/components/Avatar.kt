@@ -20,6 +20,13 @@ import androidx.compose.ui.unit.dp
 /** Prefix marking a built-in emoji avatar instead of a photo file. */
 const val EMOJI_AVATAR_PREFIX = "emoji:"
 
+/**
+ * The built-in faces. One of them is dealt out at random on the very first
+ * launch, so the app has a face from the start rather than two grey letters —
+ * and whichever one is picked afterwards is the one that stays.
+ */
+val PRESET_AVATARS = listOf("🦊", "🐻", "🐼", "🦁", "🐸", "🚀", "💎", "🌟", "🔥", "🤑")
+
 /** Profile photo, built-in emoji avatar or initials in a circle. */
 @Composable
 fun Avatar(

@@ -302,7 +302,7 @@ fun unitPrice(item: ItemDraft): Long {
 /** The unit price as the price field should show it for editing. */
 private fun unitPriceInput(item: ItemDraft, currencyCode: String): String {
     if (item.amountMinor <= 0) return ""
-    return Money.format(unitPrice(item), currencyCode).filter { it.isDigit() || it == ',' }
+    return Money.editableText(unitPrice(item), currencyCode)
 }
 
 /** "2" rather than "2.0", and "0,756" for what was weighed. */

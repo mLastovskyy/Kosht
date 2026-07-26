@@ -33,16 +33,14 @@
     <string name="transfer_fee_short">fee %1$s</string>
     <string name="transfer_total">Leaves the account: %1$s</string>
     <string name="transfer_fee_setting">Transfer fee</string>
-    <string name="transfer_fee_setting_desc">Offer a fee field when moving money between accounts</string>
+    <string name="transfer_fee_setting_desc">A fee field in transfers</string>
     <string name="stats_all_accounts">All accounts</string>
     <string name="show_greeting">Greeting on Home</string>
-    <string name="show_greeting_desc">Hide if you prefer a cleaner look</string>
     <string name="show_streak">Streak on Home</string>
     <string name="show_streak_desc">The 🔥 days-under-budget chip</string>
     <string name="show_rates">Rates card in Wallet</string>
-    <string name="show_rates_desc">NBRB exchange rates block</string>
     <string name="auto_convert">Convert on currency change</string>
-    <string name="auto_convert_desc">Recalculate all amounts by the NBRB rate when switching currency</string>
+    <string name="auto_convert_desc">At the NBRB rate</string>
     <string name="settings_profile">Profile</string>
     <string name="profile_name">Name</string>
     <string name="profile_nickname">Nickname</string>
@@ -167,7 +165,6 @@
     <string name="settings_report_period">Report period</string>
     <string name="settings_report_fields_desc">%1$d of %2$d rows shown</string>
     <string name="auto_calc">Calculator on add</string>
-    <string name="auto_calc_desc">Open the calculator automatically for a new record</string>
     <string name="tip_overspend">You spent %1$s more than you earned. Review recurring payments and the biggest category.</string>
     <string name="tip_growth">Spending grew %1$d%% vs the previous period. Check what changed.</string>
     <string name="tip_top_heavy">%1$s takes %2$d%% of expenses. A weekly limit challenge could help.</string>
@@ -181,7 +178,7 @@
     <string name="theme_light">Light</string>
     <string name="theme_dark">Dark</string>
     <string name="settings_dynamic_colors">Dynamic colors</string>
-    <string name="settings_dynamic_colors_desc">Use system wallpaper colors (Android 12+)</string>
+    <string name="settings_dynamic_colors_desc">Colors from the wallpaper</string>
     <string name="settings_general">General</string>
     <string name="settings_language">Language</string>
     <string name="lang_system">System</string>
@@ -255,20 +252,20 @@
     <!-- Account and cloud sync -->
     <string name="account_title">Account</string>
     <string name="account_sync">Cloud sync</string>
-    <string name="account_signed_out">Sign in to keep your records on every device</string>
+    <string name="account_signed_out">Your records on every device</string>
     <string name="account_sign_in">Sign in</string>
     <string name="account_sign_up">Create account</string>
     <string name="account_sign_out">Sign out</string>
     <string name="account_email">Email</string>
     <string name="account_password">Password</string>
     <string name="account_auto_sync">Sync automatically</string>
-    <string name="account_auto_sync_hint">Changes go up as soon as there is a connection</string>
+    <string name="account_auto_sync_hint">As soon as there is a connection</string>
     <string name="account_sync_now">Sync now</string>
     <string name="account_last_sync">Last sync: %1$s</string>
     <string name="account_last_sync_label">Last sync</string>
     <string name="account_syncing">Syncing…</string>
     <string name="account_sync_photos">Sync receipt photos</string>
-    <string name="account_sync_photos_hint">Off by default. Switch it on and receipt photos are uploaded to your account and appear on your other phone; switch it off and the uploaded copies are deleted — the originals stay here.</string>
+    <string name="account_sync_photos_hint">Uploaded to your account; switching off deletes the copies</string>
     <string name="account_photos_purged">Uploaded photos deleted. The copies on this phone are untouched.</string>
     <string name="account_last_sync_never">Not synced yet</string>
     <string name="account_sign_out_title">Sign out?</string>
@@ -311,16 +308,16 @@
     <!-- Documents and consent -->
     <string name="legal_terms">Terms of use</string>
     <string name="legal_privacy">Personal data policy</string>
-    <string name="legal_accept">I accept the Terms of use and the Personal data policy</string>
+    <!-- Square brackets mark the two links: first the terms, then the policy. -->
+    <string name="legal_accept">I accept the [Terms of use] and the [Personal data policy]</string>
     <string name="legal_marketing">Email me about new features</string>
-    <string name="legal_marketing_hint">Optional. You can switch it off at any time.</string>
     <string name="doc_saved">Saved to Downloads: %1$s</string>
     <string name="policy_updated_title">The documents have been updated</string>
     <string name="policy_updated_text">The Terms of use and the Personal data policy have a new version. Please read them — a tap saves the document into Downloads and opens it.</string>
     <string name="policy_updated_accept">I have read them</string>
     <string name="settings_danger">Point of no return</string>
     <string name="legal_delete">Delete account and data</string>
-    <string name="legal_delete_hint">The cloud copy is erased for good; the records on this phone stay</string>
+    <string name="legal_delete_hint">The cloud copy is erased for good</string>
     <string name="legal_delete_title">Delete the account?</string>
     <string name="legal_delete_text">The cloud copy and everything in it is erased for good, and this cannot be undone. Records already on this phone stay where they are.</string>
     <string name="legal_delete_confirm">Delete</string>
@@ -341,13 +338,12 @@
     <string name="channel_summary">Summaries</string>
     <string name="channel_awards">Awards</string>
     <string name="notif_setting_daily">Daily reminder</string>
-    <string name="notif_setting_daily_desc">Evening nudge if nothing is logged today</string>
+    <string name="notif_setting_daily_desc">In the evening, if nothing is logged</string>
     <string name="notif_setting_recurring">Payments awaiting confirmation</string>
-    <string name="notif_setting_recurring_desc">When a monthly payment is due</string>
+    <string name="notif_setting_recurring_desc">When one is due</string>
     <string name="notif_setting_weekly">Weekly summary</string>
-    <string name="notif_setting_weekly_desc">Spending digest every Monday</string>
+    <string name="notif_setting_weekly_desc">Every Monday</string>
     <string name="notif_setting_awards">Awards earned</string>
-    <string name="notif_setting_awards_desc">A quiet note when you unlock one</string>
     <string name="notif_daily_title">Don\'t forget your expenses</string>
     <string name="notif_daily_text">Nothing is logged today. It only takes a few seconds.</string>
     <string name="notif_recurring_title">Payments to confirm</string>
@@ -399,6 +395,10 @@
     <string name="goal_new">New goal</string>
     <string name="goal_title_hint">What are you saving for?</string>
     <string name="goal_achieved">Goal achieved! 🎉</string>
+    <string name="goal_edit">Edit goal</string>
+    <string name="goal_currency_converts">What is already set aside toward it moves across at the NBRB rate</string>
+    <string name="debt_edit">Edit debt</string>
+    <string name="savings_in_currency">Set aside in %1$s</string>
     <string name="goals_pick">Toward a goal</string>
     <string name="goals_none">No goal</string>
     <string name="achievements_title">Achievements</string>
@@ -503,12 +503,11 @@
 
     <!-- In-app guide -->
     <string name="guide_title">How to use Kosht</string>
-    <string name="guide_settings_entry_desc">Every screen and button explained</string>
     <string name="guide_pdf_title">Full PDF manual</string>
     <string name="guide_pdf_desc">An illustrated step-by-step manual with screenshots — saved into your Downloads and opened, so it stays on the phone</string>
     <string name="guide_pdf_open">Download PDF</string>
     <string name="guide_pdf_error">No PDF viewer found</string>
-    <string name="guide_intro">A quick tour of every screen. Everything works offline; data leaves the phone only if you switch on cloud sync.</string>
+    <string name="guide_intro">A quick tour of every screen. The five main ones can be swiped through as well as tapped in the bottom bar. Everything works offline; data leaves the phone only if you switch on cloud sync.</string>
     <string name="guide_sync_title">Account &amp; sync</string>
     <string name="guide_sync_body">Kosht works without an account, and your records stay on the phone. An account is for one thing: seeing the same figures on your other phone.
 
@@ -524,7 +523,7 @@ Receipt photos are the exception, and they are off by default — the policy say
 
 The sync icon sits in the row with your address: it starts a sync and turns into a spinner while one is running. Tap the row itself for the full address, the exact time of the last sync and whether automatic sync is on.</string>
     <string name="guide_home_title">Home</string>
-    <string name="guide_home_body">The big card shows your total balance (all income minus all expenses) with this month\'s income and expenses below it. If your currency is not BYN, the ≈ line shows the equivalent at the live rate. In the top row: the 🔥 chip is your under-budget streak, the trophy opens Achievements, and the avatar opens your profile — the same dialog Settings opens, so a name or a picture can be changed right where you are looking at it. "Recent" lists the latest records — tap one to edit, "All" jumps to History. The big + button adds a transaction.</string>
+    <string name="guide_home_body">The big card shows your total balance (all income minus all expenses) with this month\'s income and expenses below it. If your currency is not BYN, the ≈ line shows the equivalent at the live rate. In the top row: the 🔥 chip is your under-budget streak, the trophy opens Achievements, and the avatar opens your profile — the same dialog Settings opens, so a name or a picture can be changed right where you are looking at it. The app deals itself one of the built-in avatars on the very first launch, so there is a face there from the start; pick another and yours is the one that stays. "Recent" lists the latest records — tap one to edit, "All" jumps to History. The big + button adds a transaction.</string>
     <string name="guide_editor_title">Adding a transaction</string>
     <string name="guide_editor_body">Switch Expense/Income at the top. For a new record the calculator opens by itself in a bottom sheet; type the sum (comma adds cents) and hit Apply — tap the amount any time to open it again. Pick a category in the carousel — the "New" circle creates your own with a name, icon and color. The date chip opens a calendar (defaults to today). Write an optional note. In the bottom row the basket chip lists what you bought (optional — see "Products in a record"), the scanner icon reads a receipt photo and the photo icon attaches one from camera or gallery; tap the thumbnail to view or remove it. A record whose figures came off a receipt carries a small scanner mark here and in every list. Save finishes. When editing an existing record a trash icon appears in the top bar.</string>
     <string name="guide_scan_title">Receipt scanning</string>
@@ -548,7 +547,11 @@ Swiping a row deletes it and offers it back: "Transaction deleted — Undo" appe
     <string name="guide_wallet_title">Wallet: rates &amp; payments</string>
     <string name="guide_wallet_body">The NBRB rates card shows official rates with the update time — the arrow button refreshes them manually; without a connection the rates from the last successful check stay on screen and a toast explains why nothing changed. Any amount in a foreign currency shows its ≈ BYN equivalent. Changing the app currency in Settings converts all stored amounts at the current rate; each expense also freezes its BYN value at payment time, so history never drifts. Planned payments: + adds one — Expense or Income (a salary is as regular as a subscription), title, amount, currency, the date picked in a calendar, a frequency (weekly / monthly / every 3 months / yearly), a category and, with several accounts, the account it moves on. Nothing is charged silently: due payments appear in "Awaiting confirmation", and Confirm records the movement — the dialog says which way it goes, starts from the account the plan names and lets you adjust both the amount and, for a foreign currency, the rate. Tap a payment to change any of it, the switch pauses it, the trash deletes it.</string>
     <string name="guide_savings_title">Debts, goals &amp; savings</string>
-    <string name="guide_savings_body">Debts: + adds one — who, direction (I owe / owed to me), amount in any currency, note. The two tiles total both directions in BYN. Tap a debt to repay a part, close it or delete it. Goals: + creates a goal with a target amount; deposits linked to the goal fill its progress bar, and reaching the target celebrates 🎉. Savings: "Set aside" and "Withdraw" record movements (optionally toward a goal), the journal below lists them with BYN equivalents; the trash removes an entry.</string>
+    <string name="guide_savings_body">Debts: + adds one — who, direction (I owe / owed to me), amount in any currency, note. The two tiles total both directions in BYN. Tap a debt to repay a part, close it or delete it — and the pencil in that dialog opens the debt itself for correcting: the person, the direction, the sum, the currency, the note.
+
+Goals: + creates a goal with a target amount; deposits linked to the goal fill its progress bar, and reaching the target celebrates 🎉. Tap a goal to change any of it — the name, the target, the currency it is counted in — with the trash in the corner of that dialog. Changing the currency carries what is already set aside toward it across at the official rate, so the progress bar keeps meaning what it says.
+
+Savings: "Set aside" and "Withdraw" record movements (optionally toward a goal), the journal below lists them with BYN equivalents; the trash removes an entry. The sum can be in any currency: pick it in the chips and Kosht converts it into the currency the savings are counted in — the app\'s, or the goal\'s — at the National Bank rate. That converted figure sits in its own field, and it is editable: the bank\'s arithmetic and the official rate rarely agree to the last kopeck, and what actually left the account is what should be written down.</string>
     <string name="guide_achievements_title">Achievements</string>
     <string name="guide_achievements_body">Open with the trophy on Home. The streak card counts consecutive days you stayed within the daily budget (set it in Settings, auto = last month\'s average). Challenges: + creates one — Limit (spend under X, optionally in one category), No spend, or Save up (set aside X) — for a week, until month end or 30 days. Progress updates live; tap a challenge to edit its title, amount, category and end date, the trash removes it. Below are 30 awards, six to a page, easiest first: from the first record to a year inside the budget, a thousand records, five thousand saved, a perfect month without a single day over budget, three months in a row in the black, and twenty challenges completed. Tap any award to see how to earn it, your progress toward it (like "6 / 10"), and the date you earned it. An award unlocks the moment it is deserved, whichever screen you are on: a congratulation appears over the app and a quiet note lands in the shade — you never have to open this screen for it to count. Once earned an award stays yours forever, even if the streak resets.</string>
     <string name="guide_accounts_title">Accounts: cards &amp; cash</string>

@@ -6,6 +6,7 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.runtime.LaunchedEffect
+import kotlinx.coroutines.launch
 import by.mlastovsky.kosht.MainViewModel
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
@@ -74,8 +75,17 @@ fun KoshtRoot(
     val navController = rememberNavController()
     val backStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute = backStackEntry?.destination?.route
-    val isMainTab = MainTabs.any { it.route == currentRoute }
-    val showFab = currentRoute == Routes.HOME || currentRoute == Routes.HISTORY
+    val isMainTab = currentRoute == null || currentRoute == Routes.TABS
+    // One pager for the five screens: the bottom bar and a swipe move the same
+    // thing, so the app answers to a thumb as well as to a tap.
+    val pagerState = androidx.compose.foundation.pager.rememberPagerState(
+        pageCount = { MainTabs.size }
+    )
+    val homePage = MainTabs.indexOfFirst { it.route == Routes.HOME }
+    val historyPage = MainTabs.indexOfFirst { it.route == Routes.HISTORY }
+    val showFab = isMainTab &&
+        (pagerState.currentPage == homePage || pagerState.currentPage == historyPage)
+    val scope = androidx.compose.runtime.rememberCoroutineScope()
 
     // One host for the whole app: the Scaffold that owns the add button is the
     // only thing that can keep a snackbar out from under it.
@@ -92,7 +102,12 @@ fun KoshtRoot(
                 enter = slideInVertically(tween(250)) { it } + fadeIn(tween(250)),
                 exit = slideOutVertically(tween(200)) { it } + fadeOut(tween(200))
             ) {
-                KoshtNavigationBar(navController, currentRoute)
+                KoshtNavigationBar(
+                    selectedPage = pagerState.currentPage,
+                    onSelect = { page ->
+                        scope.launch { pagerState.animateScrollToPage(page) }
+                    }
+                )
             }
         },
         floatingActionButton = {
@@ -116,19 +131,51 @@ fun KoshtRoot(
     ) { innerPadding ->
         NavHost(
             navController = navController,
-            startDestination = Routes.HOME,
+            startDestination = Routes.TABS,
             modifier = Modifier.padding(
                 bottom = innerPadding.calculateBottomPadding()
             ),
             enterTransition = { fadeIn(tween(220)) },
             exitTransition = { fadeOut(tween(180)) }
         ) {
-            composable(Routes.HOME) {
-                HomeScreen(
-                    onTransactionClick = { id -> navController.navigate(Routes.editor(id)) },
-                    onSeeAllClick = { navController.navigateToTab(Routes.HISTORY) },
-                    onAchievementsClick = { navController.navigate(Routes.ACHIEVEMENTS) }
-                )
+            composable(Routes.TABS) {
+                androidx.compose.foundation.pager.HorizontalPager(
+                    state = pagerState,
+                    // Neighbours stay composed, so a swipe reveals a screen
+                    // that is already there rather than one still loading.
+                    beyondViewportPageCount = 1,
+                    key = { page -> MainTabs[page].route }
+                ) { page ->
+                    when (MainTabs[page].route) {
+                        Routes.HOME -> HomeScreen(
+                            onTransactionClick = { id ->
+                                navController.navigate(Routes.editor(id))
+                            },
+                            onSeeAllClick = {
+                                scope.launch { pagerState.animateScrollToPage(historyPage) }
+                            },
+                            onAchievementsClick = { navController.navigate(Routes.ACHIEVEMENTS) }
+                        )
+
+                        Routes.HISTORY -> HistoryScreen(
+                            onTransactionClick = { id ->
+                                navController.navigate(Routes.editor(id))
+                            }
+                        )
+
+                        Routes.STATS -> StatsScreen(
+                            onTransactionClick = { id ->
+                                navController.navigate(Routes.editor(id))
+                            }
+                        )
+
+                        Routes.WALLET -> WalletScreen()
+
+                        else -> SettingsScreen(
+                            onOpenGuide = { navController.navigate(Routes.GUIDE) }
+                        )
+                    }
+                }
             }
             composable(
                 route = Routes.ACHIEVEMENTS,
@@ -141,24 +188,6 @@ fun KoshtRoot(
                 }
             ) {
                 AchievementsScreen(onBack = { navController.popBackStack() })
-            }
-            composable(Routes.HISTORY) {
-                HistoryScreen(
-                    onTransactionClick = { id -> navController.navigate(Routes.editor(id)) }
-                )
-            }
-            composable(Routes.STATS) {
-                StatsScreen(
-                    onTransactionClick = { id -> navController.navigate(Routes.editor(id)) }
-                )
-            }
-            composable(Routes.WALLET) {
-                WalletScreen()
-            }
-            composable(Routes.SETTINGS) {
-                SettingsScreen(
-                    onOpenGuide = { navController.navigate(Routes.GUIDE) }
-                )
             }
             composable(
                 route = Routes.GUIDE,
@@ -245,13 +274,13 @@ private fun AskForNotificationsOnce(
 }
 
 @Composable
-private fun KoshtNavigationBar(navController: NavHostController, currentRoute: String?) {
+private fun KoshtNavigationBar(selectedPage: Int, onSelect: (Int) -> Unit) {
     NavigationBar {
-        MainTabs.forEach { tab ->
-            val selected = currentRoute == tab.route
+        MainTabs.forEachIndexed { page, tab ->
+            val selected = page == selectedPage
             NavigationBarItem(
                 selected = selected,
-                onClick = { navController.navigateToTab(tab.route) },
+                onClick = { onSelect(page) },
                 icon = {
                     Icon(
                         imageVector = if (selected) tab.selectedIcon else tab.unselectedIcon,
@@ -260,13 +289,5 @@ private fun KoshtNavigationBar(navController: NavHostController, currentRoute: S
                 }
             )
         }
-    }
-}
-
-private fun NavHostController.navigateToTab(route: String) {
-    navigate(route) {
-        popUpTo(graph.findStartDestination().id) { saveState = true }
-        launchSingleTop = true
-        restoreState = true
     }
 }

@@ -71,6 +71,8 @@ fun WalletScreen(
     var showAddRecurring by remember { mutableStateOf(false) }
     var savingDialogWithdraw by remember { mutableStateOf<Boolean?>(null) }
     var debtInAction by remember { mutableStateOf<DebtEntity?>(null) }
+    var debtToEdit by remember { mutableStateOf<DebtEntity?>(null) }
+    var goalInAction by remember { mutableStateOf<GoalUi?>(null) }
     var recurringToConfirm by remember { mutableStateOf<RecurringWithCategory?>(null) }
     var recurringToEdit by remember { mutableStateOf<RecurringWithCategory?>(null) }
     var showAddGoal by remember { mutableStateOf(false) }
@@ -283,7 +285,7 @@ fun WalletScreen(
         items(state.goals, key = { "goal-${it.goal.id}" }) { goalUi ->
             GoalCard(
                 goalUi = goalUi,
-                onDelete = { viewModel.deleteGoal(goalUi) },
+                onClick = { goalInAction = goalUi },
                 modifier = Modifier.animateItem()
             )
         }
@@ -321,7 +323,8 @@ fun WalletScreen(
     }
 
     if (showAddDebt) {
-        AddDebtDialog(
+        DebtDialog(
+            initial = null,
             defaultCurrency = state.currencyCode,
             onConfirm = { name, direction, amount, currency, note ->
                 viewModel.addDebt(name, direction, amount, currency, note)
@@ -342,6 +345,10 @@ fun WalletScreen(
                 viewModel.closeDebt(debt)
                 debtInAction = null
             },
+            onEdit = {
+                debtInAction = null
+                debtToEdit = debt
+            },
             onDelete = {
                 viewModel.deleteDebt(debt)
                 debtInAction = null
@@ -350,11 +357,24 @@ fun WalletScreen(
         )
     }
 
+    debtToEdit?.let { debt ->
+        DebtDialog(
+            initial = debt,
+            defaultCurrency = state.currencyCode,
+            onConfirm = { name, direction, amount, currency, note ->
+                viewModel.updateDebt(debt, name, direction, amount, currency, note)
+                debtToEdit = null
+            },
+            onDismiss = { debtToEdit = null }
+        )
+    }
+
     savingDialogWithdraw?.let { withdraw ->
         AddSavingDialog(
             withdraw = withdraw,
             defaultCurrency = state.currencyCode,
             goals = state.goals.filter { !it.achieved },
+            rateOf = viewModel::suggestedRate,
             onConfirm = { amount, currency, note, goalId ->
                 viewModel.addSaving(amount, currency, note, goalId)
                 savingDialogWithdraw = null
@@ -395,13 +415,31 @@ fun WalletScreen(
     }
 
     if (showAddGoal) {
-        AddGoalDialog(
+        GoalDialog(
+            initial = null,
             defaultCurrency = state.currencyCode,
             onConfirm = { title, target, currency ->
                 viewModel.addGoal(title, target, currency)
                 showAddGoal = false
             },
+            onDelete = null,
             onDismiss = { showAddGoal = false }
+        )
+    }
+
+    goalInAction?.let { goalUi ->
+        GoalDialog(
+            initial = goalUi.goal,
+            defaultCurrency = state.currencyCode,
+            onConfirm = { title, target, currency ->
+                viewModel.updateGoal(goalUi, title, target, currency)
+                goalInAction = null
+            },
+            onDelete = {
+                viewModel.deleteGoal(goalUi)
+                goalInAction = null
+            },
+            onDismiss = { goalInAction = null }
         )
     }
 
@@ -808,7 +846,7 @@ private fun DebtRow(
 @Composable
 private fun GoalCard(
     goalUi: GoalUi,
-    onDelete: () -> Unit,
+    onClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     val goal = goalUi.goal
@@ -819,7 +857,10 @@ private fun GoalCard(
             .padding(horizontal = 16.dp, vertical = 4.dp)
             .clip(MaterialTheme.shapes.large)
             .background(MaterialTheme.colorScheme.surfaceContainer)
-            .padding(start = 16.dp, end = 4.dp, top = 12.dp, bottom = 12.dp)
+            // A tap opens the goal for changing — name, target, currency — and
+            // the trash moved in there with them.
+            .clickable(onClick = onClick)
+            .padding(horizontal = 16.dp, vertical = 12.dp)
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             if (goalUi.achieved) {
@@ -846,13 +887,6 @@ private fun GoalCard(
                 color = accent,
                 maxLines = 1
             )
-            IconButton(onClick = onDelete) {
-                Icon(
-                    Icons.Rounded.DeleteOutline,
-                    contentDescription = stringResource(R.string.editor_delete),
-                    tint = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            }
         }
         LinearProgressIndicator(
             progress = { goalUi.progress },
@@ -861,7 +895,7 @@ private fun GoalCard(
             drawStopIndicator = {},
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(top = 8.dp, end = 12.dp)
+                .padding(top = 8.dp)
         )
         if (goalUi.achieved) {
             Text(

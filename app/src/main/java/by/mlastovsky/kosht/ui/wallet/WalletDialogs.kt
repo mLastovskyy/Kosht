@@ -92,8 +92,14 @@ private fun CurrencyChips(
     }
 }
 
+/**
+ * A debt, new or being corrected. One dialog for both: the fields are the same
+ * five either way, and a debt written down wrong should be as easy to fix as it
+ * was to add.
+ */
 @Composable
-fun AddDebtDialog(
+fun DebtDialog(
+    initial: DebtEntity?,
     defaultCurrency: String,
     onConfirm: (
         name: String,
@@ -104,16 +110,20 @@ fun AddDebtDialog(
     ) -> Unit,
     onDismiss: () -> Unit
 ) {
-    var name by remember { mutableStateOf("") }
-    var direction by remember { mutableStateOf(DebtDirection.I_OWE) }
-    var amountText by remember { mutableStateOf("") }
-    var currency by remember { mutableStateOf(defaultCurrency) }
-    var note by remember { mutableStateOf("") }
+    var name by remember { mutableStateOf(initial?.personName ?: "") }
+    var direction by remember { mutableStateOf(initial?.direction ?: DebtDirection.I_OWE) }
+    var amountText by remember {
+        mutableStateOf(initial?.let { Money.editableText(it.amountMinor, it.currencyCode) } ?: "")
+    }
+    var currency by remember { mutableStateOf(initial?.currencyCode ?: defaultCurrency) }
+    var note by remember { mutableStateOf(initial?.note ?: "") }
     val amountMinor = Money.parseToMinor(amountText, currency) ?: 0L
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text(stringResource(R.string.debt_new)) },
+        title = {
+            Text(stringResource(if (initial == null) R.string.debt_new else R.string.debt_edit))
+        },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 DirectionToggle(direction) { direction = it }
@@ -151,7 +161,13 @@ fun AddDebtDialog(
             TextButton(
                 enabled = name.isNotBlank() && amountMinor > 0,
                 onClick = { onConfirm(name, direction, amountMinor, currency, note) }
-            ) { Text(stringResource(R.string.action_add)) }
+            ) {
+                Text(
+                    stringResource(
+                        if (initial == null) R.string.action_add else R.string.editor_save
+                    )
+                )
+            }
         },
         dismissButton = {
             TextButton(onClick = onDismiss) { Text(stringResource(R.string.action_cancel)) }
@@ -186,6 +202,7 @@ fun DebtActionsDialog(
     debt: DebtEntity,
     onRepay: (amountMinor: Long) -> Unit,
     onClose: () -> Unit,
+    onEdit: () -> Unit,
     onDelete: () -> Unit,
     onDismiss: () -> Unit
 ) {
@@ -194,7 +211,22 @@ fun DebtActionsDialog(
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text(debt.personName) },
+        title = {
+            Row(verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
+                Text(
+                    text = debt.personName,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier.weight(1f)
+                )
+                IconButton(onClick = onEdit) {
+                    Icon(
+                        imageVector = Icons.Rounded.Edit,
+                        contentDescription = stringResource(R.string.debt_edit)
+                    )
+                }
+            }
+        },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 Text(
@@ -234,11 +266,19 @@ fun DebtActionsDialog(
     )
 }
 
+/**
+ * Setting money aside, or taking it back out. The amount can be in any
+ * currency: what lands in the savings is the same sum in the currency they are
+ * counted in — the goal's, or the app's — converted at the official rate and
+ * left editable, because the bank's figure and the National Bank's rate rarely
+ * agree to the last kopeck, and the one that actually left the account wins.
+ */
 @Composable
 fun AddSavingDialog(
     withdraw: Boolean,
     defaultCurrency: String,
     goals: List<by.mlastovsky.kosht.ui.wallet.GoalUi>,
+    rateOf: (from: String, to: String) -> Double?,
     onConfirm: (amountMinor: Long, currency: String, note: String, goalId: Long?) -> Unit,
     onDismiss: () -> Unit
 ) {
@@ -246,10 +286,31 @@ fun AddSavingDialog(
     var currency by remember { mutableStateOf(defaultCurrency) }
     var note by remember { mutableStateOf("") }
     var goalId by remember { mutableStateOf<Long?>(null) }
-    // A goal locks the currency so its progress stays in one currency.
+    // A goal counts its deposits up, so they all land in its own currency.
     val selectedGoal = goals.firstOrNull { it.goal.id == goalId }
-    val effectiveCurrency = selectedGoal?.goal?.currencyCode ?: currency
-    val amountMinor = Money.parseToMinor(amountText, effectiveCurrency) ?: 0L
+    val savedIn = selectedGoal?.goal?.currencyCode ?: defaultCurrency
+    val typedMinor = Money.parseToMinor(amountText, currency) ?: 0L
+    val converting = currency != savedIn
+    var convertedText by remember { mutableStateOf("") }
+    // Re-derived whenever the sum or either currency moves; the last word is
+    // still the person's, since they can type over it afterwards.
+    androidx.compose.runtime.LaunchedEffect(typedMinor, currency, savedIn) {
+        convertedText = if (!converting || typedMinor <= 0) {
+            ""
+        } else {
+            val rate = rateOf(currency, savedIn)
+            if (rate == null || rate <= 0.0) {
+                ""
+            } else {
+                Money.editableText(Math.round(typedMinor * rate), savedIn)
+            }
+        }
+    }
+    val amountMinor = if (converting) {
+        Money.parseToMinor(convertedText, savedIn) ?: 0L
+    } else {
+        typedMinor
+    }
 
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -285,13 +346,17 @@ fun AddSavingDialog(
                         }
                     }
                 }
-                if (selectedGoal == null) {
-                    CurrencyChips(currency) { currency = it }
-                } else {
-                    Text(
-                        text = selectedGoal.goal.currencyCode,
-                        style = MaterialTheme.typography.labelLarge,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                CurrencyChips(currency) { currency = it }
+                // Only when the two differ: otherwise there is nothing to
+                // convert and nothing to correct.
+                if (converting) {
+                    OutlinedTextField(
+                        value = convertedText,
+                        onValueChange = { convertedText = it.take(12) },
+                        label = { Text(stringResource(R.string.savings_in_currency, savedIn)) },
+                        singleLine = true,
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+                        modifier = Modifier.fillMaxWidth()
                     )
                 }
                 OutlinedTextField(
@@ -310,7 +375,7 @@ fun AddSavingDialog(
                 onClick = {
                     onConfirm(
                         if (withdraw) -amountMinor else amountMinor,
-                        effectiveCurrency,
+                        savedIn,
                         note,
                         if (withdraw) null else goalId
                     )
@@ -323,20 +388,48 @@ fun AddSavingDialog(
     )
 }
 
+/**
+ * A savings goal, new or being changed. The name, the target and the currency
+ * are all corrigible — a goal outlives the evening it was created on, and
+ * "накопить на отпуск" turns out to be in euro after all.
+ */
 @Composable
-fun AddGoalDialog(
+fun GoalDialog(
+    initial: by.mlastovsky.kosht.data.db.SavingGoalEntity?,
     defaultCurrency: String,
     onConfirm: (title: String, targetMinor: Long, currency: String) -> Unit,
+    onDelete: (() -> Unit)?,
     onDismiss: () -> Unit
 ) {
-    var title by remember { mutableStateOf("") }
-    var amountText by remember { mutableStateOf("") }
-    var currency by remember { mutableStateOf(defaultCurrency) }
+    var title by remember { mutableStateOf(initial?.title ?: "") }
+    var amountText by remember {
+        mutableStateOf(initial?.let { Money.editableText(it.targetMinor, it.currencyCode) } ?: "")
+    }
+    var currency by remember { mutableStateOf(initial?.currencyCode ?: defaultCurrency) }
     val targetMinor = Money.parseToMinor(amountText, currency) ?: 0L
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text(stringResource(R.string.goal_new)) },
+        title = {
+            Row(verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
+                Text(
+                    text = stringResource(
+                        if (initial == null) R.string.goal_new else R.string.goal_edit
+                    ),
+                    modifier = Modifier.weight(1f)
+                )
+                // The trash lives where it does for a payment or an account.
+                if (onDelete != null) {
+                    IconButton(onClick = onDelete) {
+                        Icon(
+                            imageVector = Icons.Rounded.DeleteOutline,
+                            contentDescription = stringResource(R.string.editor_delete),
+                            tint = MaterialTheme.colorScheme.error
+                        )
+                    }
+                }
+            }
+        },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 OutlinedTextField(
@@ -349,13 +442,27 @@ fun AddGoalDialog(
                 )
                 AmountField(amountText, { amountText = it })
                 CurrencyChips(currency) { currency = it }
+                // Said out loud, because it moves money that is already there.
+                if (initial != null && currency != initial.currencyCode) {
+                    Text(
+                        text = stringResource(R.string.goal_currency_converts),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
             }
         },
         confirmButton = {
             TextButton(
                 enabled = title.isNotBlank() && targetMinor > 0,
                 onClick = { onConfirm(title, targetMinor, currency) }
-            ) { Text(stringResource(R.string.action_add)) }
+            ) {
+                Text(
+                    stringResource(
+                        if (initial == null) R.string.action_add else R.string.editor_save
+                    )
+                )
+            }
         },
         dismissButton = {
             TextButton(onClick = onDismiss) { Text(stringResource(R.string.action_cancel)) }
@@ -685,10 +792,7 @@ fun AccountBalanceDialog(
 ) {
     val resolvedName = by.mlastovsky.kosht.ui.AccountVisuals.displayName(account)
     var balanceText by remember {
-        mutableStateOf(
-            Money.format(currentBalanceMinor, currencyCode)
-                .filter { it.isDigit() || it == ',' || it == '-' }
-        )
+        mutableStateOf(Money.editableText(currentBalanceMinor, currencyCode))
     }
     var editMode by remember { mutableStateOf(false) }
     var name by remember { mutableStateOf(resolvedName) }
@@ -832,10 +936,7 @@ fun EditRecurringDialog(
 ) {
     var title by remember { mutableStateOf(initial.title) }
     var amountText by remember {
-        mutableStateOf(
-            Money.format(initial.amountMinor, initial.currencyCode)
-                .filter { it.isDigit() || it == ',' }
-        )
+        mutableStateOf(Money.editableText(initial.amountMinor, initial.currencyCode))
     }
     var due by remember { mutableStateOf(initial.nextDueDate) }
     var frequency by remember { mutableStateOf(initial.frequency) }
@@ -988,10 +1089,7 @@ fun ConfirmRecurringDialog(
 ) {
     val sameCurrency = currencyCode == appCurrencyCode
     var amountText by remember {
-        mutableStateOf(
-            Money.format(initialAmountMinor, currencyCode)
-                .filter { it.isDigit() || it == ',' }
-        )
+        mutableStateOf(Money.editableText(initialAmountMinor, currencyCode))
     }
     var rateText by remember {
         mutableStateOf(suggestedRate?.let { "%.4f".format(it).replace(',', '.') } ?: "")

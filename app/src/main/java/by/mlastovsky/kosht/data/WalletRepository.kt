@@ -77,6 +77,9 @@ class WalletRepository(
         debtDao.update(debt.copy(closedAt = System.currentTimeMillis()))
     }
 
+    /** A debt written down wrong stays wrong until it can be corrected. */
+    suspend fun updateDebt(debt: DebtEntity) = debtDao.update(debt)
+
     suspend fun deleteDebt(id: Long) = debtDao.deleteById(id)
 
     // --- Savings ---
@@ -127,6 +130,21 @@ class WalletRepository(
     suspend fun deleteGoal(id: Long) {
         goalDao.unlinkSavings(id)
         goalDao.deleteById(id)
+    }
+
+    /**
+     * Renames a goal, moves its target, or changes the currency it is counted
+     * in. [savingsFactor] converts what has already been set aside toward it —
+     * a goal adds its deposits up, so the two cannot be in different currencies.
+     * Reaching the target this way counts as reaching it, and lowering the
+     * target below what is saved is a goal met, not a goal broken.
+     */
+    suspend fun updateGoal(goal: SavingGoalEntity, savingsFactor: Double? = null) {
+        goalDao.update(goal)
+        if (savingsFactor != null && savingsFactor > 0.0) {
+            savingDao.convertForGoal(goal.id, goal.currencyCode, savingsFactor)
+        }
+        checkGoalAchieved(goal.id)
     }
 
     private suspend fun checkGoalAchieved(goalId: Long) {

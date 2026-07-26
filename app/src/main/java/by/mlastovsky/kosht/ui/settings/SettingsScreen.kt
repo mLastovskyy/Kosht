@@ -242,13 +242,13 @@ fun SettingsScreen(
         SettingsCard {
             NotificationToggle(
                 titleRes = R.string.show_greeting,
-                descRes = R.string.show_greeting_desc,
                 icon = Icons.Rounded.WavingHand,
                 checked = current.showGreeting,
                 onChange = viewModel::setShowGreeting
             )
             NotificationToggle(
                 titleRes = R.string.show_streak,
+                // "Streak" alone does not say what it counts.
                 descRes = R.string.show_streak_desc,
                 icon = Icons.Rounded.LocalFireDepartment,
                 checked = current.showStreak,
@@ -256,7 +256,6 @@ fun SettingsScreen(
             )
             NotificationToggle(
                 titleRes = R.string.show_rates,
-                descRes = R.string.show_rates_desc,
                 icon = Icons.Rounded.CurrencyExchange,
                 checked = current.showRates,
                 onChange = viewModel::setShowRates
@@ -270,7 +269,6 @@ fun SettingsScreen(
             )
             NotificationToggle(
                 titleRes = R.string.auto_calc,
-                descRes = R.string.auto_calc_desc,
                 icon = Icons.Rounded.Calculate,
                 checked = current.autoCalculator,
                 onChange = viewModel::setAutoCalculator
@@ -386,7 +384,6 @@ fun SettingsScreen(
         )
         NotificationToggle(
             titleRes = R.string.notif_setting_awards,
-            descRes = R.string.notif_setting_awards_desc,
             icon = Icons.Rounded.EmojiEvents,
             checked = current.notifyAwards,
             onChange = { enabled ->
@@ -408,7 +405,6 @@ fun SettingsScreen(
         SettingsCard {
         ListItem(
             headlineContent = { Text(stringResource(R.string.guide_title)) },
-            supportingContent = { Text(stringResource(R.string.guide_settings_entry_desc)) },
             leadingContent = { Icon(Icons.AutoMirrored.Rounded.HelpOutline, contentDescription = null) },
             colors = transparentListColors(),
             modifier = Modifier.clickable(onClick = onOpenGuide)
@@ -1189,7 +1185,6 @@ private fun MarketingToggle(viewModel: by.mlastovsky.kosht.ui.account.AccountVie
 
     ListItem(
         headlineContent = { Text(stringResource(R.string.legal_marketing)) },
-        supportingContent = { Text(stringResource(R.string.legal_marketing_hint)) },
         leadingContent = { Icon(Icons.Rounded.MarkEmailRead, contentDescription = null) },
         trailingContent = {
             Switch(
@@ -1509,17 +1504,21 @@ private fun ReportFieldsDialog(
 }
 
 
+/**
+ * A switch row. [descRes] is optional on purpose: where the title already says
+ * the whole thing, a second line of explaining is just noise to scroll past.
+ */
 @Composable
 private fun NotificationToggle(
     titleRes: Int,
-    descRes: Int,
+    descRes: Int? = null,
     icon: androidx.compose.ui.graphics.vector.ImageVector,
     checked: Boolean,
     onChange: (Boolean) -> Unit
 ) {
     ListItem(
         headlineContent = { Text(stringResource(titleRes)) },
-        supportingContent = { Text(stringResource(descRes)) },
+        supportingContent = descRes?.let { { Text(stringResource(it)) } },
         leadingContent = { Icon(icon, contentDescription = null) },
         trailingContent = { Switch(checked = checked, onCheckedChange = onChange) },
         colors = transparentListColors(),

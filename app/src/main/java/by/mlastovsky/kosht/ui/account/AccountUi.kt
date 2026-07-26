@@ -40,6 +40,13 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.AnnotatedString
+import androidx.compose.ui.text.LinkAnnotation
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.TextLinkStyles
+import androidx.compose.ui.text.buildAnnotatedString
+import androidx.compose.ui.text.style.TextDecoration
+import androidx.compose.ui.text.withLink
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.text.input.KeyboardType
@@ -241,58 +248,97 @@ private fun ConsentCheckboxes(state: AuthUiState, viewModel: AccountViewModel) {
     CheckRow(
         checked = state.acceptedTerms,
         enabled = !state.busy,
-        text = stringResource(R.string.legal_accept),
-        onCheckedChange = viewModel::setAcceptedTerms
-    )
-    Row {
-        TextButton(
-            onClick = {
+        text = consentSentence(
+            onTerms = {
                 openPdf(
                     by.mlastovsky.kosht.ui.components.LegalDocs.TERMS_ASSET,
                     by.mlastovsky.kosht.ui.components.LegalDocs.TERMS_FILE
                 )
-            }
-        ) {
-            Text(
-                text = stringResource(R.string.legal_terms),
-                style = MaterialTheme.typography.labelMedium
-            )
-        }
-        TextButton(
-            onClick = {
+            },
+            onPrivacy = {
                 openPdf(
                     by.mlastovsky.kosht.ui.components.LegalDocs.PRIVACY_ASSET,
                     by.mlastovsky.kosht.ui.components.LegalDocs.PRIVACY_FILE
                 )
             }
-        ) {
-            Text(
-                text = stringResource(R.string.legal_privacy),
-                style = MaterialTheme.typography.labelMedium,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis
-            )
-        }
-    }
+        ),
+        onCheckedChange = viewModel::setAcceptedTerms
+    )
     CheckRow(
         checked = state.marketingOptIn,
         enabled = !state.busy,
-        text = stringResource(R.string.legal_marketing),
+        text = AnnotatedString(stringResource(R.string.legal_marketing)),
         onCheckedChange = viewModel::setMarketingOptIn
     )
+}
+
+/**
+ * "I accept the Terms of use and the Personal data policy" with the two names
+ * as links inside the sentence — the documents belong in the line that agrees
+ * to them, not in two buttons underneath pretending to be something else.
+ *
+ * Square brackets in the string mark the links: the first is the terms, the
+ * second the policy. That keeps each language's grammar in one piece — Russian
+ * declines both names — which a sentence stitched from fragments would not.
+ */
+@Composable
+private fun consentSentence(
+    onTerms: () -> Unit,
+    onPrivacy: () -> Unit
+): AnnotatedString {
+    val sentence = stringResource(R.string.legal_accept)
+    val linkStyles = TextLinkStyles(
+        style = SpanStyle(
+            color = MaterialTheme.colorScheme.primary,
+            textDecoration = TextDecoration.Underline
+        )
+    )
+    val openers = listOf(onTerms, onPrivacy)
+    return remember(sentence, linkStyles, onTerms, onPrivacy) {
+        buildAnnotatedString {
+            var rest = 0
+            var index = 0
+            while (rest < sentence.length) {
+                val open = sentence.indexOf('[', rest)
+                val close = if (open < 0) -1 else sentence.indexOf(']', open + 1)
+                if (close < 0) {
+                    // No markers left (or a broken translation): plain text.
+                    append(sentence.substring(rest))
+                    break
+                }
+                append(sentence.substring(rest, open))
+                val label = sentence.substring(open + 1, close)
+                val open2 = openers.getOrNull(index)
+                if (open2 == null) {
+                    append(label)
+                } else {
+                    withLink(
+                        LinkAnnotation.Clickable(
+                            tag = "doc$index",
+                            styles = linkStyles
+                        ) { open2() }
+                    ) { append(label) }
+                }
+                index++
+                rest = close + 1
+            }
+        }
+    }
 }
 
 @Composable
 private fun CheckRow(
     checked: Boolean,
     enabled: Boolean,
-    text: String,
+    text: AnnotatedString,
     onCheckedChange: (Boolean) -> Unit
 ) {
     Row(
         verticalAlignment = Alignment.CenterVertically,
         modifier = Modifier
             .fillMaxWidth()
+            // The links inside the sentence take their own taps; anywhere else
+            // on the row still ticks the box.
             .clickable(enabled = enabled) { onCheckedChange(!checked) }
     ) {
         Checkbox(checked = checked, enabled = enabled, onCheckedChange = onCheckedChange)

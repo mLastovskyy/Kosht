@@ -109,9 +109,9 @@ Signing up is an email, a six-digit code that Kosht mails you (good for five min
 - Foreign-currency recurring payments let you set the **exact rate you were charged**
 
 ### 👛 The Wallet
-- **Debts** — who owes whom, in any currency, with partial repayments
-- **Savings** — a journal of every "set aside" moment, with per-currency totals
-- **Savings goals** — name a goal, set a target, watch the progress bar fill 🎉
+- **Debts** — who owes whom, in any currency, with partial repayments; tap one to repay, close or delete it, and the pencil corrects the debt itself — person, direction, sum, currency, note
+- **Savings** — a journal of every "set aside" moment, with per-currency totals. Set aside in **any** currency and Kosht converts it into the currency the savings are counted in at the National Bank rate — then leaves that figure editable, because the bank's arithmetic and the official rate rarely agree to the last kopeck and what actually left the account is what belongs in the record
+- **Savings goals** — name a goal, set a target, watch the progress bar fill 🎉. Tap a goal to change any of it later: the name, the target, even the currency — and what is already set aside toward it moves across at the official rate, so the progress bar keeps meaning what it says
 - **Planned payments — outgoing or incoming** — a salary is as regular as a subscription. Pick expense or income, the date, the frequency, the category and the account it moves on; nothing happens silently, you always confirm. The confirmation says which way the money goes, starts from the account the plan names, and lets you set the exact rate for a foreign currency.
 
 ### 🏆 Gamification that helps, not annoys
@@ -124,7 +124,7 @@ Signing up is an email, a six-digit code that Kosht mails you (good for five min
 An evening nudge only if nothing is logged, planned payments awaiting confirmation, a Monday money digest, and awards as you earn them. Each arrives with the phone's notification sound and a short vibration — a notification nobody hears is a notification nobody acts on — while staying out of the way otherwise: no heads-up popups over what you are doing, and Android's own per-channel settings can quiet any of them down again. A tap takes you straight into the app.
 
 ### 🎨 Made for you
-Light & dark themes, Material You dynamic colors, English & Russian interface, a profile with photo or built-in avatars — tap the avatar anywhere, on Home as well as in Settings, and the same profile dialog opens — and interface toggles to hide anything you don't need. Without an account nothing ever leaves the phone; with one, only you can read it.
+Light & dark themes, Material You dynamic colors, English & Russian interface, a profile with photo or built-in avatars — one of them is dealt out at random on the very first launch, so the app has a face from the start, and tapping the avatar anywhere, on Home as well as in Settings, opens the same profile dialog — and interface toggles to hide anything you don't need. The five main screens answer to a thumb as well as to a tap: swipe between Home, History, Statistics, Wallet and Settings. Without an account nothing ever leaves the phone; with one, only you can read it.
 
 ### 🔐 A lock of your own, if you want one
 Switch on *Settings → Security → App lock*, make up a code of 4 to 8 digits, and Kosht asks for it before it opens.
