@@ -10,7 +10,8 @@ import kotlinx.coroutines.flow.first
 /** Money sources (cards, cash, ...). */
 class AccountRepository(
     private val accountDao: AccountDao,
-    private val transactionDao: TransactionDao
+    private val transactionDao: TransactionDao,
+    private val recurringDao: by.mlastovsky.kosht.data.db.RecurringDao
 ) {
 
     fun observeAccounts(): Flow<List<AccountEntity>> = accountDao.observeAll()
@@ -51,11 +52,18 @@ class AccountRepository(
     /**
      * Deletes an account, moving its transactions to the primary one.
      * The last remaining account can not be deleted.
+     *
+     * Transfers are the one thing that cannot simply be moved: one between
+     * this account and the account inheriting its records would end up going
+     * from itself to itself, so those go with the account.
      */
     suspend fun deleteAccount(account: AccountEntity) {
         if (accountDao.count() <= 1) return
         val primary = observeAccounts().first().firstOrNull { it.id != account.id } ?: return
+        transactionDao.deleteCollapsedTransfers(from = account.id, to = primary.id)
         transactionDao.reassignAccount(from = account.id, to = primary.id)
+        transactionDao.reassignTransferAccount(from = account.id, to = primary.id)
+        recurringDao.reassignAccount(from = account.id, to = primary.id)
         accountDao.deleteById(account.id)
     }
 }

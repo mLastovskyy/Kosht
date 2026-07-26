@@ -21,6 +21,7 @@ import androidx.compose.material.icons.rounded.DeleteOutline
 import androidx.compose.material.icons.rounded.EmojiEvents
 import androidx.compose.material.icons.rounded.Refresh
 import androidx.compose.material.icons.rounded.Remove
+import androidx.compose.material.icons.rounded.SwapHoriz
 import androidx.compose.material3.Button
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.Card
@@ -74,6 +75,7 @@ fun WalletScreen(
     var recurringToEdit by remember { mutableStateOf<RecurringWithCategory?>(null) }
     var showAddGoal by remember { mutableStateOf(false) }
     var showAddAccount by remember { mutableStateOf(false) }
+    var showTransfer by remember { mutableStateOf(false) }
     var accountInAction by remember {
         mutableStateOf<Pair<by.mlastovsky.kosht.data.db.AccountEntity, Long>?>(null)
     }
@@ -127,6 +129,17 @@ fun WalletScreen(
                     modifier = Modifier.weight(1f)
                 )
                 if (state.multiAccount) {
+                    // Moving money makes sense only once there are two places
+                    // to move it between.
+                    if (state.accountsWithBalances.size > 1) {
+                        IconButton(onClick = { showTransfer = true }) {
+                            Icon(
+                                Icons.Rounded.SwapHoriz,
+                                contentDescription = stringResource(R.string.transfer_new),
+                                tint = MaterialTheme.colorScheme.primary
+                            )
+                        }
+                    }
                     IconButton(onClick = { showAddAccount = true }) {
                         Icon(
                             Icons.Rounded.Add,
@@ -392,12 +405,22 @@ fun WalletScreen(
         )
     }
 
+    if (showTransfer) {
+        by.mlastovsky.kosht.ui.transfer.TransferDialog(
+            onDismiss = { showTransfer = false }
+        )
+    }
+
     if (showAddRecurring) {
         AddRecurringDialog(
-            categories = state.expenseCategories,
+            expenseCategories = state.expenseCategories,
+            incomeCategories = state.incomeCategories,
+            accounts = state.pickableAccounts,
             currencyCode = state.currencyCode,
-            onConfirm = { title, amount, currency, categoryId, firstDue, frequency ->
-                viewModel.addRecurring(title, amount, currency, categoryId, firstDue, frequency)
+            onConfirm = { title, amount, currency, categoryId, firstDue, frequency, type, account ->
+                viewModel.addRecurring(
+                    title, amount, currency, categoryId, firstDue, frequency, type, account
+                )
                 showAddRecurring = false
             },
             onDismiss = { showAddRecurring = false }
@@ -407,8 +430,13 @@ fun WalletScreen(
     recurringToEdit?.let { item ->
         EditRecurringDialog(
             initial = item.recurring,
-            onConfirm = { title, amount, due, freq ->
-                viewModel.updateRecurringDetails(item, title, amount, due, freq)
+            expenseCategories = state.expenseCategories,
+            incomeCategories = state.incomeCategories,
+            accounts = state.pickableAccounts,
+            onConfirm = { title, amount, due, freq, type, categoryId, account ->
+                viewModel.updateRecurringDetails(
+                    item, title, amount, due, freq, type, categoryId, account
+                )
                 recurringToEdit = null
             },
             onDismiss = { recurringToEdit = null }
@@ -426,11 +454,9 @@ fun WalletScreen(
                 to = state.currencyCode
             ),
             // The picker shows up only with several accounts to choose from.
-            accounts = if (state.multiAccount) {
-                state.accountsWithBalances.map { it.first }
-            } else {
-                emptyList()
-            },
+            accounts = state.pickableAccounts,
+            defaultAccountId = item.recurring.accountId,
+            type = item.recurring.type,
             onConfirm = { amountMinor, rate, accountId ->
                 viewModel.confirmRecurring(item, amountMinor, rate, accountId)
                 recurringToConfirm = null
@@ -569,6 +595,16 @@ private fun EmptyHint(text: String) {
     )
 }
 
+/** "+120,00" for money coming in, "−120,00" for money going out. */
+private fun signedAmount(item: RecurringWithCategory): String {
+    val sign = if (item.recurring.type == by.mlastovsky.kosht.model.TransactionType.INCOME) {
+        "+"
+    } else {
+        "−"
+    }
+    return sign + Money.format(item.recurring.amountMinor, item.recurring.currencyCode)
+}
+
 @Composable
 private fun DueCard(
     item: RecurringWithCategory,
@@ -603,7 +639,7 @@ private fun DueCard(
                     overflow = TextOverflow.Ellipsis
                 )
                 Text(
-                    text = Money.format(item.recurring.amountMinor, item.recurring.currencyCode),
+                    text = signedAmount(item),
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onPrimaryContainer
                 )
@@ -646,9 +682,13 @@ private fun RecurringRow(
             Text(
                 text = relativeDate(item.recurring.nextDueDate) +
                     " · " + frequencyLabel(item.recurring.frequency) +
-                    " · " + Money.format(item.recurring.amountMinor, item.recurring.currencyCode),
+                    " · " + signedAmount(item),
                 style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                color = if (item.recurring.type == by.mlastovsky.kosht.model.TransactionType.INCOME) {
+                    KoshtTheme.colors.income
+                } else {
+                    MaterialTheme.colorScheme.onSurfaceVariant
+                },
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis
             )

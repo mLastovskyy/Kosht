@@ -1,9 +1,20 @@
 package by.mlastovsky.kosht.data
 
 import by.mlastovsky.kosht.data.db.TransactionEntity
+import by.mlastovsky.kosht.data.db.TransactionItemEntity
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.asSharedFlow
+
+/**
+ * A record on its way out, with everything that has to come back if the user
+ * changes their mind: its product lines went with it through the foreign key,
+ * and the database cannot hand them back on its own.
+ */
+data class DeletedRecord(
+    val transaction: TransactionEntity,
+    val items: List<TransactionItemEntity> = emptyList()
+)
 
 /**
  * A record that has just been deleted, on its way to being offered back.
@@ -20,11 +31,11 @@ import kotlinx.coroutines.flow.asSharedFlow
  */
 object DeletionEvents {
 
-    private val _deleted = MutableSharedFlow<TransactionEntity>(extraBufferCapacity = 4)
+    private val _deleted = MutableSharedFlow<DeletedRecord>(extraBufferCapacity = 4)
 
-    val deleted: SharedFlow<TransactionEntity> = _deleted.asSharedFlow()
+    val deleted: SharedFlow<DeletedRecord> = _deleted.asSharedFlow()
 
-    fun report(transaction: TransactionEntity) {
-        _deleted.tryEmit(transaction)
+    fun report(transaction: TransactionEntity, items: List<TransactionItemEntity> = emptyList()) {
+        _deleted.tryEmit(DeletedRecord(transaction, items))
     }
 }

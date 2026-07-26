@@ -4,6 +4,7 @@ import by.mlastovsky.kosht.data.AppSettings
 import by.mlastovsky.kosht.data.SyncedSettings
 import by.mlastovsky.kosht.data.db.SyncMeta
 import by.mlastovsky.kosht.data.db.TransactionEntity
+import by.mlastovsky.kosht.data.db.TransactionItemEntity
 import by.mlastovsky.kosht.data.db.UidRef
 import by.mlastovsky.kosht.data.sync.SyncPayloads
 import by.mlastovsky.kosht.data.sync.UidIndex
@@ -23,15 +24,17 @@ class SyncPayloadsTest {
 
     private val here = UidIndex(
         categories = listOf(UidRef(id = 7, uid = "seed:food")),
-        accounts = listOf(UidRef(id = 3, uid = "acc-uid")),
-        goals = emptyList()
+        accounts = listOf(UidRef(id = 3, uid = "acc-uid"), UidRef(id = 4, uid = "cash-uid")),
+        goals = emptyList(),
+        transactions = listOf(UidRef(id = 5, uid = "tx-uid"))
     )
 
     /** Same account, second phone: same uids, entirely different local ids. */
     private val there = UidIndex(
         categories = listOf(UidRef(id = 41, uid = "seed:food")),
-        accounts = listOf(UidRef(id = 92, uid = "acc-uid")),
-        goals = emptyList()
+        accounts = listOf(UidRef(id = 92, uid = "acc-uid"), UidRef(id = 93, uid = "cash-uid")),
+        goals = emptyList(),
+        transactions = listOf(UidRef(id = 77, uid = "tx-uid"))
     )
 
     private val local = TransactionEntity(
@@ -100,6 +103,61 @@ class SyncPayloadsTest {
         assertNull(SyncPayloads.of(orphan, here))
     }
 
+    @Test
+    fun `both ends of a transfer travel as uids`() {
+        val transfer = local.copy(
+            transferToAccountId = 4,
+            transferFeeMinor = 150,
+            scanned = false
+        )
+        val payload = SyncPayloads.of(transfer, here)!!
+        assertEquals("cash-uid", payload.getString("transferToAccountUid"))
+
+        val arrived = SyncPayloads.toTransaction(payload, SyncMeta("tx-uid", 111), there, null)!!
+        assertEquals(93L, arrived.transferToAccountId)
+        assertEquals(150L, arrived.transferFeeMinor)
+        assertEquals(92L, arrived.accountId)
+    }
+
+    @Test
+    fun `the scanner mark travels with the record`() {
+        val payload = SyncPayloads.of(local.copy(scanned = true), here)!!
+        val arrived = SyncPayloads.toTransaction(payload, SyncMeta("tx-uid", 111), there, null)!!
+        assertTrue(arrived.scanned)
+    }
+
+    @Test
+    fun `a product line lands on the other device's record`() {
+        val line = TransactionItemEntity(
+            id = 12,
+            transactionId = 5,
+            name = "Молоко",
+            amountMinor = 245,
+            quantity = 2.0,
+            position = 1,
+            sync = SyncMeta(uid = "item-uid", updatedAt = 222)
+        )
+        val payload = SyncPayloads.of(line, here)!!
+        assertEquals("tx-uid", payload.getString("transactionUid"))
+
+        val arrived = SyncPayloads.toItem(payload, SyncMeta("item-uid", 222), there, null)!!
+        assertEquals(77L, arrived.transactionId)
+        assertEquals("Молоко", arrived.name)
+        assertEquals(245L, arrived.amountMinor)
+        assertEquals(2.0, arrived.quantity!!, 0.001)
+        assertEquals(1, arrived.position)
+    }
+
+    @Test
+    fun `a product line whose record has not arrived yet waits`() {
+        val line = TransactionItemEntity(
+            transactionId = 999,
+            name = "Хлеб",
+            sync = SyncMeta(uid = "item-uid", updatedAt = 1)
+        )
+        assertNull(SyncPayloads.of(line, here))
+    }
+
     // ---- Settings ---------------------------------------------------------
 
     private val defaults = AppSettings(
@@ -116,6 +174,7 @@ class SyncPayloadsTest {
         showRates = true,
         convertOnCurrencyChange = true,
         multiAccount = false,
+        transferFee = false,
         reportFields = setOf("SPENT", "INCOME"),
         reportPeriod = "MONTH",
         autoCalculator = true,

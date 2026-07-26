@@ -22,7 +22,10 @@ object AppViewModelProvider {
 
     val Factory: ViewModelProvider.Factory = viewModelFactory {
         initializer {
-            MainViewModel(app().container.settingsRepository)
+            MainViewModel(
+                app().container.settingsRepository,
+                app().container.syncAccountRepository
+            )
         }
         initializer {
             HomeViewModel(
@@ -35,7 +38,8 @@ object AppViewModelProvider {
         initializer {
             HistoryViewModel(
                 app().container.transactionRepository,
-                app().container.settingsRepository
+                app().container.settingsRepository,
+                app().container.accountRepository
             )
         }
         initializer {
@@ -86,6 +90,14 @@ object AppViewModelProvider {
                 app().container.ratesRepository,
                 app().container.settingsRepository,
                 app().container.accountRepository
+            )
+        }
+        initializer {
+            by.mlastovsky.kosht.ui.transfer.TransferViewModel(
+                app().container.transactionRepository,
+                app().container.accountRepository,
+                app().container.settingsRepository,
+                app().container.ratesRepository
             )
         }
         initializer {

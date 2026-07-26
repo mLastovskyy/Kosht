@@ -59,6 +59,10 @@ interface SyncDao {
     @Query("SELECT id, uid FROM saving_goals")
     suspend fun goalRefs(): List<UidRef>
 
+    /** Product lines point at their record, so that mapping travels too. */
+    @Query("SELECT id, uid FROM transactions")
+    suspend fun transactionRefs(): List<UidRef>
+
     // ---- accounts ---------------------------------------------------------
 
     @Query("SELECT * FROM accounts WHERE updatedAt > :since")
@@ -126,6 +130,23 @@ interface SyncDao {
 
     @Query("DELETE FROM transactions WHERE uid = :uid")
     suspend fun deleteTransaction(uid: String)
+
+    // ---- transaction_items ------------------------------------------------
+
+    @Query("SELECT * FROM transaction_items WHERE updatedAt > :since")
+    suspend fun itemsChanged(since: Long): List<TransactionItemEntity>
+
+    @Query("SELECT * FROM transaction_items WHERE uid IN (:uids)")
+    suspend fun itemsByUid(uids: List<String>): List<TransactionItemEntity>
+
+    @Insert
+    suspend fun insertItem(row: TransactionItemEntity)
+
+    @Update
+    suspend fun updateItem(row: TransactionItemEntity)
+
+    @Query("DELETE FROM transaction_items WHERE uid = :uid")
+    suspend fun deleteItem(uid: String)
 
     // ---- recurring --------------------------------------------------------
 

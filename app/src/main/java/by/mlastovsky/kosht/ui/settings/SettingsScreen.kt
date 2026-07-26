@@ -52,6 +52,7 @@ import androidx.compose.material.icons.rounded.PhotoLibrary
 import androidx.compose.material.icons.rounded.Repeat
 import androidx.compose.material.icons.rounded.Speed
 import androidx.compose.material.icons.rounded.Summarize
+import androidx.compose.material.icons.rounded.SwapHoriz
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.CircularProgressIndicator
@@ -266,6 +267,13 @@ fun SettingsScreen(
                 checked = current.autoCalculator,
                 onChange = viewModel::setAutoCalculator
             )
+            NotificationToggle(
+                titleRes = R.string.transfer_fee_setting,
+                descRes = R.string.transfer_fee_setting_desc,
+                icon = Icons.Rounded.SwapHoriz,
+                checked = current.transferFee,
+                onChange = viewModel::setTransferFee
+            )
         }
 
         SectionHeader(stringResource(R.string.settings_report))
@@ -403,14 +411,14 @@ fun SettingsScreen(
         DocumentRow(
             titleRes = R.string.legal_terms,
             icon = Icons.AutoMirrored.Rounded.Article,
-            asset = "legal/terms.pdf",
-            fileName = "kosht-terms.pdf"
+            asset = by.mlastovsky.kosht.ui.components.LegalDocs.TERMS_ASSET,
+            fileName = by.mlastovsky.kosht.ui.components.LegalDocs.TERMS_FILE
         )
         DocumentRow(
             titleRes = R.string.legal_privacy,
             icon = Icons.Rounded.PrivacyTip,
-            asset = "legal/privacy-policy.pdf",
-            fileName = "kosht-privacy-policy.pdf"
+            asset = by.mlastovsky.kosht.ui.components.LegalDocs.PRIVACY_ASSET,
+            fileName = by.mlastovsky.kosht.ui.components.LegalDocs.PRIVACY_FILE
         )
         DocumentRow(
             titleRes = R.string.guide_pdf_title,
@@ -1040,9 +1048,7 @@ private fun DocumentRow(
     asset: String,
     fileName: String
 ) {
-    val context = LocalContext.current
-    val savedTemplate = stringResource(R.string.doc_saved)
-    val failed = stringResource(R.string.guide_pdf_error)
+    val openDocument = by.mlastovsky.kosht.ui.components.rememberDocumentOpener()
     ListItem(
         headlineContent = {
             Text(
@@ -1054,20 +1060,7 @@ private fun DocumentRow(
         leadingContent = { Icon(icon, contentDescription = null) },
         trailingContent = { Icon(Icons.Rounded.Download, contentDescription = null) },
         colors = transparentListColors(),
-        modifier = Modifier.clickable {
-            val message = when (
-                val outcome = by.mlastovsky.kosht.util.PdfDocs.download(context, asset, fileName)
-            ) {
-                is by.mlastovsky.kosht.util.PdfDocs.Outcome.Saved ->
-                    String.format(savedTemplate, outcome.fileName)
-
-                by.mlastovsky.kosht.util.PdfDocs.Outcome.Opened -> null
-                by.mlastovsky.kosht.util.PdfDocs.Outcome.Failed -> failed
-            }
-            message?.let {
-                android.widget.Toast.makeText(context, it, android.widget.Toast.LENGTH_LONG).show()
-            }
-        }
+        modifier = Modifier.clickable { openDocument(asset, fileName) }
     )
 }
 

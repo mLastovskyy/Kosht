@@ -39,6 +39,12 @@ data class AppSettings(
     val convertOnCurrencyChange: Boolean,
     /** Master switch for multiple money sources (cards/cash). */
     val multiAccount: Boolean,
+    /**
+     * Offer a fee field when transferring between accounts. Off unless asked
+     * for: most transfers are free, and an always-visible field would be one
+     * more thing to skip past every time.
+     */
+    val transferFee: Boolean,
     /** Names of [by.mlastovsky.kosht.model.ReportField] rows shown in the report. */
     val reportFields: Set<String>,
     /** Name of the [by.mlastovsky.kosht.ui.stats.ReportPeriod] the report covers. */
@@ -88,6 +94,19 @@ class SettingsRepository(private val context: Context) {
         context.dataStore.edit { it[Keys.notificationsAsked] = true }
     }
 
+    /**
+     * The version of the Terms and the data policy this person has been shown,
+     * or null on a device that has never recorded one. It stays out of
+     * [syncSnapshot] on purpose: reading the documents happens on a device, and
+     * a second phone should say so itself rather than assume.
+     */
+    val policyVersionSeen: Flow<String?> = context.dataStore.data
+        .map { it[Keys.policyVersionSeen]?.takeIf { version -> version.isNotBlank() } }
+
+    suspend fun setPolicyVersionSeen(version: String) {
+        context.dataStore.edit { it[Keys.policyVersionSeen] = version }
+    }
+
     private object Keys {
         val currencyCode = stringPreferencesKey("currency_code")
         val themeMode = stringPreferencesKey("theme_mode")
@@ -106,6 +125,8 @@ class SettingsRepository(private val context: Context) {
         val showRates = booleanPreferencesKey("show_rates")
         val convertOnCurrencyChange = booleanPreferencesKey("convert_on_currency_change")
         val multiAccount = booleanPreferencesKey("multi_account")
+        val transferFee = booleanPreferencesKey("transfer_fee")
+        val policyVersionSeen = stringPreferencesKey("policy_version_seen")
         val reportFields = stringSetPreferencesKey("report_fields")
         val reportPeriod = stringPreferencesKey("report_period")
         val autoCalculator = booleanPreferencesKey("auto_calculator")
@@ -148,6 +169,10 @@ class SettingsRepository(private val context: Context) {
 
     suspend fun setMultiAccount(value: Boolean) {
         bumped { it[Keys.multiAccount] = value }
+    }
+
+    suspend fun setTransferFee(value: Boolean) {
+        bumped { it[Keys.transferFee] = value }
     }
 
     suspend fun setConvertOnCurrencyChange(value: Boolean) {
@@ -206,6 +231,7 @@ class SettingsRepository(private val context: Context) {
             showRates = prefs[Keys.showRates] ?: true,
             convertOnCurrencyChange = prefs[Keys.convertOnCurrencyChange] ?: true,
             multiAccount = prefs[Keys.multiAccount] ?: false,
+            transferFee = prefs[Keys.transferFee] ?: false,
             // Absent preference = all rows; an explicit empty set is honored.
             reportFields = prefs[Keys.reportFields]
                 ?: by.mlastovsky.kosht.model.ReportField.entries.map { it.name }.toSet(),
@@ -299,6 +325,7 @@ class SettingsRepository(private val context: Context) {
             prefs[Keys.showRates] = incoming.showRates
             prefs[Keys.convertOnCurrencyChange] = incoming.convertOnCurrencyChange
             prefs[Keys.multiAccount] = incoming.multiAccount
+            prefs[Keys.transferFee] = incoming.transferFee
             prefs[Keys.reportFields] = incoming.reportFields
             prefs[Keys.reportPeriod] = incoming.reportPeriod
             prefs[Keys.autoCalculator] = incoming.autoCalculator

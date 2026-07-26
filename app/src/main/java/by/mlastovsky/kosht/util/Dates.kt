@@ -19,6 +19,21 @@ object Dates {
     fun toLocalDate(epochMillis: Long): LocalDate =
         Instant.ofEpochMilli(epochMillis).atZone(ZoneId.systemDefault()).toLocalDate()
 
+    /**
+     * A sensible moment for a record the user dated [date]: today gets the
+     * current time, a record kept on its own day keeps the time it had, and any
+     * other day lands on noon, which no time zone can push into a neighbour.
+     */
+    fun momentFor(date: LocalDate, previous: Long? = null): Long {
+        if (previous != null && toLocalDate(previous) == date) return previous
+        return if (date == today()) {
+            System.currentTimeMillis()
+        } else {
+            date.atTime(java.time.LocalTime.NOON).atZone(ZoneId.systemDefault())
+                .toInstant().toEpochMilli()
+        }
+    }
+
     fun monthRange(month: YearMonth): LongRange {
         val start = month.atDay(1).atStartOfDay(ZoneId.systemDefault()).toInstant().toEpochMilli()
         val end = month.plusMonths(1).atDay(1).atStartOfDay(ZoneId.systemDefault())

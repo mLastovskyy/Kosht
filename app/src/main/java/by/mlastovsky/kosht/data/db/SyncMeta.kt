@@ -50,6 +50,7 @@ enum class SyncEntity(val table: String, val local: Boolean = true) {
     CATEGORIES("categories"),
     SAVING_GOALS("saving_goals"),
     TRANSACTIONS("transactions"),
+    TRANSACTION_ITEMS("transaction_items"),
     RECURRING("recurring"),
     SAVINGS("savings"),
     CHALLENGES("challenges"),

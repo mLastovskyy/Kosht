@@ -10,11 +10,13 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
@@ -27,6 +29,7 @@ import androidx.compose.material.icons.rounded.CalendarMonth
 import androidx.compose.material.icons.rounded.Check
 import androidx.compose.material.icons.rounded.DonutLarge
 import androidx.compose.material.icons.rounded.Insights
+import androidx.compose.material.icons.rounded.ShoppingBasket
 import androidx.compose.material.icons.rounded.Tune
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Checkbox
@@ -220,6 +223,10 @@ fun StatsScreen(
 
 @Composable
 private fun ChartsContent(state: StatsUiState) {
+    // Which category is showing what was bought inside it. One at a time: the
+    // list stays readable, and the answer is right under the question.
+    var expandedCategory by rememberSaveable { mutableStateOf<Long?>(null) }
+
     LazyColumn(
         modifier = Modifier.fillMaxSize(),
         contentPadding = PaddingValues(bottom = 96.dp)
@@ -251,13 +258,96 @@ private fun ChartsContent(state: StatsUiState) {
                 )
             }
         }
-        items(state.slices, key = { it.category.id }) { slice ->
-            CategorySliceRow(
-                slice = slice,
-                currencyCode = state.currencyCode,
-                modifier = Modifier.animateItem()
+        state.slices.forEach { slice ->
+            val products = state.productsByCategory[slice.category.id].orEmpty()
+            item(key = "slice-${slice.category.id}") {
+                CategorySliceRow(
+                    slice = slice,
+                    currencyCode = state.currencyCode,
+                    // Only a category that has products invites a tap, and the
+                    // basket says so; the rest stay a plain list.
+                    products = products.size,
+                    expanded = expandedCategory == slice.category.id,
+                    onClick = {
+                        expandedCategory = if (expandedCategory == slice.category.id) {
+                            null
+                        } else {
+                            slice.category.id
+                        }
+                    },
+                    modifier = Modifier.animateItem()
+                )
+            }
+            if (expandedCategory == slice.category.id) {
+                items(products, key = { "product-${slice.category.id}-${it.name}" }) { product ->
+                    ProductRowItem(
+                        product = product,
+                        currencyCode = state.currencyCode,
+                        modifier = Modifier.animateItem()
+                    )
+                }
+            }
+        }
+    }
+}
+
+/**
+ * One product inside the category above it: what it cost in total, how much of
+ * that category's shopping it is, and how often it turned up. Indented, so it
+ * reads as part of the category rather than a category of its own.
+ */
+@Composable
+private fun ProductRowItem(
+    product: ProductRow,
+    currencyCode: String,
+    modifier: Modifier = Modifier
+) {
+    Row(
+        modifier = modifier
+            .fillMaxWidth()
+            .padding(start = 72.dp, end = 16.dp, top = 6.dp, bottom = 6.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(12.dp)
+    ) {
+        Column(Modifier.weight(1f)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text(
+                    text = product.name,
+                    style = MaterialTheme.typography.bodyLarge,
+                    maxLines = 1,
+                    overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
+                    modifier = Modifier.weight(1f)
+                )
+                Text(
+                    // "2 × 1,75" when the lines counted anything, the way a
+                    // receipt spells it out; otherwise how many records it is in.
+                    text = product.quantity?.let { quantity ->
+                        by.mlastovsky.kosht.ui.editor.formatQuantity(quantity) + " × " +
+                            Money.format(
+                                Math.round(product.totalMinor / quantity),
+                                currencyCode
+                            )
+                    } ?: stringResource(R.string.stats_product_times, product.lines),
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    maxLines = 1
+                )
+            }
+            LinearProgressIndicator(
+                progress = { product.share },
+                color = MaterialTheme.colorScheme.primary,
+                trackColor = MaterialTheme.colorScheme.surfaceContainerHigh,
+                drawStopIndicator = {},
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(top = 6.dp)
             )
         }
+        Text(
+            text = Money.format(product.totalMinor, currencyCode),
+            style = MaterialTheme.typography.titleSmall,
+            maxLines = 1
+        )
     }
 }
 
@@ -521,11 +611,16 @@ private fun DailyBarChart(
 private fun CategorySliceRow(
     slice: CategorySlice,
     currencyCode: String,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    /** How many products the records of this category list; 0 hides the tap. */
+    products: Int = 0,
+    expanded: Boolean = false,
+    onClick: () -> Unit = {}
 ) {
     Row(
         modifier = modifier
             .fillMaxWidth()
+            .then(if (products > 0) Modifier.clickable(onClick = onClick) else Modifier)
             .padding(horizontal = 16.dp, vertical = 8.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(12.dp)
@@ -540,8 +635,33 @@ private fun CategorySliceRow(
                 Text(
                     text = CategoryVisuals.displayName(slice.category),
                     style = MaterialTheme.typography.bodyLarge,
-                    modifier = Modifier.weight(1f)
+                    maxLines = 1,
+                    overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
+                    modifier = Modifier.weight(1f, fill = false)
                 )
+                // The basket is the invitation: this category can say what was
+                // actually bought inside it.
+                if (products > 0) {
+                    Icon(
+                        imageVector = Icons.Rounded.ShoppingBasket,
+                        contentDescription = stringResource(R.string.stats_products),
+                        tint = if (expanded) {
+                            MaterialTheme.colorScheme.primary
+                        } else {
+                            MaterialTheme.colorScheme.onSurfaceVariant
+                        },
+                        modifier = Modifier
+                            .padding(start = 6.dp)
+                            .size(16.dp)
+                    )
+                    Text(
+                        text = products.toString(),
+                        style = MaterialTheme.typography.labelMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.padding(start = 2.dp)
+                    )
+                }
+                Spacer(Modifier.weight(1f))
                 Text(
                     text = "${(slice.share * 100).roundToInt()} %",
                     style = MaterialTheme.typography.labelMedium,

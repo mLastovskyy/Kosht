@@ -234,19 +234,9 @@ private fun EmailStep(
  */
 @Composable
 private fun ConsentCheckboxes(state: AuthUiState, viewModel: AccountViewModel) {
-    val context = LocalContext.current
-    val pdfError = stringResource(R.string.guide_pdf_error)
-    val savedTemplate = stringResource(R.string.doc_saved)
     // Opens the document and, where Android allows it, leaves a copy in
     // Downloads — what someone is asked to agree to should be theirs to keep.
-    fun openPdf(asset: String, file: String) {
-        val message = when (val outcome = PdfDocs.download(context, asset, file)) {
-            is PdfDocs.Outcome.Saved -> String.format(savedTemplate, outcome.fileName)
-            PdfDocs.Outcome.Opened -> null
-            PdfDocs.Outcome.Failed -> pdfError
-        }
-        message?.let { Toast.makeText(context, it, Toast.LENGTH_LONG).show() }
-    }
+    val openPdf = by.mlastovsky.kosht.ui.components.rememberDocumentOpener()
 
     CheckRow(
         checked = state.acceptedTerms,
@@ -255,13 +245,27 @@ private fun ConsentCheckboxes(state: AuthUiState, viewModel: AccountViewModel) {
         onCheckedChange = viewModel::setAcceptedTerms
     )
     Row {
-        TextButton(onClick = { openPdf("legal/terms.pdf", "kosht-terms.pdf") }) {
+        TextButton(
+            onClick = {
+                openPdf(
+                    by.mlastovsky.kosht.ui.components.LegalDocs.TERMS_ASSET,
+                    by.mlastovsky.kosht.ui.components.LegalDocs.TERMS_FILE
+                )
+            }
+        ) {
             Text(
                 text = stringResource(R.string.legal_terms),
                 style = MaterialTheme.typography.labelMedium
             )
         }
-        TextButton(onClick = { openPdf("legal/privacy-policy.pdf", "kosht-privacy-policy.pdf") }) {
+        TextButton(
+            onClick = {
+                openPdf(
+                    by.mlastovsky.kosht.ui.components.LegalDocs.PRIVACY_ASSET,
+                    by.mlastovsky.kosht.ui.components.LegalDocs.PRIVACY_FILE
+                )
+            }
+        ) {
             Text(
                 text = stringResource(R.string.legal_privacy),
                 style = MaterialTheme.typography.labelMedium,

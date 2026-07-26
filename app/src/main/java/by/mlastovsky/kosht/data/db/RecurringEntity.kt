@@ -1,5 +1,6 @@
 package by.mlastovsky.kosht.data.db
 
+import androidx.room.ColumnInfo
 import androidx.room.Embedded
 import androidx.room.Entity
 import androidx.room.ForeignKey
@@ -7,12 +8,13 @@ import androidx.room.Index
 import androidx.room.PrimaryKey
 import androidx.room.Relation
 import by.mlastovsky.kosht.model.RecurringFrequency
+import by.mlastovsky.kosht.model.TransactionType
 import java.time.LocalDate
 
 /**
- * A recurring charge with a chosen due date and frequency. It never creates
- * transactions silently: when due, the user must confirm it, which records
- * an expense and advances [nextDueEpochDay] by one period.
+ * A planned payment with a chosen due date and frequency. It never creates
+ * transactions silently: when due, the user must confirm it, which records a
+ * movement of [type] and advances [nextDueEpochDay] by one period.
  */
 @Entity(
     tableName = "recurring",
@@ -39,6 +41,17 @@ data class RecurringEntity(
     val frequency: RecurringFrequency = RecurringFrequency.MONTHLY,
     val enabled: Boolean = true,
     val createdAt: Long,
+    /**
+     * Whether confirming this writes an expense or an income — a salary is as
+     * regular as a subscription.
+     */
+    @ColumnInfo(defaultValue = "EXPENSE")
+    val type: TransactionType = TransactionType.EXPENSE,
+    /**
+     * Which account the confirmed amount goes off (or onto); null means the
+     * user has not picked one and the confirmation asks.
+     */
+    val accountId: Long? = null,
     @Embedded
     val sync: SyncMeta = SyncMeta()
 ) {

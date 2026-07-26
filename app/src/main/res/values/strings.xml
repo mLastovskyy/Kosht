@@ -23,6 +23,17 @@
     <string name="account_new">New account</string>
     <string name="account_balance">Current balance</string>
     <string name="account_balance_hint">Set the real balance — the app adds a correction without touching your history</string>
+
+    <!-- Transfers between accounts -->
+    <string name="transfer_title">Transfer</string>
+    <string name="transfer_new">New transfer</string>
+    <string name="transfer_from">From</string>
+    <string name="transfer_to">To</string>
+    <string name="transfer_fee">Fee</string>
+    <string name="transfer_fee_short">fee %1$s</string>
+    <string name="transfer_total">Leaves the account: %1$s</string>
+    <string name="transfer_fee_setting">Transfer fee</string>
+    <string name="transfer_fee_setting_desc">Offer a fee field when moving money between accounts</string>
     <string name="stats_all_accounts">All accounts</string>
     <string name="show_greeting">Greeting on Home</string>
     <string name="show_greeting_desc">Hide if you prefer a cleaner look</string>
@@ -66,6 +77,52 @@
     <string name="scan_review_title">Recognized from receipt</string>
     <string name="scan_review_hint">Check the values and correct them if needed</string>
     <string name="scan_review_date">Date: %1$s</string>
+    <string name="scanned_mark">Scanned</string>
+    <string name="scan_review_items">Read off the receipt: %1$d items</string>
+    <string name="scan_review_items_partial">Read off the receipt: %1$d items · %2$s of %3$s — the rest could not be read</string>
+
+    <!-- What a record was for, line by line -->
+    <string name="items_title">Items</string>
+    <string name="items_add">Items</string>
+    <string name="items_hint">Optional: list what the money was for — products, or the parts of a payment like rent and utilities. Statistics then break the category down by them.</string>
+    <string name="items_name">Item</string>
+    <string name="items_price">Price</string>
+    <string name="items_quantity">Qty</string>
+    <string name="items_summary">%1$s · %2$s</string>
+    <string name="items_summary_of">%1$s · %2$s of %3$s</string>
+    <plurals name="items_count">
+        <item quantity="one">%1$d item</item>
+        <item quantity="other">%1$d items</item>
+    </plurals>
+
+    <!-- Suggested lines for the built-in categories -->
+    <string name="item_seed_bread">Bread</string>
+    <string name="item_seed_milk">Milk</string>
+    <string name="item_seed_coffee">Coffee</string>
+    <string name="item_seed_vegetables">Vegetables</string>
+    <string name="item_seed_meat">Meat</string>
+    <string name="item_seed_sweets">Sweets</string>
+    <string name="item_seed_rent">Rent</string>
+    <string name="item_seed_utilities">Utilities</string>
+    <string name="item_seed_internet">Internet</string>
+    <string name="item_seed_repairs">Repairs</string>
+    <string name="item_seed_fuel">Fuel</string>
+    <string name="item_seed_public_transport">Public transport</string>
+    <string name="item_seed_taxi">Taxi</string>
+    <string name="item_seed_parking">Parking</string>
+    <string name="item_seed_pharmacy">Pharmacy</string>
+    <string name="item_seed_doctor">Doctor</string>
+    <string name="item_seed_dentist">Dentist</string>
+    <string name="item_seed_mobile">Mobile</string>
+    <string name="item_seed_streaming">Streaming</string>
+    <string name="item_seed_cloud">Cloud storage</string>
+    <string name="item_seed_cinema">Cinema</string>
+    <string name="item_seed_concert">Concert</string>
+    <string name="item_seed_games">Games</string>
+    <string name="item_seed_courses">Courses</string>
+    <string name="item_seed_books">Books</string>
+    <string name="item_seed_lunch">Lunch</string>
+    <string name="item_seed_dinner">Dinner</string>
     <string name="action_apply">Apply</string>
 
     <!-- History -->
@@ -84,6 +141,8 @@
     <string name="stats_no_data_title">No data for this month</string>
     <string name="stats_no_data_subtitle">Transactions will appear here once added</string>
     <string name="stats_by_day">Spending by day</string>
+    <string name="stats_products">Items</string>
+    <string name="stats_product_times">%1$d ×</string>
     <string name="stats_view_charts">Charts</string>
     <string name="stats_view_calendar">Calendar</string>
     <string name="stats_empty_day">No transactions this day</string>
@@ -223,6 +282,9 @@
     <string name="legal_marketing">Email me about new features</string>
     <string name="legal_marketing_hint">Optional. You can switch it off at any time.</string>
     <string name="doc_saved">Saved to Downloads: %1$s</string>
+    <string name="policy_updated_title">The documents have been updated</string>
+    <string name="policy_updated_text">The Terms of use and the Personal data policy have a new version. Please read them — a tap saves the document into Downloads and opens it.</string>
+    <string name="policy_updated_accept">I have read them</string>
     <string name="legal_delete">Delete account and data</string>
     <string name="legal_delete_title">Delete the account?</string>
     <string name="legal_delete_text">The cloud copy and everything in it is erased for good, and this cannot be undone. Records already on this phone stay where they are.</string>
@@ -275,6 +337,8 @@
     <string name="freq_yearly">Yearly</string>
     <string name="recurring_rate">Rate %1$s → %2$s</string>
     <string name="recurring_converted">Will be charged: %1$s</string>
+    <string name="recurring_confirm_expense">Will be recorded as an expense</string>
+    <string name="recurring_confirm_income">Will be recorded as income</string>
     <string name="wallet_empty_recurring">No recurring payments yet</string>
     <string name="section_debts">Debts</string>
     <string name="debt_new">New debt</string>
@@ -427,7 +491,7 @@ The sync icon sits in the row with your address: it starts a sync and turns into
     <string name="guide_home_title">Home</string>
     <string name="guide_home_body">The big card shows your total balance (all income minus all expenses) with this month\'s income and expenses below it. If your currency is not BYN, the ≈ line shows the equivalent at the live rate. In the top row: the 🔥 chip is your under-budget streak, the trophy opens Achievements, the avatar is your profile. "Recent" lists the latest records — tap one to edit, "All" jumps to History. The big + button adds a transaction.</string>
     <string name="guide_editor_title">Adding a transaction</string>
-    <string name="guide_editor_body">Switch Expense/Income at the top. For a new record the calculator opens by itself in a bottom sheet; type the sum (comma adds cents) and hit Apply — tap the amount any time to open it again. Pick a category in the carousel — the "New" circle creates your own with a name, icon and color. The date chip opens a calendar (defaults to today). Write an optional note. In the bottom row the scanner icon reads a receipt photo and the photo icon attaches one from camera or gallery; tap the thumbnail to view or remove it. Save finishes. When editing an existing record a trash icon appears in the top bar.</string>
+    <string name="guide_editor_body">Switch Expense/Income at the top. For a new record the calculator opens by itself in a bottom sheet; type the sum (comma adds cents) and hit Apply — tap the amount any time to open it again. Pick a category in the carousel — the "New" circle creates your own with a name, icon and color. The date chip opens a calendar (defaults to today). Write an optional note. In the bottom row the basket chip lists what you bought (optional — see "Products in a record"), the scanner icon reads a receipt photo and the photo icon attaches one from camera or gallery; tap the thumbnail to view or remove it. A record whose figures came off a receipt carries a small scanner mark here and in every list. Save finishes. When editing an existing record a trash icon appears in the top bar.</string>
     <string name="guide_scan_title">Receipt scanning</string>
     <string name="guide_scan_body">In the editor tap the scanner icon (bottom row, next to the photo icon), then shoot the receipt or pick it from the gallery.
 
@@ -435,25 +499,43 @@ If the receipt has a QR code, Kosht reads the shop\'s electronic receipt through
 
 With no QR the photo itself is read, right on the phone. Either way a dialog shows what was found: correct the amount or the shop if needed, the date fills itself in. Apply puts everything into the form, and you can still change any of it afterwards.
 
-The shop goes into the note. A familiar chain is recognised by name; an unfamiliar one is read off the way the slip is printed — the largest type at the top, a trade name in quotes, a legal form, the line beside the tax number. Addresses, cashiers, document headers, card details and scanning noise are thrown out, and if no line looks like a name the note is simply left empty rather than filled with something off the receipt.</string>
+The shop goes into the note. A familiar chain is recognised by name; an unfamiliar one is read off the way the slip is printed — the largest type at the top, a trade name in quotes, a legal form, the line beside the tax number. Addresses, cashiers, document headers, card details and scanning noise are thrown out, and a line that no shop would print — longer than the note field takes — is left out entirely rather than cut in half: the note then simply stays empty.
+
+The slip\'s own lines are read as well. When the receipt lists what was bought, the review dialog says how many products it found, and they land in the record\'s product list — including the quantity where the line printed one. Discounts, VAT, card details and the total itself are not products and are left out. The list is yours to correct afterwards in the basket chip.</string>
     <string name="guide_history_title">History</string>
     <string name="guide_history_body">Arrows switch months. The search field filters by note and custom category names. Chips: All / Expense / Income, "Category" opens a category picker (tap ✕ on the chip to clear), "Period" opens a calendar where you select a single day or a range — the period replaces month navigation until you clear it with ✕. Records are grouped by day with a net total per day. Swipe a row left to delete — an Undo snackbar appears. Tap a row to edit it.
 
 Swiping a row deletes it and offers it back: "Transaction deleted — Undo" appears along the bottom, always above the add button, and the same offer follows a delete from the editor. The receipt photo is only thrown away once that offer has passed, so undoing really does put everything back.</string>
     <string name="guide_stats_title">Statistics</string>
-    <string name="guide_stats_body">Three views via the round buttons: 1) Charts — a donut of categories with the total in the middle and daily bars below; 2) Calendar — a heatmap where a darker day means more spent; tap a day to see its records; 3) Report — the verdict for a whole period, with arrows walking back through past ones. It shows spending vs the previous period of the same length, income, result, daily average, no-spend days, top category and personalized tips. Which period it covers (week, month, quarter, year) and which rows are shown are set in Settings → Report. The Expense/Income toggle applies to charts and calendar, arrows switch months.</string>
+    <string name="guide_stats_body">Three views via the round buttons: 1) Charts — a donut of categories with the total in the middle and daily bars below; 2) Calendar — a heatmap where a darker day means more spent; tap a day to see its records; 3) Report — the verdict for a whole period, with arrows walking back through past ones. It shows spending vs the previous period of the same length, income, result, daily average, no-spend days, top category and personalized tips. Which period it covers (week, month, quarter, year) and which rows are shown are set in Settings → Report. The Expense/Income toggle applies to charts and calendar, arrows switch months. Under the category list the Products block appears as soon as any record of the month lists what was bought: every product with what it cost you in total, how much of the shopping that is and how many records mention it. Transfers between your own accounts are left out of every figure here — moving money is neither spending nor earning.</string>
     <string name="guide_wallet_title">Wallet: rates &amp; payments</string>
-    <string name="guide_wallet_body">The NBRB rates card shows official rates with the update time — the arrow button refreshes them manually; without a connection the rates from the last successful check stay on screen and a toast explains why nothing changed. Any amount in a foreign currency shows its ≈ BYN equivalent. Changing the app currency in Settings converts all stored amounts at the current rate; each expense also freezes its BYN value at payment time, so history never drifts. Recurring payments: + adds one — title, amount, currency, the charge date picked in a calendar and a frequency (weekly / monthly / every 3 months / yearly). Nothing is charged silently: due payments appear in "Awaiting confirmation", and Confirm records the expense (for a foreign currency you can adjust the rate; with several accounts you also pick which one the payment is deducted from). The switch pauses a payment, the trash deletes it.</string>
+    <string name="guide_wallet_body">The NBRB rates card shows official rates with the update time — the arrow button refreshes them manually; without a connection the rates from the last successful check stay on screen and a toast explains why nothing changed. Any amount in a foreign currency shows its ≈ BYN equivalent. Changing the app currency in Settings converts all stored amounts at the current rate; each expense also freezes its BYN value at payment time, so history never drifts. Planned payments: + adds one — Expense or Income (a salary is as regular as a subscription), title, amount, currency, the date picked in a calendar, a frequency (weekly / monthly / every 3 months / yearly), a category and, with several accounts, the account it moves on. Nothing is charged silently: due payments appear in "Awaiting confirmation", and Confirm records the movement — the dialog says which way it goes, starts from the account the plan names and lets you adjust both the amount and, for a foreign currency, the rate. Tap a payment to change any of it, the switch pauses it, the trash deletes it.</string>
     <string name="guide_savings_title">Debts, goals &amp; savings</string>
     <string name="guide_savings_body">Debts: + adds one — who, direction (I owe / owed to me), amount in any currency, note. The two tiles total both directions in BYN. Tap a debt to repay a part, close it or delete it. Goals: + creates a goal with a target amount; deposits linked to the goal fill its progress bar, and reaching the target celebrates 🎉. Savings: "Set aside" and "Withdraw" record movements (optionally toward a goal), the journal below lists them with BYN equivalents; the trash removes an entry.</string>
     <string name="guide_achievements_title">Achievements</string>
     <string name="guide_achievements_body">Open with the trophy on Home. The streak card counts consecutive days you stayed within the daily budget (set it in Settings, auto = last month\'s average). Challenges: + creates one — Limit (spend under X, optionally in one category), No spend, or Save up (set aside X) — for a week, until month end or 30 days. Progress updates live; tap a challenge to edit its title, amount, category and end date, the trash removes it. Below are 30 awards, six to a page, easiest first: from the first record to a year inside the budget, a thousand records, five thousand saved, a perfect month without a single day over budget, three months in a row in the black, and twenty challenges completed. Tap any award to see how to earn it, your progress toward it (like "6 / 10"), and the date you earned it. An award unlocks the moment it is deserved, whichever screen you are on: a congratulation appears over the app and a quiet note lands in the shade — you never have to open this screen for it to count. Once earned an award stays yours forever, even if the streak resets.</string>
     <string name="guide_accounts_title">Accounts: cards &amp; cash</string>
-    <string name="guide_accounts_body">By default there is a single account and the app looks perfectly simple. Add more (Settings → Accounts: name, icon, color — e.g. Cash, a second card) and Kosht lights up: the editor gets an account chip next to the date so you choose where the money comes from or goes to, confirming a recurring payment asks which account to deduct from, Home shows a balance pill per account under the main card, and Statistics gains an account filter. Tapping an account opens its card: the pencil (or a tap on the name) reveals renaming plus icon and color, the balance field sets the real amount, and the trash icon deletes it — its records move to the primary account.</string>
+    <string name="guide_accounts_body">By default there is a single account and the app looks perfectly simple. Add more (Settings → Accounts: name, icon, color — e.g. Cash, a second card) and Kosht lights up: the editor gets an account chip next to the date so you choose where the money comes from or goes to, confirming a recurring payment asks which account to deduct from, Home shows a balance pill per account under the main card, and Statistics gains an account filter. Tapping an account opens its card: the pencil (or a tap on the name) reveals renaming plus icon and color, the balance field sets the real amount, and the trash icon deletes it — its records move to the primary account. The ⇄ button next to + moves money between two of them; see "Transfers between accounts".</string>
+    <string name="guide_transfer_title">Transfers between accounts</string>
+    <string name="guide_transfer_body">Withdrawing cash from a card, or topping one card up from another, is not spending — the money is still yours. So Kosht records it as a transfer: on Wallet, in the Accounts block, the ⇄ button opens the dialog (it appears once you keep more than one account).
+
+Pick where from and where to, the amount, the date and an optional note. The amount leaves the source account and lands on the destination one; your total balance does not move, and no chart, category, streak, challenge or report counts it as an expense or an income. In History and on Home a transfer shows with its own ⇄ icon and reads "Card → Cash".
+
+Switch on Settings → Interface → "Transfer fee" and the dialog gains a fee field, for the cases where moving money costs something. The fee comes off the source account on top of the amount — it is the one part of a transfer that really does leave your pocket, so the total balance drops by exactly that much. The dialog spells out what will be taken off the account, and the row in the lists says "fee 1,50" next to the date.
+
+Tap a transfer in any list to correct it or delete it — the same dialog opens, with Delete in place of Cancel, and the usual Undo offer follows. Deleting an account also deletes the transfers that ran between it and the account inheriting its records: those would have ended up going from itself to itself.</string>
+    <string name="guide_items_title">Products in a record</string>
+    <string name="guide_items_body">A record can say what the money went on, not just how much of it went. The basket chip in the editor opens the list: type a product, optionally what it cost and how many, and Add puts it in. Tap a line to correct it, ✕ removes it. Names you have used before are offered as chips while you type — tapping one keeps the spelling identical, which is what makes the statistics add up.
+
+Nothing here is required. A record with no list is complete, the chip stays quiet until you use it, and the amount of the record is never overwritten by what the lines add up to — the list is a description of the purchase, not a second source of truth.
+
+Scanning a receipt fills the list in by itself where the slip lists its lines (see "Receipt scanning"), quantities included.
+
+What it is for: Statistics → Charts → Products shows every product of the month with what it cost you in total, how many times it turned up and how much of the month\'s shopping it is. That is where "we spend how much on coffee?" gets an answer.</string>
     <string name="guide_calc_title">Amount calculator</string>
     <string name="guide_calc_body">The calculator lives in a full-width bottom sheet: it opens by itself for a new record and whenever you tap the amount. The right column of the keypad holds ÷ × − +. Type expressions like 12,50+3,90+8. While an operation is unfinished the big button turns into = — tap it to evaluate. Apply writes the result into the amount field and closes the sheet; Cancel or a swipe down leaves the amount untouched. Multiplication and division take precedence, as they should.</string>
     <string name="guide_settings_title">Settings</string>
-    <string name="guide_settings_body">Profile — tap to set a photo from the gallery or one of the built-in avatars, press and hold the avatar to remove the photo, and set your name and nickname (used in greetings and reports). Interface toggles hide anything you do not need and control whether the calculator opens by itself when adding a record. The Report block sets the period the statistics report covers and ticks off exactly which metric rows it shows. Notifications: an evening reminder (only if nothing was logged), payments awaiting confirmation, a Monday summary, awards you earn, and — once signed in — whether Kosht may email you about new features. The Account block follows: tap the address row to see the full address, the exact time of the last sync and whether automatic sync is on; sign out asks first, and deleting the account and its data is the last row there. About holds the guide, the Terms, the Personal data policy and the full manual — each tap saves the PDF into your phone\'s Downloads and opens it, so it stays yours to read, print or forward. Tap Version to check for a newer build: Kosht either says you are up to date or downloads and installs the update right there — no browser, nothing left in Downloads, and your data stays in place. Android asks once for permission to let Kosht install its own updates. Offline it just says the check is not possible right now. Theme: system/light/dark plus Material You dynamic colors. Language: system, Russian or English. Currency — switching converts everything at the live NBRB rate: records, the daily budget, balance corrections, challenge limits, savings, goals, debts and recurring charges. Daily budget powers the streak.</string>
+    <string name="guide_settings_body">Profile — tap to set a photo from the gallery or one of the built-in avatars, press and hold the avatar to remove the photo, and set your name and nickname (used in greetings and reports). Interface toggles hide anything you do not need, control whether the calculator opens by itself when adding a record, and whether a transfer between accounts offers a fee field. The Report block sets the period the statistics report covers and ticks off exactly which metric rows it shows. Notifications: an evening reminder (only if nothing was logged), payments awaiting confirmation, a Monday summary, awards you earn, and — once signed in — whether Kosht may email you about new features. Each of them arrives with the phone\'s notification sound and a short vibration; Android\'s own per-channel settings can quiet any of them down again. The Account block follows: tap the address row to see the full address, the exact time of the last sync and whether automatic sync is on; sign out asks first, and deleting the account and its data is the last row there. About holds the guide, the Terms, the Personal data policy and the full manual — each tap saves the PDF into your phone\'s Downloads and opens it, so it stays yours to read, print or forward. When either document gets a new version, Kosht says so on the next launch and offers both right there rather than leaving you to notice it here. Tap Version to check for a newer build: Kosht either says you are up to date or downloads and installs the update right there — no browser, nothing left in Downloads, and your data stays in place. Android asks once for permission to let Kosht install its own updates. Offline it just says the check is not possible right now. Theme: system/light/dark plus Material You dynamic colors. Language: system, Russian or English. Currency — switching converts everything at the live NBRB rate: records, the daily budget, balance corrections, challenge limits, savings, goals, debts and recurring charges. Daily budget powers the streak.</string>
 
     <!-- Built-in categories -->
     <string name="category_groceries">Groceries</string>

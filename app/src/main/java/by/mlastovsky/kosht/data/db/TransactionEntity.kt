@@ -1,5 +1,6 @@
 package by.mlastovsky.kosht.data.db
 
+import androidx.room.ColumnInfo
 import androidx.room.Embedded
 import androidx.room.Entity
 import androidx.room.ForeignKey
@@ -10,6 +11,11 @@ import by.mlastovsky.kosht.model.TransactionType
 /**
  * A single money movement. [amountMinor] is stored in minor currency units
  * (e.g. kopecks/cents) to avoid floating point rounding issues.
+ *
+ * A transfer between two of the user's own accounts is one row as well, marked
+ * by [transferToAccountId]: it moves money from [accountId] to that account
+ * without being income or expense anywhere, which is why the statistics leave
+ * such rows out and only the balances take them into account.
  */
 @Entity(
     tableName = "transactions",
@@ -56,6 +62,29 @@ data class TransactionEntity(
      * which is every record until somebody asks otherwise.
      */
     val photoKey: String? = null,
+    /**
+     * The figures were read off a receipt rather than typed. Kept so the app
+     * can say where a record came from long after the scan.
+     */
+    @ColumnInfo(defaultValue = "0")
+    val scanned: Boolean = false,
+    /**
+     * Destination account of a transfer; null for an ordinary record. The
+     * money leaves [accountId] and arrives here, so neither side is spending.
+     */
+    val transferToAccountId: Long? = null,
+    /**
+     * What the transfer itself cost, charged to the source account on top of
+     * [amountMinor]. Zero when the transfer was free.
+     */
+    @ColumnInfo(defaultValue = "0")
+    val transferFeeMinor: Long = 0,
     @Embedded
     val sync: SyncMeta = SyncMeta()
-)
+) {
+    /** Money moved between the user's own accounts rather than spent or earned. */
+    val isTransfer: Boolean get() = transferToAccountId != null
+
+    /** Everything the transfer takes off the source account, fee included. */
+    val transferTotalMinor: Long get() = amountMinor + transferFeeMinor
+}

@@ -217,6 +217,10 @@ class SettingsViewModel(
         viewModelScope.launch { settingsRepository.setAutoCalculator(value) }
     }
 
+    fun setTransferFee(value: Boolean) {
+        viewModelScope.launch { settingsRepository.setTransferFee(value) }
+    }
+
     fun setReportPeriod(period: by.mlastovsky.kosht.ui.stats.ReportPeriod) {
         viewModelScope.launch { settingsRepository.setReportPeriod(period.name) }
     }

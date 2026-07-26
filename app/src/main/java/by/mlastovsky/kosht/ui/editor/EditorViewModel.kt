@@ -4,6 +4,7 @@ import android.net.Uri
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import by.mlastovsky.kosht.data.ItemDraft
 import by.mlastovsky.kosht.data.PhotoStore
 import by.mlastovsky.kosht.data.RatesRepository
 import by.mlastovsky.kosht.data.SettingsRepository
@@ -16,6 +17,7 @@ import kotlinx.coroutines.flow.first
 import by.mlastovsky.kosht.ui.navigation.Routes
 import by.mlastovsky.kosht.util.Dates
 import by.mlastovsky.kosht.util.Money
+import by.mlastovsky.kosht.util.Notes
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -28,9 +30,6 @@ import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import java.time.LocalDate
-import java.time.LocalDateTime
-import java.time.LocalTime
-import java.time.ZoneId
 
 data class EditorUiState(
     val loaded: Boolean = false,
@@ -51,6 +50,19 @@ data class EditorUiState(
     val accounts: List<by.mlastovsky.kosht.data.db.AccountEntity> = emptyList(),
     val accountId: Long? = null,
     val multiAccount: Boolean = false,
+    /** The figures were read off a receipt rather than typed. */
+    val scanned: Boolean = false,
+    /** What the record was spent on, line by line. Optional, often empty. */
+    val items: List<ItemDraft> = emptyList(),
+    /** Item names already used in this category, offered while typing. */
+    val itemSuggestions: List<String> = emptyList(),
+    /** Built-in key of the chosen category; picks the suggested lines. */
+    val itemCategoryKey: String? = null,
+    /**
+     * The record turned out to be a transfer between accounts, which is edited
+     * in its own dialog rather than here. The screen closes on it.
+     */
+    val isTransfer: Boolean = false,
     /** Open the calculator automatically for a new record. */
     val autoCalculator: Boolean = true,
     /** Working expression of the standalone calculator dialog. */
@@ -67,6 +79,10 @@ data class EditorUiState(
     val canSave: Boolean
         get() = categoryId != null &&
             (by.mlastovsky.kosht.util.Expr.evaluateToMinor(amountInput, currencyCode) ?: 0L) > 0L
+
+    /** What the listed products add up to — shown next to the record's amount. */
+    val itemsTotalMinor: Long
+        get() = items.sumOf { it.amountMinor }
 }
 
 /** Scan result awaiting user review before it is applied to the draft. */
@@ -77,7 +93,9 @@ data class PendingScan(
     val photoPath: String?,
     /** Set when the figures came from an electronic receipt behind a QR. */
     val receiptUrl: String? = null,
-    val receiptDocPath: String? = null
+    val receiptDocPath: String? = null,
+    /** The shopping the slip listed, when its lines could be read. */
+    val items: List<ItemDraft> = emptyList()
 ) {
     val fromQr: Boolean get() = receiptUrl != null || receiptDocPath != null
 }
@@ -106,6 +124,9 @@ class EditorViewModel(
         val accountId: Long? = null,
         val receiptUrl: String? = null,
         val receiptDocPath: String? = null,
+        val scanned: Boolean = false,
+        val isTransfer: Boolean = false,
+        val items: List<ItemDraft> = emptyList(),
         /** Original entity when editing, to preserve id/createdAt/time of day. */
         val original: TransactionEntity? = null
     )
@@ -128,14 +149,42 @@ class EditorViewModel(
         val scanning: Boolean,
         val pending: PendingScan?,
         val accounts: List<by.mlastovsky.kosht.data.db.AccountEntity>,
-        val calcInput: String
+        val calcInput: String,
+        val itemHints: ItemHints
     )
+
+    /** What to offer while listing the items of a record, and where from. */
+    private data class ItemHints(
+        val names: List<String> = emptyList(),
+        /** Built-in key of the chosen category; picks the suggested lines. */
+        val categoryKey: String? = null
+    )
+
+    /**
+     * The category actually in force — the chosen one, or the first of the type
+     * when nothing is chosen yet, exactly as [uiState] resolves it.
+     */
+    private val selectedCategory = combine(
+        draft.map { it.categoryId }.distinctUntilChanged(),
+        categoriesForType
+    ) { id, categories ->
+        categories.firstOrNull { it.id == id } ?: categories.firstOrNull()
+    }.distinctUntilChanged()
+
+    private val itemHints = selectedCategory.flatMapLatest { category ->
+        if (category == null) {
+            kotlinx.coroutines.flow.flowOf(ItemHints())
+        } else {
+            repository.observeItemNames(category.id).map { ItemHints(it, category.key) }
+        }
+    }
 
     private val aux = combine(
         scanning,
         pendingScan,
         accountRepository.observeAccounts(),
         calcInput,
+        itemHints,
         ::Aux
     )
 
@@ -167,6 +216,11 @@ class EditorViewModel(
             accounts = extras.accounts,
             accountId = d.accountId ?: extras.accounts.firstOrNull()?.id,
             multiAccount = settings.multiAccount,
+            scanned = d.scanned,
+            isTransfer = d.isTransfer,
+            items = d.items,
+            itemSuggestions = extras.itemHints.names,
+            itemCategoryKey = extras.itemHints.categoryKey,
             autoCalculator = settings.autoCalculator,
             calcInput = extras.calcInput
         )
@@ -178,6 +232,9 @@ class EditorViewModel(
                 val existing = repository.getTransaction(transactionId)
                 if (existing != null) {
                     val tx = existing.transaction
+                    val items = repository.itemsOf(tx.id).map {
+                        ItemDraft(it.name, it.amountMinor, it.quantity)
+                    }
                     draft.update {
                         it.copy(
                             loaded = true,
@@ -190,6 +247,9 @@ class EditorViewModel(
                             accountId = tx.accountId,
                             receiptUrl = tx.receiptUrl,
                             receiptDocPath = tx.receiptDocPath,
+                            scanned = tx.scanned,
+                            isTransfer = tx.isTransfer,
+                            items = items,
                             original = tx
                         )
                     }
@@ -213,11 +273,53 @@ class EditorViewModel(
     }
 
     fun setNote(note: String) {
-        draft.update { it.copy(note = note.take(200)) }
+        draft.update { it.copy(note = note.take(Notes.MAX_LENGTH)) }
     }
 
     fun setDate(date: LocalDate) {
         draft.update { it.copy(date = date) }
+    }
+
+    // --- What the record was spent on ---
+
+    /**
+     * Adds a line of what the record was for. A nameless line says nothing, so
+     * it is refused rather than stored — the whole list is optional anyway.
+     * [priceMinor] is the price of one, the way a receipt prints it.
+     */
+    fun addItem(name: String, priceMinor: Long, quantity: Double?) {
+        val draftItem = itemOrNull(name, priceMinor, quantity) ?: return
+        draft.update { it.copy(items = it.items + draftItem) }
+    }
+
+    fun updateItem(index: Int, name: String, priceMinor: Long, quantity: Double?) {
+        val draftItem = itemOrNull(name, priceMinor, quantity) ?: return
+        draft.update { d ->
+            if (index !in d.items.indices) return@update d
+            d.copy(items = d.items.toMutableList().also { it[index] = draftItem })
+        }
+    }
+
+    fun removeItem(index: Int) {
+        draft.update { d ->
+            if (index !in d.items.indices) return@update d
+            d.copy(items = d.items.filterIndexed { at, _ -> at != index })
+        }
+    }
+
+    /**
+     * A price with a quantity is the price of one: two at 1,75 is a line of
+     * 3,50, which is what the receipt says and what the statistics add up.
+     */
+    private fun itemOrNull(name: String, priceMinor: Long, quantity: Double?): ItemDraft? {
+        if (name.isBlank()) return null
+        val count = quantity?.takeIf { it > 0 }
+        val lineTotal = if (count != null) Math.round(priceMinor * count) else priceMinor
+        return ItemDraft(
+            name = name.trim(),
+            amountMinor = lineTotal.coerceAtLeast(0),
+            quantity = count
+        )
     }
 
     // --- Calculator dialog ---
@@ -312,7 +414,10 @@ class EditorViewModel(
                     merchant = scanned.parsed.merchant,
                     photoPath = savedPhoto,
                     receiptUrl = scanned.sourceUrl,
-                    receiptDocPath = scanned.documentPath
+                    receiptDocPath = scanned.documentPath,
+                    items = scanned.parsed.items.map {
+                        ItemDraft(it.name, it.amountMinor, it.quantity)
+                    }
                 )
                 onResult(true)
             } else {
@@ -334,10 +439,15 @@ class EditorViewModel(
                 type = TransactionType.EXPENSE,
                 amountInput = amountInput.replace(',', '.').trim(),
                 date = pending.date ?: d.date,
-                note = note.trim().take(200),
+                note = note.trim().take(Notes.MAX_LENGTH),
                 photoPath = pending.photoPath ?: d.photoPath,
                 receiptUrl = pending.receiptUrl ?: d.receiptUrl,
-                receiptDocPath = pending.receiptDocPath ?: d.receiptDocPath
+                receiptDocPath = pending.receiptDocPath ?: d.receiptDocPath,
+                // Where the figures came from, kept with the record itself.
+                scanned = true,
+                // The slip's own lines, when it had readable ones. A list the
+                // user has already typed is theirs and is left alone.
+                items = if (d.items.isEmpty()) pending.items else d.items
             )
         }
         pendingScan.value = null
@@ -394,7 +504,7 @@ class EditorViewModel(
 
         viewModelScope.launch {
             val original = draft.value.original
-            val timestamp = resolveTimestamp(state.date, original)
+            val timestamp = Dates.momentFor(state.date, original?.timestamp)
             val bynMinor = resolveBynMinor(amountMinor, state.currencyCode, original)
             if (original != null) {
                 repository.updateTransaction(
@@ -408,11 +518,13 @@ class EditorViewModel(
                         accountId = state.accountId,
                         bynMinor = bynMinor,
                         receiptUrl = draft.value.receiptUrl,
-                        receiptDocPath = draft.value.receiptDocPath
+                        receiptDocPath = draft.value.receiptDocPath,
+                        scanned = draft.value.scanned
                     )
                 )
+                repository.saveItems(original.id, draft.value.items)
             } else {
-                repository.addTransaction(
+                val id = repository.addTransaction(
                     TransactionEntity(
                         amountMinor = amountMinor,
                         type = state.type,
@@ -424,9 +536,11 @@ class EditorViewModel(
                         accountId = state.accountId,
                         bynMinor = bynMinor,
                         receiptUrl = draft.value.receiptUrl,
-                        receiptDocPath = draft.value.receiptDocPath
+                        receiptDocPath = draft.value.receiptDocPath,
+                        scanned = draft.value.scanned
                     )
                 )
+                repository.saveItems(id, draft.value.items)
             }
             onDone()
         }
@@ -452,29 +566,15 @@ class EditorViewModel(
     fun delete(onDone: () -> Unit) {
         val original = draft.value.original ?: return
         viewModelScope.launch {
+            // Read while they still exist: the delete cascades them away, and
+            // the undo offer is what has to hand them back.
+            val items = repository.itemsOf(original.id)
             repository.deleteTransaction(original)
             // The photo and the downloaded receipt are deleted only once the
             // undo offer has passed -- restoring a record whose picture is
             // already gone would put it back pointing at nothing.
-            by.mlastovsky.kosht.data.DeletionEvents.report(original)
+            by.mlastovsky.kosht.data.DeletionEvents.report(original, items)
             onDone()
-        }
-    }
-
-    /**
-     * Keeps a sensible time of day: "today" gets the current moment, edits on
-     * the same day keep the original time, other days land on noon to avoid
-     * timezone edge cases.
-     */
-    private fun resolveTimestamp(date: LocalDate, original: TransactionEntity?): Long {
-        val zone = ZoneId.systemDefault()
-        if (original != null && Dates.toLocalDate(original.timestamp) == date) {
-            return original.timestamp
-        }
-        return if (date == LocalDate.now()) {
-            System.currentTimeMillis()
-        } else {
-            LocalDateTime.of(date, LocalTime.NOON).atZone(zone).toInstant().toEpochMilli()
         }
     }
 

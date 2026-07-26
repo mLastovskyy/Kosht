@@ -38,7 +38,9 @@ data class HistoryUiState(
     val query: String = "",
     val groups: List<DayGroup> = emptyList(),
     val categories: List<CategoryEntity> = emptyList(),
-    val currencyCode: String = SettingsRepository.DEFAULT_CURRENCY
+    val currencyCode: String = SettingsRepository.DEFAULT_CURRENCY,
+    /** Both ends of a transfer are named from these. */
+    val accounts: List<by.mlastovsky.kosht.data.db.AccountEntity> = emptyList()
 ) {
     val isCurrentMonth: Boolean
         get() = month == YearMonth.now()
@@ -50,7 +52,8 @@ data class HistoryUiState(
 @OptIn(ExperimentalCoroutinesApi::class)
 class HistoryViewModel(
     private val repository: TransactionRepository,
-    settingsRepository: SettingsRepository
+    settingsRepository: SettingsRepository,
+    accountRepository: by.mlastovsky.kosht.data.AccountRepository
 ) : ViewModel() {
 
     private data class Filters(
@@ -80,9 +83,14 @@ class HistoryViewModel(
         filters,
         periodTransactions,
         repository.observeCategories(),
-        settingsRepository.settings
-    ) { f, transactions, categories, settings ->
+        settingsRepository.settings,
+        accountRepository.observeAccounts()
+    ) { f, transactions, categories, settings, accounts ->
         val filtered = transactions
+            // A transfer is neither income nor expense and belongs to no
+            // category, so a filter on either of those leaves it out rather
+            // than showing it as something it is not.
+            .filter { !it.transaction.isTransfer || (f.type == null && f.categoryId == null) }
             .filter { f.type == null || it.transaction.type == f.type }
             .filter { f.categoryId == null || it.category.id == f.categoryId }
             .filter {
@@ -96,13 +104,7 @@ class HistoryViewModel(
             .map { (date, items) ->
                 DayGroup(
                     date = date,
-                    netMinor = items.sumOf {
-                        if (it.transaction.type == TransactionType.INCOME) {
-                            it.transaction.amountMinor
-                        } else {
-                            -it.transaction.amountMinor
-                        }
-                    },
+                    netMinor = items.sumOf { dayEffect(it.transaction) },
                     items = items
                 )
             }
@@ -116,9 +118,20 @@ class HistoryViewModel(
             query = f.query,
             groups = groups,
             categories = categories,
-            currencyCode = settings.currencyCode
+            currencyCode = settings.currencyCode,
+            accounts = accounts
         )
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), HistoryUiState())
+
+    /**
+     * What a record did to the money on that day. A transfer moved it rather
+     * than spent it, so only what the transfer cost counts.
+     */
+    private fun dayEffect(transaction: TransactionEntity): Long = when {
+        transaction.isTransfer -> -transaction.transferFeeMinor
+        transaction.type == TransactionType.INCOME -> transaction.amountMinor
+        else -> -transaction.amountMinor
+    }
 
     fun previousMonth() = filters.update { it.copy(month = it.month.minusMonths(1)) }
 
@@ -140,15 +153,13 @@ class HistoryViewModel(
 
     fun delete(item: TransactionWithCategory) {
         viewModelScope.launch {
+            // The product lines go with the record, so they are read before it
+            // and travel with the offer to undo.
+            val items = repository.itemsOf(item.transaction.id)
             repository.deleteTransaction(item.transaction)
             // The offer to undo it, and the cleanup of its files if nobody
             // does, are handled in one place for the whole app.
-            by.mlastovsky.kosht.data.DeletionEvents.report(item.transaction)
+            by.mlastovsky.kosht.data.DeletionEvents.report(item.transaction, items)
         }
-    }
-
-    /** Re-inserts a just-deleted transaction with its original id. */
-    fun restore(transaction: TransactionEntity) {
-        viewModelScope.launch { repository.addTransaction(transaction) }
     }
 }

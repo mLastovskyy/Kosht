@@ -27,6 +27,7 @@ import kotlin.math.roundToLong
  */
 class CurrencyChanger(
     private val transactionDao: TransactionDao,
+    private val itemDao: by.mlastovsky.kosht.data.db.TransactionItemDao,
     private val challengeDao: ChallengeDao,
     private val accountDao: by.mlastovsky.kosht.data.db.AccountDao,
     private val savingDao: SavingDao,
@@ -61,6 +62,8 @@ class CurrencyChanger(
         // keep their figures and only the label changes.
         val factor = RatesRepository.factor(oldCode, newCode, rates) ?: return
         transactionDao.rescaleAmounts(factor)
+        // The product lines are priced in the app currency like their record.
+        itemDao.rescaleAmounts(factor)
         challengeDao.rescaleAmounts(factor)
         accountDao.rescaleAdjustments(factor)
         if (dailyBudgetMinor > 0) {

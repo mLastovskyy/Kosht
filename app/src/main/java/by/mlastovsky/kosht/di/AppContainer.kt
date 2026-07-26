@@ -28,7 +28,8 @@ class AppContainer(
         TransactionRepository(
             database.transactionDao(),
             database.categoryDao(),
-            database.recurringDao()
+            database.recurringDao(),
+            database.transactionItemDao()
         )
     }
 
@@ -37,7 +38,11 @@ class AppContainer(
     }
 
     val accountRepository: AccountRepository by lazy {
-        AccountRepository(database.accountDao(), database.transactionDao())
+        AccountRepository(
+            database.accountDao(),
+            database.transactionDao(),
+            database.recurringDao()
+        )
     }
 
     val walletRepository: WalletRepository by lazy {
@@ -71,6 +76,7 @@ class AppContainer(
     val currencyChanger: CurrencyChanger by lazy {
         CurrencyChanger(
             database.transactionDao(),
+            database.transactionItemDao(),
             database.challengeDao(),
             database.accountDao(),
             database.savingDao(),

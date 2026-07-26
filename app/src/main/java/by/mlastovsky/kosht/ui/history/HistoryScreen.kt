@@ -75,6 +75,10 @@ fun HistoryScreen(
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     var showCategoryFilter by remember { mutableStateOf(false) }
     var showRangePicker by remember { mutableStateOf(false) }
+    // Transfers are corrected where they were made, not in the editor.
+    var transferInAction by remember {
+        mutableStateOf<by.mlastovsky.kosht.data.db.TransactionEntity?>(null)
+    }
 
     Box(Modifier.fillMaxSize()) {
         Column(
@@ -225,7 +229,14 @@ fun HistoryScreen(
                                 TransactionRow(
                                     item = item,
                                     currencyCode = state.currencyCode,
-                                    onClick = { onTransactionClick(item.transaction.id) },
+                                    onClick = {
+                                        if (item.transaction.isTransfer) {
+                                            transferInAction = item.transaction
+                                        } else {
+                                            onTransactionClick(item.transaction.id)
+                                        }
+                                    },
+                                    accounts = state.accounts,
                                     modifier = Modifier.background(MaterialTheme.colorScheme.background)
                                 )
                             }
@@ -234,6 +245,13 @@ fun HistoryScreen(
                 }
             }
         }
+    }
+
+    transferInAction?.let { transfer ->
+        by.mlastovsky.kosht.ui.transfer.TransferDialog(
+            initial = transfer,
+            onDismiss = { transferInAction = null }
+        )
     }
 
     if (showCategoryFilter) {

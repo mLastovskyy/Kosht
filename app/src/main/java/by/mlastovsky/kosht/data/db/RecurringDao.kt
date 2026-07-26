@@ -29,6 +29,10 @@ interface RecurringDao {
     @Query("UPDATE recurring SET categoryId = :to WHERE categoryId = :from")
     suspend fun reassignCategory(from: Long, to: Long)
 
+    /** A plan moves to the account that inherits the records of a deleted one. */
+    @Query("UPDATE recurring SET accountId = :to WHERE accountId = :from")
+    suspend fun reassignAccount(from: Long, to: Long)
+
     @Query("SELECT DISTINCT currencyCode FROM recurring")
     suspend fun currencies(): List<String>
 

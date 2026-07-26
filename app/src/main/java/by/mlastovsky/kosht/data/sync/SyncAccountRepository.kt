@@ -126,6 +126,23 @@ class SyncAccountRepository(
         )
     }
 
+    /**
+     * The person has been told the documents changed and said so. It joins the
+     * same append-only ledger as the original agreement, under the version they
+     * were shown, so what was accepted and when stays provable. Signed out
+     * there is nobody to record it against, and the local mark is enough.
+     */
+    suspend fun recordPolicyAcceptance(): Boolean {
+        val session = validAccessToken() ?: return false
+        return api.recordConsent(
+            session = session,
+            kind = CONSENT_TERMS,
+            granted = true,
+            policyVersion = POLICY_VERSION,
+            source = "policy_update"
+        )
+    }
+
     suspend fun setMarketingConsent(granted: Boolean): Boolean {
         val session = validAccessToken() ?: return false
         return api.recordConsent(
@@ -196,8 +213,12 @@ class SyncAccountRepository(
         const val CONSENT_MARKETING = "marketing_email"
         const val CONSENT_PHOTOS = "receipt_photos"
 
-        /** Bump together with the documents, so old agreements stay dated. */
-        const val POLICY_VERSION = "1.1"
+        /**
+         * Bump together with the documents, so old agreements stay dated — and
+         * so the app tells everyone who has seen an earlier edition that there
+         * is a new one (see MainViewModel.policyUpdated).
+         */
+        const val POLICY_VERSION = "1.2"
     }
 
     private suspend fun clear() {

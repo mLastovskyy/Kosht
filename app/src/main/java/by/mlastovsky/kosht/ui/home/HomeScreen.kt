@@ -34,6 +34,9 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
@@ -68,6 +71,11 @@ fun HomeScreen(
         animationSpec = tween(durationMillis = 300),
         label = "contentAlpha"
     )
+    // A transfer is not a record the editor knows how to show, so it opens the
+    // dialog it was made in.
+    var transferInAction by remember {
+        mutableStateOf<by.mlastovsky.kosht.data.db.TransactionEntity?>(null)
+    }
 
     LazyColumn(
         modifier = Modifier
@@ -227,13 +235,27 @@ fun HomeScreen(
             TransactionRow(
                 item = item,
                 currencyCode = state.currencyCode,
-                onClick = { onTransactionClick(item.transaction.id) },
+                onClick = {
+                    if (item.transaction.isTransfer) {
+                        transferInAction = item.transaction
+                    } else {
+                        onTransactionClick(item.transaction.id)
+                    }
+                },
                 supportingText = item.transaction.note.ifBlank {
                     relativeDate(Dates.toLocalDate(item.transaction.timestamp))
                 },
+                accounts = state.accounts,
                 modifier = Modifier.animateItem()
             )
         }
+    }
+
+    transferInAction?.let { transfer ->
+        by.mlastovsky.kosht.ui.transfer.TransferDialog(
+            initial = transfer,
+            onDismiss = { transferInAction = null }
+        )
     }
 }
 

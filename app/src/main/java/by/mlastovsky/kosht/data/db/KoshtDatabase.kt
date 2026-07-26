@@ -11,6 +11,7 @@ import by.mlastovsky.kosht.data.CategorySeed
 @Database(
     entities = [
         TransactionEntity::class,
+        TransactionItemEntity::class,
         CategoryEntity::class,
         RateEntity::class,
         DebtEntity::class,
@@ -23,12 +24,14 @@ import by.mlastovsky.kosht.data.CategorySeed
         SyncTombstoneEntity::class,
         SyncCursorEntity::class
     ],
-    version = 13,
+    version = 15,
     exportSchema = false
 )
 abstract class KoshtDatabase : RoomDatabase() {
 
     abstract fun transactionDao(): TransactionDao
+
+    abstract fun transactionItemDao(): TransactionItemDao
 
     abstract fun categoryDao(): CategoryDao
 
@@ -58,7 +61,8 @@ abstract class KoshtDatabase : RoomDatabase() {
                 .addMigrations(
                     MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6,
                     MIGRATION_6_7, MIGRATION_7_8, MIGRATION_8_9, MIGRATION_9_10,
-                    MIGRATION_10_11, MIGRATION_11_12, MIGRATION_12_13
+                    MIGRATION_10_11, MIGRATION_11_12, MIGRATION_12_13, MIGRATION_13_14,
+                    MIGRATION_14_15
                 )
                 .build()
 
@@ -240,7 +244,10 @@ abstract class KoshtDatabase : RoomDatabase() {
                         "`pushedThrough` INTEGER NOT NULL, `lastSyncAt` INTEGER NOT NULL, " +
                         "PRIMARY KEY(`id`))"
                 )
-                SyncEntity.tables.forEach { entity ->
+                // The tables that existed when sync arrived, spelled out rather
+                // than read off the enum: a table added by a later migration is
+                // not here yet, and altering it would fail this one.
+                syncTablesAtV11.forEach { entity ->
                     val table = entity.table
                     db.execSQL("ALTER TABLE `$table` ADD COLUMN `uid` TEXT NOT NULL DEFAULT ''")
                     db.execSQL(
@@ -271,6 +278,74 @@ abstract class KoshtDatabase : RoomDatabase() {
                 db.execSQL("ALTER TABLE transactions ADD COLUMN photoKey TEXT")
             }
         }
+
+        /**
+         * Where a record came from and where money went: the scanner mark,
+         * transfers between the user's own accounts with what they cost, and
+         * planned payments that can now be income and name their account.
+         * Every existing row is an ordinary typed expense, which is exactly
+         * what these defaults say.
+         */
+        private val MIGRATION_13_14 = object : Migration(13, 14) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL(
+                    "ALTER TABLE transactions ADD COLUMN scanned INTEGER NOT NULL DEFAULT 0"
+                )
+                db.execSQL("ALTER TABLE transactions ADD COLUMN transferToAccountId INTEGER")
+                db.execSQL(
+                    "ALTER TABLE transactions " +
+                        "ADD COLUMN transferFeeMinor INTEGER NOT NULL DEFAULT 0"
+                )
+                db.execSQL(
+                    "ALTER TABLE recurring ADD COLUMN type TEXT NOT NULL DEFAULT 'EXPENSE'"
+                )
+                db.execSQL("ALTER TABLE recurring ADD COLUMN accountId INTEGER")
+            }
+        }
+
+        /**
+         * What a record was spent on, line by line — the optional product list
+         * behind an amount, and what the product statistics read. CASCADE, so a
+         * deleted record takes its lines with it; the undo offer carries them
+         * back (see DeletionEvents).
+         */
+        private val MIGRATION_14_15 = object : Migration(14, 15) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL(
+                    "CREATE TABLE IF NOT EXISTS transaction_items (" +
+                        "id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, " +
+                        "transactionId INTEGER NOT NULL, " +
+                        "name TEXT NOT NULL, " +
+                        "amountMinor INTEGER NOT NULL, " +
+                        "quantity REAL, " +
+                        "position INTEGER NOT NULL, " +
+                        "uid TEXT NOT NULL DEFAULT '', " +
+                        "updatedAt INTEGER NOT NULL DEFAULT 0, " +
+                        "FOREIGN KEY(transactionId) REFERENCES transactions(id) " +
+                        "ON UPDATE NO ACTION ON DELETE CASCADE)"
+                )
+                db.execSQL(
+                    "CREATE INDEX IF NOT EXISTS index_transaction_items_transactionId " +
+                        "ON transaction_items (transactionId)"
+                )
+                db.execSQL(
+                    "CREATE INDEX IF NOT EXISTS index_transaction_items_name " +
+                        "ON transaction_items (name)"
+                )
+            }
+        }
+
+        private val syncTablesAtV11 = listOf(
+            SyncEntity.ACCOUNTS,
+            SyncEntity.CATEGORIES,
+            SyncEntity.SAVING_GOALS,
+            SyncEntity.TRANSACTIONS,
+            SyncEntity.RECURRING,
+            SyncEntity.SAVINGS,
+            SyncEntity.CHALLENGES,
+            SyncEntity.DEBTS,
+            SyncEntity.AWARDS
+        )
 
         /**
          * Built-in rows must land on the same identity on every device, or

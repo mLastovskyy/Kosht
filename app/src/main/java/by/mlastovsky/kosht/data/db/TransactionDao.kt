@@ -28,6 +28,12 @@ data class MonthlyTotals(
     val expense: Long
 )
 
+/**
+ * Every question about spending and earning ignores transfers between the
+ * user's own accounts — moving money is neither — so the aggregates below all
+ * carry `transferToAccountId IS NULL`. The balances are the exception: that is
+ * the one place a transfer has to be felt.
+ */
 @Dao
 interface TransactionDao {
 
@@ -49,19 +55,26 @@ interface TransactionDao {
 
     @Query(
         "SELECT COALESCE(SUM(amountMinor), 0) FROM transactions " +
-            "WHERE type = :type AND timestamp >= :from AND timestamp < :to"
+            "WHERE type = :type AND transferToAccountId IS NULL " +
+            "AND timestamp >= :from AND timestamp < :to"
     )
     fun observeTotal(type: TransactionType, from: Long, to: Long): Flow<Long>
 
+    /**
+     * A transfer leaves the money in the user's hands, so only what it cost
+     * comes off the total.
+     */
     @Query(
-        "SELECT COALESCE(SUM(CASE WHEN type = 'INCOME' THEN amountMinor ELSE -amountMinor END), 0) " +
+        "SELECT COALESCE(SUM(CASE WHEN transferToAccountId IS NOT NULL THEN -transferFeeMinor " +
+            "WHEN type = 'INCOME' THEN amountMinor ELSE -amountMinor END), 0) " +
             "FROM transactions"
     )
     fun observeBalance(): Flow<Long>
 
     @Query(
         "SELECT categoryId, COALESCE(SUM(amountMinor), 0) AS total FROM transactions " +
-            "WHERE type = :type AND timestamp >= :from AND timestamp < :to " +
+            "WHERE type = :type AND transferToAccountId IS NULL " +
+            "AND timestamp >= :from AND timestamp < :to " +
             "GROUP BY categoryId ORDER BY total DESC"
     )
     fun observeCategoryTotals(type: TransactionType, from: Long, to: Long): Flow<List<CategoryTotal>>
@@ -69,27 +82,33 @@ interface TransactionDao {
     @Query("SELECT COUNT(*) FROM transactions WHERE categoryId = :categoryId")
     suspend fun countByCategory(categoryId: Long): Int
 
-    @Query("SELECT COUNT(*) FROM transactions")
+    @Query("SELECT COUNT(*) FROM transactions WHERE transferToAccountId IS NULL")
     fun observeCount(): Flow<Int>
 
     @Query("SELECT COUNT(*) FROM transactions WHERE photoPath IS NOT NULL")
     fun observePhotoCount(): Flow<Int>
 
-    @Query("SELECT COUNT(*) FROM transactions WHERE type = 'INCOME'")
+    @Query(
+        "SELECT COUNT(*) FROM transactions " +
+            "WHERE type = 'INCOME' AND transferToAccountId IS NULL"
+    )
     fun observeIncomeCount(): Flow<Int>
 
     /** How many different expense categories have ever been used. */
-    @Query("SELECT COUNT(DISTINCT categoryId) FROM transactions WHERE type = 'EXPENSE'")
+    @Query(
+        "SELECT COUNT(DISTINCT categoryId) FROM transactions " +
+            "WHERE type = 'EXPENSE' AND transferToAccountId IS NULL"
+    )
     fun observeExpenseCategoryCount(): Flow<Int>
 
     /** Records written between midnight and five in the morning, local time. */
     @Query(
-        "SELECT COUNT(*) FROM transactions WHERE CAST(" +
+        "SELECT COUNT(*) FROM transactions WHERE transferToAccountId IS NULL AND CAST(" +
             "strftime('%H', createdAt / 1000, 'unixepoch', 'localtime') AS INTEGER) < 5"
     )
     fun observeNightCount(): Flow<Int>
 
-    @Query("SELECT MIN(timestamp) FROM transactions")
+    @Query("SELECT MIN(timestamp) FROM transactions WHERE transferToAccountId IS NULL")
     fun observeFirstTimestamp(): Flow<Long?>
 
     /**
@@ -101,7 +120,7 @@ interface TransactionDao {
     @Query(
         "SELECT strftime('%Y-%m-%d', timestamp / 1000, 'unixepoch', 'localtime') AS day, " +
             "categoryId, COALESCE(SUM(amountMinor), 0) AS total FROM transactions " +
-            "WHERE type = 'EXPENSE' GROUP BY day, categoryId"
+            "WHERE type = 'EXPENSE' AND transferToAccountId IS NULL GROUP BY day, categoryId"
     )
     fun observeDailyCategorySpend(): Flow<List<DailyCategorySpend>>
 
@@ -110,12 +129,16 @@ interface TransactionDao {
         "SELECT strftime('%Y-%m', timestamp / 1000, 'unixepoch', 'localtime') AS month, " +
             "COALESCE(SUM(CASE WHEN type = 'INCOME' THEN amountMinor ELSE 0 END), 0) AS income, " +
             "COALESCE(SUM(CASE WHEN type = 'EXPENSE' THEN amountMinor ELSE 0 END), 0) AS expense " +
-            "FROM transactions GROUP BY month ORDER BY month ASC"
+            "FROM transactions WHERE transferToAccountId IS NULL " +
+            "GROUP BY month ORDER BY month ASC"
     )
     fun observeMonthlyTotals(): Flow<List<MonthlyTotals>>
 
     /** Creation moments used for the logging-streak computation. */
-    @Query("SELECT createdAt FROM transactions WHERE createdAt >= :from")
+    @Query(
+        "SELECT createdAt FROM transactions " +
+            "WHERE createdAt >= :from AND transferToAccountId IS NULL"
+    )
     fun observeCreatedSince(from: Long): Flow<List<Long>>
 
     @Query("UPDATE transactions SET categoryId = :to WHERE categoryId = :from")
@@ -144,12 +167,31 @@ interface TransactionDao {
     @Query("UPDATE transactions SET photoKey = NULL WHERE photoKey IS NOT NULL")
     suspend fun clearPhotoKeys()
 
-    /** Rescales every amount when the app currency changes. */
-    @Query("UPDATE transactions SET amountMinor = CAST(ROUND(amountMinor * :factor) AS INTEGER)")
+    /** Rescales every amount when the app currency changes, fees included. */
+    @Query(
+        "UPDATE transactions SET amountMinor = CAST(ROUND(amountMinor * :factor) AS INTEGER), " +
+            "transferFeeMinor = CAST(ROUND(transferFeeMinor * :factor) AS INTEGER)"
+    )
     suspend fun rescaleAmounts(factor: Double)
 
     @Query("UPDATE transactions SET accountId = :to WHERE accountId = :from OR (:from IS NULL AND accountId IS NULL)")
     suspend fun reassignAccount(from: Long?, to: Long)
+
+    /** The other end of a transfer follows the account it pointed at. */
+    @Query("UPDATE transactions SET transferToAccountId = :to WHERE transferToAccountId = :from")
+    suspend fun reassignTransferAccount(from: Long, to: Long)
+
+    /**
+     * A transfer between an account being deleted and the account its records
+     * move to would end up pointing at itself, which is no movement at all.
+     */
+    @Query(
+        "DELETE FROM transactions WHERE transferToAccountId IS NOT NULL AND " +
+            "((accountId = :from AND transferToAccountId = :to) OR " +
+            "(accountId = :to AND transferToAccountId = :from) OR " +
+            "(accountId = :from AND transferToAccountId = :from))"
+    )
+    suspend fun deleteCollapsedTransfers(from: Long, to: Long)
 
     @Insert
     suspend fun insert(transaction: TransactionEntity): Long

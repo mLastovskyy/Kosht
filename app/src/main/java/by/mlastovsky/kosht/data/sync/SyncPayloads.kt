@@ -13,6 +13,7 @@ import by.mlastovsky.kosht.data.db.SavingGoalEntity
 import by.mlastovsky.kosht.data.db.SyncEntity
 import by.mlastovsky.kosht.data.db.SyncMeta
 import by.mlastovsky.kosht.data.db.TransactionEntity
+import by.mlastovsky.kosht.data.db.TransactionItemEntity
 import by.mlastovsky.kosht.data.db.UidRef
 import by.mlastovsky.kosht.model.ChallengeType
 import by.mlastovsky.kosht.model.DebtDirection
@@ -39,8 +40,16 @@ data class SyncRow(
 class UidIndex(
     categories: List<UidRef>,
     accounts: List<UidRef>,
-    goals: List<UidRef>
+    goals: List<UidRef>,
+    transactions: List<UidRef> = emptyList()
 ) {
+    private val transactionUidById = transactions.associate { it.id to it.uid }
+    private val transactionIdByUid = transactions.associate { it.uid to it.id }
+
+    fun transactionUid(id: Long): String? = transactionUidById[id]
+
+    fun transactionId(uid: String?): Long? = uid?.let { transactionIdByUid[it] }
+
     private val categoryUidById = categories.associate { it.id to it.uid }
     private val categoryIdByUid = categories.associate { it.uid to it.id }
     private val accountUidById = accounts.associate { it.id to it.uid }
@@ -87,6 +96,9 @@ object SyncPayloads {
             // Where the photo was uploaded, when the user asked for that. The
             // local path still never travels -- only the object's name does.
             .put("photoKey", row.photoKey)
+            .put("scanned", row.scanned)
+            .put("transferToAccountUid", index.accountUid(row.transferToAccountId))
+            .put("transferFeeMinor", row.transferFeeMinor)
     }
 
     fun toTransaction(
@@ -112,6 +124,41 @@ object SyncPayloads {
             // The link travels, the downloaded copy does not.
             receiptDocPath = local?.receiptDocPath,
             photoKey = json.stringOrNull("photoKey") ?: local?.photoKey,
+            scanned = json.optBoolean("scanned", local?.scanned ?: false),
+            transferToAccountId = index.accountId(json.stringOrNull("transferToAccountUid")),
+            transferFeeMinor = json.optLong("transferFeeMinor"),
+            sync = meta
+        )
+    }
+
+    /**
+     * A product line. It only means anything next to its record, so it travels
+     * with that record's identity and waits if the record has not arrived yet.
+     */
+    fun of(row: TransactionItemEntity, index: UidIndex): JSONObject? {
+        val transactionUid = index.transactionUid(row.transactionId) ?: return null
+        return JSONObject()
+            .put("transactionUid", transactionUid)
+            .put("name", row.name)
+            .put("amountMinor", row.amountMinor)
+            .put("quantity", row.quantity)
+            .put("position", row.position)
+    }
+
+    fun toItem(
+        json: JSONObject,
+        meta: SyncMeta,
+        index: UidIndex,
+        local: TransactionItemEntity?
+    ): TransactionItemEntity? {
+        val transactionId = index.transactionId(json.stringOrNull("transactionUid")) ?: return null
+        return TransactionItemEntity(
+            id = local?.id ?: 0,
+            transactionId = transactionId,
+            name = json.optString("name"),
+            amountMinor = json.optLong("amountMinor"),
+            quantity = if (json.isNull("quantity")) null else json.optDouble("quantity"),
+            position = json.optInt("position"),
             sync = meta
         )
     }
@@ -204,6 +251,8 @@ object SyncPayloads {
             .put("frequency", row.frequency.name)
             .put("enabled", row.enabled)
             .put("createdAt", row.createdAt)
+            .put("type", row.type.name)
+            .put("accountUid", index.accountUid(row.accountId))
     }
 
     fun toRecurring(
@@ -223,6 +272,12 @@ object SyncPayloads {
             frequency = RecurringFrequency.valueOf(json.getString("frequency")),
             enabled = json.optBoolean("enabled", true),
             createdAt = json.getLong("createdAt"),
+            // Plans made before payments could be income are expenses, which
+            // is what an older device leaves this field out to say.
+            type = json.stringOrNull("type")
+                ?.let { runCatching { TransactionType.valueOf(it) }.getOrNull() }
+                ?: TransactionType.EXPENSE,
+            accountId = index.accountId(json.stringOrNull("accountUid")),
             sync = meta
         )
     }
@@ -302,6 +357,7 @@ object SyncPayloads {
         .put("showRates", row.settings.showRates)
         .put("convertOnCurrencyChange", row.settings.convertOnCurrencyChange)
         .put("multiAccount", row.settings.multiAccount)
+        .put("transferFee", row.settings.transferFee)
         .put("reportFields", JSONArray(row.settings.reportFields.sorted()))
         .put("reportPeriod", row.settings.reportPeriod)
         .put("autoCalculator", row.settings.autoCalculator)
@@ -351,6 +407,7 @@ object SyncPayloads {
                     defaults.convertOnCurrencyChange
                 ),
                 multiAccount = json.optBoolean("multiAccount", defaults.multiAccount),
+                transferFee = json.optBoolean("transferFee", defaults.transferFee),
                 reportFields = json.optJSONArray("reportFields")
                     ?.let { array -> (0 until array.length()).map { array.getString(it) }.toSet() }
                     ?: defaults.reportFields,

@@ -30,7 +30,12 @@ data class HomeUiState(
     val showGreeting: Boolean = true,
     val showStreak: Boolean = true,
     /** Per-account balances; shown only when there is more than one account. */
-    val accountBalances: List<Pair<by.mlastovsky.kosht.data.db.AccountEntity, Long>> = emptyList()
+    val accountBalances: List<Pair<by.mlastovsky.kosht.data.db.AccountEntity, Long>> = emptyList(),
+    /**
+     * Every account, whatever the multi-account switch says: a transfer names
+     * both of its ends even if the user has since folded the balances away.
+     */
+    val accounts: List<by.mlastovsky.kosht.data.db.AccountEntity> = emptyList()
 )
 
 class HomeViewModel(
@@ -64,7 +69,9 @@ class HomeViewModel(
             income = income,
             expense = expense,
             spendByDay = Streak.spendByDay(window),
-            firstRecordDay = window.minOfOrNull { it.transaction.timestamp }
+            firstRecordDay = window
+                .filter { !it.transaction.isTransfer }
+                .minOfOrNull { it.transaction.timestamp }
                 ?.let(Dates::toLocalDate)
         )
     }
@@ -131,7 +138,8 @@ class HomeViewModel(
                 ctx.accountBalances
             } else {
                 emptyList()
-            }
+            },
+            accounts = ctx.accountBalances.map { it.first }
         )
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), HomeUiState())
 

@@ -13,6 +13,7 @@ import by.mlastovsky.kosht.model.ReportField
 import by.mlastovsky.kosht.model.TransactionType
 import by.mlastovsky.kosht.util.Dates
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -29,6 +30,18 @@ import java.time.YearMonth
 data class CategorySlice(
     val category: CategoryEntity,
     val totalMinor: Long,
+    val share: Float
+)
+
+/** One product across the period on screen: how often, how many, how much. */
+data class ProductRow(
+    val name: String,
+    /** In how many records it turned up. */
+    val lines: Int,
+    /** Sum of the quantities, when the lines said any. */
+    val quantity: Double?,
+    val totalMinor: Long,
+    /** Share of what the listed products of its category cost, for the bar. */
     val share: Float
 )
 
@@ -80,7 +93,13 @@ data class StatsUiState(
     val reportFields: Set<ReportField> = ReportField.entries.toSet(),
     val accounts: List<by.mlastovsky.kosht.data.db.AccountEntity> = emptyList(),
     val accountFilter: Long? = null,
-    val currencyCode: String = SettingsRepository.DEFAULT_CURRENCY
+    val currencyCode: String = SettingsRepository.DEFAULT_CURRENCY,
+    /**
+     * Products behind each category, biggest spend first. A category with none
+     * is simply absent — that is what keeps the list of categories a list of
+     * categories until someone asks it for more.
+     */
+    val productsByCategory: Map<Long, List<ProductRow>> = emptyMap()
 ) {
     val isCurrentMonth: Boolean
         get() = month == YearMonth.now()
@@ -117,9 +136,19 @@ class StatsViewModel(
         ReportWindow(period, s.reportShift)
     }.distinctUntilChanged()
 
-    private val transactions = selector.flatMapLatest { s ->
+    private data class PeriodData(
+        val transactions: List<TransactionWithCategory>,
+        /** The product lines of the same month, when any were written down. */
+        val items: List<by.mlastovsky.kosht.data.db.ItemInContext>
+    )
+
+    private val period = selector.flatMapLatest { s ->
         val range = Dates.monthRange(s.month)
-        repository.observeBetween(range.first, range.last + 1)
+        combine(
+            repository.observeBetween(range.first, range.last + 1).spendingOnly(),
+            repository.observeItemsBetween(range.first, range.last + 1),
+            ::PeriodData
+        )
     }
 
     private val reportTransactions = reportWindow.flatMapLatest { w ->
@@ -127,7 +156,7 @@ class StatsViewModel(
         repository.observeBetween(
             Dates.toEpochMillis(start),
             Dates.toEpochMillis(end.plusDays(1))
-        )
+        ).spendingOnly()
     }
 
     private val prevReportTransactions = reportWindow.flatMapLatest { w ->
@@ -135,8 +164,17 @@ class StatsViewModel(
         repository.observeBetween(
             Dates.toEpochMillis(start),
             Dates.toEpochMillis(end.plusDays(1))
-        )
+        ).spendingOnly()
     }
+
+    /**
+     * Every chart, the calendar and the report answer a question about spending
+     * or earning, and a transfer between one's own accounts is neither — so
+     * none of them is ever handed one.
+     */
+    private fun Flow<List<TransactionWithCategory>>.spendingOnly():
+        Flow<List<TransactionWithCategory>> =
+        map { list -> list.filter { !it.transaction.isTransfer } }
 
     init {
         // Switching the window kind in Settings starts from the current one.
@@ -164,10 +202,11 @@ class StatsViewModel(
 
     val uiState: StateFlow<StatsUiState> = combine(
         selector,
-        transactions,
+        period,
         settingsRepository.settings,
         reportContext
-    ) { s, all, settings, report ->
+    ) { s, periodData, settings, report ->
+        val all = periodData.transactions
         val primaryId = report.accounts.firstOrNull()?.id
         fun List<TransactionWithCategory>.byAccount() = if (s.accountId == null) {
             this
@@ -189,6 +228,33 @@ class StatsViewModel(
                 )
             }
             .sortedByDescending { it.totalMinor }
+
+        // What was actually bought, when the records say so — kept per category,
+        // because that is where it is asked for: tap a category to see it.
+        // Grouped on the settled name, so one product is one row however it
+        // happened to be typed.
+        val productsByCategory = periodData.items
+            .filter { s.accountId == null || (it.accountId ?: primaryId) == s.accountId }
+            .groupBy { it.categoryId }
+            .mapValues { (_, itemsOfCategory) ->
+                val categoryTotal = itemsOfCategory.sumOf { it.amountMinor }
+                itemsOfCategory
+                    .groupBy { it.name }
+                    .map { (name, lines) ->
+                        val sum = lines.sumOf { it.amountMinor }
+                        ProductRow(
+                            name = name,
+                            lines = lines.size,
+                            quantity = lines.mapNotNull { it.quantity }
+                                .takeIf { it.isNotEmpty() }?.sum(),
+                            totalMinor = sum,
+                            share = if (categoryTotal > 0) sum.toFloat() / categoryTotal else 0f
+                        )
+                    }
+                    .sortedWith(
+                        compareByDescending<ProductRow> { it.totalMinor }.thenBy { it.name }
+                    )
+            }
 
         val daysInMonth = s.month.lengthOfMonth()
         val daily = LongArray(daysInMonth)
@@ -220,7 +286,8 @@ class StatsViewModel(
                 .toSet(),
             accounts = if (settings.multiAccount) report.accounts else emptyList(),
             accountFilter = s.accountId,
-            currencyCode = settings.currencyCode
+            currencyCode = settings.currencyCode,
+            productsByCategory = productsByCategory
         )
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), StatsUiState())
 

@@ -26,6 +26,8 @@ import androidx.compose.material.icons.rounded.Home
 import androidx.compose.material.icons.rounded.PieChart
 import androidx.compose.material.icons.rounded.Savings
 import androidx.compose.material.icons.rounded.Settings
+import androidx.compose.material.icons.rounded.ShoppingBasket
+import androidx.compose.material.icons.rounded.SwapHoriz
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -57,6 +59,11 @@ private val sections = listOf(
         R.string.guide_scan_body
     ),
     GuideSection(
+        Icons.Rounded.ShoppingBasket,
+        R.string.guide_items_title,
+        R.string.guide_items_body
+    ),
+    GuideSection(
         Icons.AutoMirrored.Rounded.ReceiptLong,
         R.string.guide_history_title,
         R.string.guide_history_body
@@ -71,6 +78,11 @@ private val sections = listOf(
         Icons.Rounded.CreditCard,
         R.string.guide_accounts_title,
         R.string.guide_accounts_body
+    ),
+    GuideSection(
+        Icons.Rounded.SwapHoriz,
+        R.string.guide_transfer_title,
+        R.string.guide_transfer_body
     ),
     GuideSection(
         Icons.Rounded.AccountBalanceWallet,

@@ -192,7 +192,9 @@ class WalletRepository(
         currencyCode: String,
         categoryId: Long,
         firstDue: LocalDate,
-        frequency: by.mlastovsky.kosht.model.RecurringFrequency
+        frequency: by.mlastovsky.kosht.model.RecurringFrequency,
+        type: TransactionType = TransactionType.EXPENSE,
+        accountId: Long? = null
     ): Long = recurringDao.insert(
         RecurringEntity(
             title = title.trim(),
@@ -201,7 +203,9 @@ class WalletRepository(
             categoryId = categoryId,
             nextDueEpochDay = firstDue.toEpochDay(),
             frequency = frequency,
-            createdAt = System.currentTimeMillis()
+            createdAt = System.currentTimeMillis(),
+            type = type,
+            accountId = accountId
         )
     )
 
@@ -214,9 +218,10 @@ class WalletRepository(
     }
 
     /**
-     * Confirms a due charge: records the expense transaction (already
-     * converted to the app currency by the caller when needed) against the
-     * chosen account and advances the next due date by one period.
+     * Confirms a due payment: records it as the movement the plan describes
+     * (already converted to the app currency by the caller when needed) on the
+     * chosen account, and advances the next due date by one period. Nothing is
+     * written until the user confirms, which is the whole point of the plan.
      */
     suspend fun confirmRecurring(
         recurring: RecurringEntity,
@@ -228,13 +233,13 @@ class WalletRepository(
         transactionDao.insert(
             TransactionEntity(
                 amountMinor = chargeAmountMinor,
-                type = TransactionType.EXPENSE,
+                type = recurring.type,
                 categoryId = recurring.categoryId,
                 note = recurring.title,
                 timestamp = now,
                 createdAt = now,
                 bynMinor = bynMinor,
-                accountId = accountId
+                accountId = accountId ?: recurring.accountId
             )
         )
         recurringDao.update(recurring.advanced())

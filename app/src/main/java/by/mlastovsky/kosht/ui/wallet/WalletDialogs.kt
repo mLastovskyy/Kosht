@@ -51,6 +51,7 @@ import by.mlastovsky.kosht.data.db.CategoryEntity
 import by.mlastovsky.kosht.data.db.DebtEntity
 import by.mlastovsky.kosht.model.DebtDirection
 import by.mlastovsky.kosht.model.RecurringFrequency
+import by.mlastovsky.kosht.model.TransactionType
 import by.mlastovsky.kosht.ui.CategoryVisuals
 import by.mlastovsky.kosht.ui.components.CategoryBadge
 import by.mlastovsky.kosht.ui.relativeDate
@@ -362,10 +363,17 @@ fun AddGoalDialog(
     )
 }
 
+/**
+ * A new planned payment. It can be money going out or coming in — a salary is
+ * as regular as a subscription — and with several accounts it says which one
+ * the confirmed amount will move on.
+ */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AddRecurringDialog(
-    categories: List<CategoryEntity>,
+    expenseCategories: List<CategoryEntity>,
+    incomeCategories: List<CategoryEntity>,
+    accounts: List<by.mlastovsky.kosht.data.db.AccountEntity>,
     currencyCode: String,
     onConfirm: (
         title: String,
@@ -373,24 +381,38 @@ fun AddRecurringDialog(
         currency: String,
         categoryId: Long,
         firstDue: LocalDate,
-        frequency: RecurringFrequency
+        frequency: RecurringFrequency,
+        type: TransactionType,
+        accountId: Long?
     ) -> Unit,
     onDismiss: () -> Unit
 ) {
     var title by remember { mutableStateOf("") }
     var amountText by remember { mutableStateOf("") }
     var currency by remember { mutableStateOf(currencyCode) }
-    var categoryId by remember { mutableStateOf(categories.firstOrNull()?.id) }
+    var type by remember { mutableStateOf(TransactionType.EXPENSE) }
+    val categories = if (type == TransactionType.EXPENSE) {
+        expenseCategories
+    } else {
+        incomeCategories
+    }
+    var categoryId by remember { mutableStateOf<Long?>(null) }
+    var accountId by remember(accounts) { mutableStateOf(accounts.firstOrNull()?.id) }
     var firstDue by remember { mutableStateOf(LocalDate.now()) }
     var frequency by remember { mutableStateOf(RecurringFrequency.MONTHLY) }
     var showDatePicker by remember { mutableStateOf(false) }
     val amountMinor = Money.parseToMinor(amountText, currency) ?: 0L
+    // Switching between money out and money in switches the categories with
+    // it, so the chosen one always belongs to the list on screen.
+    val effectiveCategoryId = categoryId?.takeIf { id -> categories.any { it.id == id } }
+        ?: categories.firstOrNull()?.id
 
     AlertDialog(
         onDismissRequest = onDismiss,
         title = { Text(stringResource(R.string.recurring_new)) },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                RecurringTypeToggle(type) { type = it }
                 OutlinedTextField(
                     value = title,
                     onValueChange = { title = it.take(60) },
@@ -433,37 +455,30 @@ fun AddRecurringDialog(
                     }
                 }
                 CurrencyChips(currency) { currency = it }
-                LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    items(categories, key = { it.id }) { category ->
-                        Column(
-                            horizontalAlignment = androidx.compose.ui.Alignment.CenterHorizontally,
-                            modifier = Modifier
-                                .clip(MaterialTheme.shapes.medium)
-                                .clickable { categoryId = category.id }
-                                .padding(4.dp)
-                        ) {
-                            CategoryBadge(
-                                iconKey = category.iconKey,
-                                color = Color(category.colorArgb),
-                                selected = category.id == categoryId,
-                                size = 40.dp,
-                                modifier = Modifier.clip(CircleShape)
-                            )
-                            Text(
-                                text = CategoryVisuals.displayName(category),
-                                style = MaterialTheme.typography.labelSmall,
-                                maxLines = 1
-                            )
-                        }
-                    }
+                CategoryRow(categories, effectiveCategoryId) { categoryId = it }
+                if (accounts.size > 1) {
+                    Text(
+                        stringResource(R.string.editor_account),
+                        style = MaterialTheme.typography.labelLarge
+                    )
+                    AccountChips(accounts, accountId) { accountId = it }
                 }
             }
         },
         confirmButton = {
             TextButton(
-                enabled = title.isNotBlank() && amountMinor > 0 && categoryId != null,
+                enabled = title.isNotBlank() && amountMinor > 0 && effectiveCategoryId != null,
                 onClick = {
-                    onConfirm(title, amountMinor, currency, categoryId!!, firstDue, frequency)
+                    onConfirm(
+                        title,
+                        amountMinor,
+                        currency,
+                        effectiveCategoryId!!,
+                        firstDue,
+                        frequency,
+                        type,
+                        accountId
+                    )
                 }
             ) { Text(stringResource(R.string.action_add)) }
         },
@@ -497,6 +512,92 @@ fun AddRecurringDialog(
             }
         ) {
             DatePicker(state = pickerState, showModeToggle = false)
+        }
+    }
+}
+
+/** Money out or money in — what confirming this payment will record. */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun RecurringTypeToggle(
+    type: TransactionType,
+    onChange: (TransactionType) -> Unit
+) {
+    val options = listOf(
+        TransactionType.EXPENSE to stringResource(R.string.type_expense),
+        TransactionType.INCOME to stringResource(R.string.type_income)
+    )
+    SingleChoiceSegmentedButtonRow(Modifier.fillMaxWidth()) {
+        options.forEachIndexed { index, (option, label) ->
+            SegmentedButton(
+                selected = type == option,
+                onClick = { onChange(option) },
+                shape = SegmentedButtonDefaults.itemShape(index = index, count = options.size),
+                label = { Text(label) }
+            )
+        }
+    }
+}
+
+@Composable
+private fun CategoryRow(
+    categories: List<CategoryEntity>,
+    selectedId: Long?,
+    onSelect: (Long) -> Unit
+) {
+    LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        items(categories, key = { it.id }) { category ->
+            Column(
+                horizontalAlignment = androidx.compose.ui.Alignment.CenterHorizontally,
+                modifier = Modifier
+                    .clip(MaterialTheme.shapes.medium)
+                    .clickable { onSelect(category.id) }
+                    .padding(4.dp)
+            ) {
+                CategoryBadge(
+                    iconKey = category.iconKey,
+                    color = Color(category.colorArgb),
+                    selected = category.id == selectedId,
+                    size = 40.dp,
+                    modifier = Modifier.clip(CircleShape)
+                )
+                Text(
+                    text = CategoryVisuals.displayName(category),
+                    style = MaterialTheme.typography.labelSmall,
+                    maxLines = 1
+                )
+            }
+        }
+    }
+}
+
+/** Which money source the amount moves on. */
+@Composable
+private fun AccountChips(
+    accounts: List<by.mlastovsky.kosht.data.db.AccountEntity>,
+    selectedId: Long?,
+    onSelect: (Long) -> Unit
+) {
+    LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        items(accounts, key = { it.id }) { account ->
+            FilterChip(
+                selected = selectedId == account.id,
+                onClick = { onSelect(account.id) },
+                leadingIcon = {
+                    Icon(
+                        CategoryVisuals.icon(account.iconKey),
+                        contentDescription = null,
+                        tint = Color(account.colorArgb),
+                        modifier = Modifier.size(18.dp)
+                    )
+                },
+                label = {
+                    Text(
+                        by.mlastovsky.kosht.ui.AccountVisuals.displayName(account),
+                        maxLines = 1
+                    )
+                }
+            )
         }
     }
 }
@@ -707,16 +808,25 @@ fun AccountBalanceDialog(
     )
 }
 
-/** Edit an existing recurring charge: title, amount, next date, frequency. */
+/**
+ * Edit a planned payment: whether it is money out or in, its title, amount,
+ * category, next date, frequency and the account it moves on.
+ */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun EditRecurringDialog(
     initial: by.mlastovsky.kosht.data.db.RecurringEntity,
+    expenseCategories: List<CategoryEntity>,
+    incomeCategories: List<CategoryEntity>,
+    accounts: List<by.mlastovsky.kosht.data.db.AccountEntity>,
     onConfirm: (
         title: String,
         amountMinor: Long,
         nextDue: LocalDate,
-        frequency: RecurringFrequency
+        frequency: RecurringFrequency,
+        type: TransactionType,
+        categoryId: Long,
+        accountId: Long?
     ) -> Unit,
     onDismiss: () -> Unit
 ) {
@@ -729,14 +839,27 @@ fun EditRecurringDialog(
     }
     var due by remember { mutableStateOf(initial.nextDueDate) }
     var frequency by remember { mutableStateOf(initial.frequency) }
+    var type by remember { mutableStateOf(initial.type) }
+    var categoryId by remember { mutableStateOf(initial.categoryId) }
+    var accountId by remember(accounts) {
+        mutableStateOf(initial.accountId ?: accounts.firstOrNull()?.id)
+    }
     var showDatePicker by remember { mutableStateOf(false) }
     val amountMinor = Money.parseToMinor(amountText, initial.currencyCode) ?: 0L
+    val categories = if (type == TransactionType.EXPENSE) {
+        expenseCategories
+    } else {
+        incomeCategories
+    }
+    val effectiveCategoryId = categoryId.takeIf { id -> categories.any { it.id == id } }
+        ?: categories.firstOrNull()?.id
 
     AlertDialog(
         onDismissRequest = onDismiss,
         title = { Text(initial.title) },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                RecurringTypeToggle(type) { type = it }
                 OutlinedTextField(
                     value = title,
                     onValueChange = { title = it.take(60) },
@@ -774,12 +897,30 @@ fun EditRecurringDialog(
                         )
                     }
                 }
+                CategoryRow(categories, effectiveCategoryId) { categoryId = it }
+                if (accounts.size > 1) {
+                    Text(
+                        stringResource(R.string.editor_account),
+                        style = MaterialTheme.typography.labelLarge
+                    )
+                    AccountChips(accounts, accountId) { accountId = it }
+                }
             }
         },
         confirmButton = {
             TextButton(
-                enabled = title.isNotBlank() && amountMinor > 0,
-                onClick = { onConfirm(title, amountMinor, due, frequency) }
+                enabled = title.isNotBlank() && amountMinor > 0 && effectiveCategoryId != null,
+                onClick = {
+                    onConfirm(
+                        title,
+                        amountMinor,
+                        due,
+                        frequency,
+                        type,
+                        effectiveCategoryId!!,
+                        accountId
+                    )
+                }
             ) { Text(stringResource(R.string.editor_save)) }
         },
         dismissButton = {
@@ -827,9 +968,10 @@ fun frequencyLabel(frequency: RecurringFrequency): String = stringResource(
 )
 
 /**
- * Confirmation of a due charge: the amount is editable (this month's bill may
- * differ), a foreign-currency charge also exposes the rate, and with several
- * accounts the user picks which one the charge is deducted from.
+ * Confirmation of a due payment: the amount is editable (this month's bill may
+ * differ), a foreign-currency payment also exposes the rate, and with several
+ * accounts the user picks which one it moves on — starting from the account the
+ * plan itself names.
  */
 @Composable
 fun ConfirmRecurringDialog(
@@ -839,6 +981,8 @@ fun ConfirmRecurringDialog(
     appCurrencyCode: String,
     suggestedRate: Double?,
     accounts: List<by.mlastovsky.kosht.data.db.AccountEntity>,
+    defaultAccountId: Long?,
+    type: TransactionType,
     onConfirm: (amountMinor: Long, rate: Double, accountId: Long?) -> Unit,
     onDismiss: () -> Unit
 ) {
@@ -852,7 +996,12 @@ fun ConfirmRecurringDialog(
     var rateText by remember {
         mutableStateOf(suggestedRate?.let { "%.4f".format(it).replace(',', '.') } ?: "")
     }
-    var accountId by remember { mutableStateOf(accounts.firstOrNull()?.id) }
+    var accountId by remember(accounts, defaultAccountId) {
+        mutableStateOf(
+            defaultAccountId?.takeIf { id -> accounts.any { it.id == id } }
+                ?: accounts.firstOrNull()?.id
+        )
+    }
     val amountMinor = Money.parseToMinor(amountText, currencyCode) ?: 0L
     val rate = if (sameCurrency) 1.0 else rateText.replace(',', '.').toDoubleOrNull() ?: 0.0
     val convertedMinor = if (rate > 0) Math.round(amountMinor * rate) else 0L
@@ -870,34 +1019,25 @@ fun ConfirmRecurringDialog(
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                     modifier = Modifier.fillMaxWidth()
                 )
+                // Which way the money goes, said outright: the same dialog
+                // now confirms a bill and a salary.
+                Text(
+                    text = stringResource(
+                        if (type == TransactionType.INCOME) {
+                            R.string.recurring_confirm_income
+                        } else {
+                            R.string.recurring_confirm_expense
+                        }
+                    ),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
                 if (accounts.size > 1) {
                     Text(
                         stringResource(R.string.editor_account),
                         style = MaterialTheme.typography.labelLarge
                     )
-                    LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        items(accounts, key = { it.id }) { account ->
-                            FilterChip(
-                                selected = accountId == account.id,
-                                onClick = { accountId = account.id },
-                                leadingIcon = {
-                                    Icon(
-                                        CategoryVisuals.icon(account.iconKey),
-                                        contentDescription = null,
-                                        tint = Color(account.colorArgb),
-                                        modifier = Modifier.size(18.dp)
-                                    )
-                                },
-                                label = {
-                                    Text(
-                                        by.mlastovsky.kosht.ui.AccountVisuals
-                                            .displayName(account),
-                                        maxLines = 1
-                                    )
-                                }
-                            )
-                        }
-                    }
+                    AccountChips(accounts, accountId) { accountId = it }
                 }
                 if (!sameCurrency) {
                     OutlinedTextField(

@@ -1,11 +1,22 @@
 package by.mlastovsky.kosht.data.receipt
 
+import by.mlastovsky.kosht.util.Notes
 import java.time.LocalDate
 
 data class ParsedReceipt(
     val amountMinor: Long?,
     val date: LocalDate?,
-    val merchant: String?
+    val merchant: String?,
+    /** What the slip says was bought, when its lines can be read that way. */
+    val items: List<ParsedItem> = emptyList()
+)
+
+/** One line of a receipt read as a purchase. */
+data class ParsedItem(
+    val name: String,
+    val amountMinor: Long,
+    /** 2 pieces, 0.756 kg — whatever the slip printed before the price. */
+    val quantity: Double? = null
 )
 
 /**
@@ -128,12 +139,33 @@ object ReceiptParser {
             .map { it.copy(text = it.text.trim()) }
             .filter { it.text.isNotEmpty() }
         val texts = cleaned.map { it.text }
+        val total = findTotal(texts)
         return ParsedReceipt(
-            amountMinor = findTotal(texts),
+            amountMinor = total,
             date = findDate(texts.joinToString("\n")),
-            merchant = findMerchant(cleaned)
+            merchant = findMerchant(cleaned),
+            items = reconciled(findItems(texts), total)
         )
     }
+
+    /**
+     * The figures have to agree with the slip. Lines adding up to far more than
+     * the receipt total mean something that is not a purchase was read as one —
+     * and a wrong list is worse than none, so it is dropped whole.
+     *
+     * Adding up to *less* is normal and kept: a line the OCR could not read is
+     * simply missing, and the app says as much rather than inventing a product
+     * to make the arithmetic work. Slightly more is normal too — a discount
+     * applied at the end sits below the items it came off.
+     */
+    private fun reconciled(items: List<ParsedItem>, total: Long?): List<ParsedItem> {
+        if (total == null || total <= 0 || items.isEmpty()) return items
+        val sum = items.sumOf { it.amountMinor }
+        return if (sum > total * OVER_TOTAL_LIMIT) emptyList() else items
+    }
+
+    /** How far above the receipt total a list of lines may still be believed. */
+    private const val OVER_TOTAL_LIMIT = 1.5
 
     // ---- Total ------------------------------------------------------------
 
@@ -186,6 +218,133 @@ object ReceiptParser {
         val whole = groupValues[1].replace(" ", "").replace(" ", "")
         return whole.toLong() * 100 + groupValues[2].toLong()
     }
+
+    // ---- Items ------------------------------------------------------------
+
+    /**
+     * Reads the shopping itself off the slip: everything above the total that
+     * looks like "a name and what it cost".
+     *
+     * Two layouts cover nearly every receipt around here. Either the name and
+     * the price share a line — `Хлеб 2 x 1,25 2,50` — or the name is printed on
+     * its own with the arithmetic underneath it. Anything that reads as a
+     * document header, a discount, a card or a footer is left out, and a line
+     * that cannot be read confidently is skipped rather than guessed at: the
+     * product list is optional, so half of one is worse than none.
+     */
+    private fun findItems(lines: List<String>): List<ParsedItem> {
+        val end = lines.indexOfFirst { line ->
+            val lower = line.lowercase()
+            totalKeywords.take(2).any { group -> group.any { lower.contains(it) } }
+        }.takeIf { it >= 0 } ?: lines.size
+        val items = mutableListOf<ParsedItem>()
+        var index = 0
+        while (index < end && items.size < MAX_ITEMS) {
+            val line = lines[index]
+            if (skipAsItem(line)) {
+                index++
+                continue
+            }
+            val sameLine = itemOnOneLine(line)
+            if (sameLine != null) {
+                items += sameLine
+                index++
+                continue
+            }
+            // A name of its own, with the figures on the line below it.
+            val next = lines.getOrNull(index + 1)
+            val split = next?.takeIf { !skipAsItem(it) }?.let { itemFromPair(line, it) }
+            if (split != null) {
+                items += split
+                index += 2
+                continue
+            }
+            index++
+        }
+        return items
+    }
+
+    /** Lines that name an amount but never a purchase. */
+    private fun skipAsItem(line: String): Boolean {
+        val lower = line.lowercase()
+        if (notTheTotal.any { lower.contains(it) }) return true
+        if (notAnItem.any { lower.contains(it) }) return true
+        return dateRegex.containsMatchIn(line)
+    }
+
+    private fun itemOnOneLine(line: String): ParsedItem? {
+        val amount = amountRegex.findAll(line).lastOrNull() ?: return null
+        // The name is what comes before the figures start.
+        val head = line.take(firstFigureAt(line, amount.range.first))
+        return item(head, amount.toMinor(), quantityIn(line))
+    }
+
+    private fun itemFromPair(nameLine: String, figuresLine: String): ParsedItem? {
+        if (amountRegex.containsMatchIn(nameLine)) return null
+        val amount = amountRegex.findAll(figuresLine).lastOrNull() ?: return null
+        // The figures line must be figures: a sentence with a price in it is
+        // somebody else's line, not the price of the name above.
+        if (figuresLine.count { it.isLetter() } > MAX_LETTERS_IN_FIGURES) return null
+        return item(nameLine, amount.toMinor(), quantityIn(figuresLine))
+    }
+
+    /**
+     * Where the numbers of a line begin — the quantity if it has one, the price
+     * otherwise. Everything before it is the name.
+     */
+    private fun firstFigureAt(line: String, priceAt: Int): Int {
+        val quantity = quantityRegex.find(line)
+        if (quantity != null && quantity.range.first < priceAt) return quantity.range.first
+        return priceAt
+    }
+
+    private fun quantityIn(line: String): Double? = quantityRegex.find(line)
+        ?.groupValues?.get(1)
+        ?.replace(',', '.')
+        ?.toDoubleOrNull()
+        ?.takeIf { it > 0 && it != 1.0 }
+
+    /**
+     * The name as it will be shown, or nothing: too short, mostly digits, or
+     * longer than a name is ever printed all mean this was not a purchase.
+     */
+    private fun item(rawName: String, amountMinor: Long, quantity: Double?): ParsedItem? {
+        if (amountMinor <= 0) return null
+        val name = rawName
+            .trim(' ', '"', '«', '»', '\'', ',', '.', ':', ';', '-', '—', '*', '=', '№', '/')
+            .replace(Regex("""\s{2,}"""), " ")
+        val letters = name.count { it.isLetter() }
+        if (letters < 3 || letters <= name.count { it.isDigit() }) return null
+        if (name.length > MAX_ITEM_NAME) return null
+        return ParsedItem(name = name, amountMinor = amountMinor, quantity = quantity)
+    }
+
+    /** `2 x`, `0,756 ×`, `3 *` — the count printed before a price. */
+    private val quantityRegex = Regex("""(\d+(?:[.,]\d{1,3})?)\s*[xх×*]\s*(?=\d)""")
+
+    /**
+     * Wording that belongs to the document rather than to the shopping. The
+     * discount and change lines are covered by [notTheTotal] already.
+     */
+    private val notAnItem = listOf(
+        "наименование", "кол-во", "колич", "цена", "стоимость", "ндс", "пдв", "нсп",
+        "унп", "инн", "скно", "кассир", "касір", "смена", "чек", "чэк", "фискальн",
+        "фіскальны", "терминал", "эквайер", "эквайринг", "rrn", "код авториз",
+        // How it was paid for, which every slip prints next to a sum.
+        "оплат", "аплат", "белкарт", "belkart", "visa", "mastercard", "maestro",
+        "карта", "картка", "банк",
+        "адрес", "адрас", "ул.", "пр-т", "просп", "тел", "www", "http", ".by",
+        "спасибо", "дзякуй", "режим работы", "лиц.", "св-во", "объект", "магазин №"
+    )
+
+    /** Beyond this a "figures" line is prose that merely contains a price. */
+    private const val MAX_LETTERS_IN_FIGURES = 6
+
+    /** A receipt longer than this is a wholesale invoice, not a shopping trip. */
+    private const val MAX_ITEMS = 60
+
+    /** Long enough for "Молоко Савушкин продукт 3,2% 900 г". */
+    private const val MAX_ITEM_NAME = 60
 
     // ---- Date -------------------------------------------------------------
 
@@ -268,7 +427,8 @@ object ReceiptParser {
     /**
      * Trims the decoration off a candidate and rejects what cannot be a name:
      * too few letters, more digits than letters, punctuation soup left by OCR,
-     * no vowel at all, or a word that just means "shop".
+     * no vowel at all, a word that just means "shop", or a line too long to be
+     * a name — the note is then left empty rather than filled with half a line.
      */
     private fun normalize(candidate: String): String? {
         val trimmed = candidate
@@ -277,9 +437,10 @@ object ReceiptParser {
         val letters = trimmed.count { it.isLetter() }
         if (letters < 3 || letters <= trimmed.count { it.isDigit() }) return null
         if (letters * 2 < trimmed.length) return null
+        if (trimmed.length > Notes.MAX_SCANNED_LENGTH) return null
         if (trimmed.none { it.lowercaseChar() in VOWELS }) return null
         if (trimmed.lowercase() in genericNames) return null
-        return prettyCase(trimmed.take(40))
+        return prettyCase(trimmed)
     }
 
     /** Receipts shout in capitals; a note reads better in ordinary case. */

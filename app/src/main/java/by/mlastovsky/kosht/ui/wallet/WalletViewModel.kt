@@ -55,11 +55,20 @@ data class WalletUiState(
     val recurring: List<RecurringWithCategory> = emptyList(),
     val dueRecurringIds: Set<Long> = emptySet(),
     val expenseCategories: List<CategoryEntity> = emptyList(),
+    /** Planned payments can be income too, and those need their own categories. */
+    val incomeCategories: List<CategoryEntity> = emptyList(),
     val multiAccount: Boolean = false,
     /** Accounts with their shown balances (transactions + adjustment). */
     val accountsWithBalances: List<Pair<by.mlastovsky.kosht.data.db.AccountEntity, Long>> =
         emptyList()
-)
+) {
+    /**
+     * Accounts worth offering in a picker: none until the user keeps several,
+     * so a single-account setup never has to answer the question.
+     */
+    val pickableAccounts: List<by.mlastovsky.kosht.data.db.AccountEntity>
+        get() = if (multiAccount) accountsWithBalances.map { it.first } else emptyList()
+}
 
 class WalletViewModel(
     private val walletRepository: WalletRepository,
@@ -119,9 +128,16 @@ class WalletViewModel(
     private data class ContextData(
         val rates: Map<String, RateEntity>,
         val settings: by.mlastovsky.kosht.data.AppSettings,
-        val expenseCategories: List<CategoryEntity>,
+        val categories: Pair<List<CategoryEntity>, List<CategoryEntity>>,
         val refreshing: Boolean,
         val accountsWithBalances: List<Pair<by.mlastovsky.kosht.data.db.AccountEntity, Long>>
+    )
+
+    /** Expense and income categories, for whichever a planned payment is. */
+    private val categories = combine(
+        transactionRepository.observeCategories(TransactionType.EXPENSE),
+        transactionRepository.observeCategories(TransactionType.INCOME),
+        ::Pair
     )
 
     private val accountsWithBalances = combine(
@@ -142,7 +158,7 @@ class WalletViewModel(
     private val context = combine(
         ratesRepository.rates,
         settingsRepository.settings,
-        transactionRepository.observeCategories(TransactionType.EXPENSE),
+        categories,
         refreshingRates,
         accountsWithBalances,
         ::ContextData
@@ -157,7 +173,7 @@ class WalletViewModel(
     )
 
     val uiState: StateFlow<WalletUiState> = combine(wallet, context) { data,
-        (rates, settings, expenseCategories, refreshing, accountsWithBalances) ->
+        (rates, settings, categories, refreshing, accountsWithBalances) ->
         WalletUiState(
             multiAccount = settings.multiAccount,
             accountsWithBalances = accountsWithBalances,
@@ -181,7 +197,8 @@ class WalletViewModel(
                 .filter { it.recurring.isDue() }
                 .map { it.recurring.id }
                 .toSet(),
-            expenseCategories = expenseCategories
+            expenseCategories = categories.first,
+            incomeCategories = categories.second
         )
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), WalletUiState())
 
@@ -284,12 +301,15 @@ class WalletViewModel(
         currencyCode: String,
         categoryId: Long,
         firstDue: java.time.LocalDate,
-        frequency: by.mlastovsky.kosht.model.RecurringFrequency
+        frequency: by.mlastovsky.kosht.model.RecurringFrequency,
+        type: TransactionType,
+        accountId: Long?
     ) {
         if (title.isBlank() || amountMinor <= 0) return
         viewModelScope.launch {
             walletRepository.addRecurring(
-                title, amountMinor, currencyCode, categoryId, firstDue, frequency
+                title, amountMinor, currencyCode, categoryId, firstDue, frequency,
+                type, accountId
             )
         }
     }
@@ -299,7 +319,10 @@ class WalletViewModel(
         title: String,
         amountMinor: Long,
         nextDue: java.time.LocalDate,
-        frequency: by.mlastovsky.kosht.model.RecurringFrequency
+        frequency: by.mlastovsky.kosht.model.RecurringFrequency,
+        type: TransactionType,
+        categoryId: Long,
+        accountId: Long?
     ) {
         if (title.isBlank() || amountMinor <= 0) return
         viewModelScope.launch {
@@ -308,7 +331,10 @@ class WalletViewModel(
                     title = title.trim(),
                     amountMinor = amountMinor,
                     nextDueEpochDay = nextDue.toEpochDay(),
-                    frequency = frequency
+                    frequency = frequency,
+                    type = type,
+                    categoryId = categoryId,
+                    accountId = accountId
                 )
             )
         }
@@ -323,9 +349,9 @@ class WalletViewModel(
     }
 
     /**
-     * Confirms a due charge with a user-checked amount (in the charge's own
-     * currency) and rate: charged = amount × rate, in the app currency,
-     * deducted from the chosen account.
+     * Confirms a due payment with a user-checked amount (in the payment's own
+     * currency) and rate: recorded = amount × rate, in the app currency, on the
+     * chosen account — or on the one the plan already names.
      */
     fun confirmRecurring(
         item: RecurringWithCategory,

@@ -115,6 +115,9 @@ class SyncEngine(
         dao.transactionsChanged(since).forEach {
             rows += row(SyncEntity.TRANSACTIONS, it.sync, SyncPayloads.of(it, index))
         }
+        dao.itemsChanged(since).forEach {
+            rows += row(SyncEntity.TRANSACTION_ITEMS, it.sync, SyncPayloads.of(it, index))
+        }
         dao.recurringChanged(since).forEach {
             rows += row(SyncEntity.RECURRING, it.sync, SyncPayloads.of(it, index))
         }
@@ -268,6 +271,9 @@ class SyncEngine(
         // Anything just inserted now has a local id worth referencing.
         val index = buildIndex()
         total += applyTransactions(byEntity[SyncEntity.TRANSACTIONS].orEmpty(), index)
+        // After the records: a line needs the record it belongs to. Rebuilt
+        // index, because records that just arrived are what it points at.
+        total += applyItems(byEntity[SyncEntity.TRANSACTION_ITEMS].orEmpty(), buildIndex())
         total += applyRecurring(byEntity[SyncEntity.RECURRING].orEmpty(), index)
         total += applySavings(byEntity[SyncEntity.SAVINGS].orEmpty(), index)
         total += applyChallenges(byEntity[SyncEntity.CHALLENGES].orEmpty(), index)
@@ -283,7 +289,8 @@ class SyncEngine(
     private suspend fun buildIndex() = UidIndex(
         categories = dao.categoryRefs(),
         accounts = dao.accountRefs(),
-        goals = dao.goalRefs()
+        goals = dao.goalRefs(),
+        transactions = dao.transactionRefs()
     )
 
     /** True when the remote copy is the newer one and should be applied. */
@@ -390,6 +397,33 @@ class SyncEngine(
                 return@forEach
             }
             if (local == null) dao.insertTransaction(entity) else dao.updateTransaction(entity)
+            result.applied++
+        }
+        return result
+    }
+
+    private suspend fun applyItems(rows: List<SyncRow>, index: UidIndex): Applied {
+        val result = Applied()
+        if (rows.isEmpty()) return result
+        val locals = rows.uids().flatMap { dao.itemsByUid(it) }.associateBy { it.sync.uid }
+        rows.forEach { row ->
+            val local = locals[row.uid]
+            if (!wins(row, local?.sync?.updatedAt)) return@forEach
+            if (row.deleted) {
+                if (local != null) {
+                    dao.deleteItem(row.uid)
+                    deleted(row.entity, row.uid)
+                    result.applied++
+                }
+                return@forEach
+            }
+            val entity = SyncPayloads.toItem(row.payload, row.meta(), index, local)
+            if (entity == null) {
+                // Its record has not arrived yet; the next sync picks it up.
+                result.skipped++
+                return@forEach
+            }
+            if (local == null) dao.insertItem(entity) else dao.updateItem(entity)
             result.applied++
         }
         return result

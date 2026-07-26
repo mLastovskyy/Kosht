@@ -48,6 +48,7 @@ import androidx.compose.material.icons.rounded.DocumentScanner
 import androidx.compose.material.icons.rounded.Event
 import androidx.compose.material.icons.rounded.PhotoCamera
 import androidx.compose.material.icons.rounded.PhotoLibrary
+import androidx.compose.material.icons.rounded.ShoppingBasket
 import androidx.compose.material.icons.automirrored.rounded.ReceiptLong
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.AssistChip
@@ -107,6 +108,7 @@ import by.mlastovsky.kosht.ui.components.CategoryBadge
 import by.mlastovsky.kosht.ui.components.rememberBitmapFromPath
 import by.mlastovsky.kosht.ui.relativeDate
 import by.mlastovsky.kosht.ui.theme.KoshtTheme
+import by.mlastovsky.kosht.util.Money
 import java.io.File
 import java.time.Instant
 import java.time.ZoneOffset
@@ -131,6 +133,7 @@ fun EditorScreen(
     var showCalculator by remember { mutableStateOf(false) }
     var showPhotoView by remember { mutableStateOf(false) }
     var showEReceipt by remember { mutableStateOf(false) }
+    var showItems by remember { mutableStateOf(false) }
     var cameraTarget by remember { mutableStateOf<Uri?>(null) }
     val scanFailedMessage = stringResource(R.string.scan_failed)
 
@@ -158,6 +161,12 @@ fun EditorScreen(
     ) { success ->
         val target = cameraTarget
         if (success && target != null) viewModel.attachPhoto(target)
+    }
+
+    // A transfer between accounts is not a category-and-amount record; it has
+    // a dialog of its own, so the editor bows out rather than showing half of it.
+    LaunchedEffect(state.isTransfer) {
+        if (state.isTransfer) onClose()
     }
 
     // A fresh record starts in the calculator right away — no extra tap.
@@ -289,6 +298,43 @@ fun EditorScreen(
                         }
                     )
                 }
+            }
+            // What was bought. Optional, so it stays a single quiet chip —
+            // with a count once there is something in it.
+            AssistChip(
+                onClick = { showItems = true },
+                leadingIcon = {
+                    Icon(
+                        Icons.Rounded.ShoppingBasket,
+                        contentDescription = null,
+                        Modifier.size(18.dp)
+                    )
+                },
+                label = {
+                    Text(
+                        text = if (state.items.isEmpty()) {
+                            stringResource(R.string.items_add)
+                        } else {
+                            state.items.size.toString()
+                        },
+                        maxLines = 1
+                    )
+                }
+            )
+            // Says where the figures came from, on the record and ever after.
+            if (state.scanned) {
+                AssistChip(
+                    onClick = { },
+                    enabled = false,
+                    leadingIcon = {
+                        Icon(
+                            Icons.Rounded.DocumentScanner,
+                            contentDescription = null,
+                            Modifier.size(18.dp)
+                        )
+                    },
+                    label = { Text(stringResource(R.string.scanned_mark), maxLines = 1) }
+                )
             }
             Spacer(Modifier.weight(1f))
             IconButton(
@@ -530,6 +576,7 @@ fun EditorScreen(
     state.pendingScan?.let { pending ->
         ScanReviewDialog(
             pending = pending,
+            currencyCode = state.currencyCode,
             onApply = { amount, note -> viewModel.applyScan(amount, note) },
             onDismiss = { viewModel.dismissScan() }
         )
@@ -543,6 +590,21 @@ fun EditorScreen(
                 showPhotoView = false
             },
             onDismiss = { showPhotoView = false }
+        )
+    }
+
+    if (showItems) {
+        ItemsDialog(
+            items = state.items,
+            suggestions = state.itemSuggestions,
+            categoryKey = state.itemCategoryKey,
+            currencyCode = state.currencyCode,
+            recordAmountMinor = by.mlastovsky.kosht.util.Expr
+                .evaluateToMinor(state.amountInput, state.currencyCode) ?: 0L,
+            onAdd = viewModel::addItem,
+            onUpdate = viewModel::updateItem,
+            onRemove = viewModel::removeItem,
+            onDismiss = { showItems = false }
         )
     }
 
@@ -604,6 +666,7 @@ private fun PhotoSourceDialog(
 @Composable
 private fun ScanReviewDialog(
     pending: PendingScan,
+    currencyCode: String,
     onApply: (amount: String, note: String) -> Unit,
     onDismiss: () -> Unit
 ) {
@@ -648,7 +711,7 @@ private fun ScanReviewDialog(
                 )
                 OutlinedTextField(
                     value = noteText,
-                    onValueChange = { noteText = it.take(200) },
+                    onValueChange = { noteText = it.take(by.mlastovsky.kosht.util.Notes.MAX_LENGTH) },
                     label = { Text(stringResource(R.string.editor_note_hint)) },
                     singleLine = true,
                     keyboardOptions = TextInput.Sentence,
@@ -658,6 +721,37 @@ private fun ScanReviewDialog(
                     Text(
                         text = stringResource(R.string.scan_review_date, relativeDate(pending.date)),
                         style = MaterialTheme.typography.bodyMedium
+                    )
+                }
+                // The slip's own lines, when it had readable ones: said out
+                // loud here, editable in the items chip afterwards. When they
+                // do not add up to the total, that is said too rather than
+                // papered over with an invented line.
+                if (pending.items.isNotEmpty()) {
+                    val listed = pending.items.sumOf { it.amountMinor }
+                    val total = Money.parseToMinor(
+                        pending.amountInput.replace('.', ','),
+                        currencyCode
+                    ) ?: 0L
+                    Text(
+                        text = if (total > 0 && listed < total) {
+                            stringResource(
+                                R.string.scan_review_items_partial,
+                                pending.items.size,
+                                Money.format(listed, currencyCode),
+                                Money.format(total, currencyCode)
+                            )
+                        } else {
+                            stringResource(R.string.scan_review_items, pending.items.size)
+                        },
+                        style = MaterialTheme.typography.bodyMedium
+                    )
+                    Text(
+                        text = pending.items.take(4).joinToString(" · ") { it.name },
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        maxLines = 2,
+                        overflow = TextOverflow.Ellipsis
                     )
                 }
             }

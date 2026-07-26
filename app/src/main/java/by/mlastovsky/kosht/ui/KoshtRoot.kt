@@ -67,6 +67,10 @@ fun KoshtRoot(
 
     AskForNotificationsOnce()
 
+    // Above the whole app, because a change in the documents concerns whoever
+    // is using it, on whichever screen they happen to be.
+    PolicyUpdateNotice()
+
     val navController = rememberNavController()
     val backStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute = backStackEntry?.destination?.route
@@ -194,6 +198,22 @@ fun KoshtRoot(
 
     // Same reason: a record can be deleted from History or from the editor.
     by.mlastovsky.kosht.ui.components.UndoDeleteSnackbar(snackbarHostState)
+}
+
+/**
+ * The Terms and the data policy do change, and a person who agreed to one text
+ * should hear about the next one rather than find it in Settings. Shown once per
+ * version, whatever screen is open.
+ */
+@Composable
+private fun PolicyUpdateNotice(
+    viewModel: MainViewModel = viewModel(factory = AppViewModelProvider.Factory)
+) {
+    val updated by viewModel.policyUpdated.collectAsStateWithLifecycle()
+    if (!updated) return
+    by.mlastovsky.kosht.ui.legal.PolicyUpdateDialog(
+        onAcknowledge = viewModel::acknowledgePolicy
+    )
 }
 
 /**

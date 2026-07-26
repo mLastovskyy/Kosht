@@ -10,10 +10,10 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.compose.viewModel
 import by.mlastovsky.kosht.R
+import by.mlastovsky.kosht.data.DeletedRecord
 import by.mlastovsky.kosht.data.DeletionEvents
 import by.mlastovsky.kosht.data.PhotoStore
 import by.mlastovsky.kosht.data.TransactionRepository
-import by.mlastovsky.kosht.data.db.TransactionEntity
 import by.mlastovsky.kosht.ui.AppViewModelProvider
 import kotlinx.coroutines.launch
 
@@ -55,16 +55,19 @@ class UndoDeleteViewModel(
     private val photoStore: PhotoStore
 ) : ViewModel() {
 
-    /** Puts the record back with its id, its photo and its receipt intact. */
-    fun restore(transaction: TransactionEntity) {
-        viewModelScope.launch { repository.addTransaction(transaction) }
+    /**
+     * Puts the record back with its id, its photo, its receipt and the product
+     * lines that were cascaded away with it.
+     */
+    fun restore(record: DeletedRecord) {
+        viewModelScope.launch { repository.restore(record) }
     }
 
     /** The offer expired: now the attachments can go. */
-    fun forget(transaction: TransactionEntity) {
+    fun forget(record: DeletedRecord) {
         viewModelScope.launch {
-            photoStore.delete(transaction.photoPath)
-            photoStore.delete(transaction.receiptDocPath)
+            photoStore.delete(record.transaction.photoPath)
+            photoStore.delete(record.transaction.receiptDocPath)
         }
     }
 }

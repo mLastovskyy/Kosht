@@ -16,7 +16,9 @@ object Streak {
 
     fun spendByDay(transactions: List<TransactionWithCategory>): Map<LocalDate, Long> =
         transactions
-            .filter { it.transaction.type == TransactionType.EXPENSE }
+            // Money moved between one's own accounts was not spent, so it can
+            // neither break a streak nor set the budget it is measured against.
+            .filter { it.transaction.type == TransactionType.EXPENSE && !it.transaction.isTransfer }
             .groupBy { Dates.toLocalDate(it.transaction.timestamp) }
             .mapValues { (_, items) -> items.sumOf { it.transaction.amountMinor } }
 
