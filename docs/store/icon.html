@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<style>
+  html, body { margin: 0; padding: 0; width: 512px; height: 512px; overflow: hidden; }
+  /* Same artwork as the adaptive launcher icon, flattened for stores. */
+  .tile { position: relative; width: 512px; height: 512px; background: #176B4E; }
+  .tile::after {
+    content: ""; position: absolute; inset: 0;
+    background: linear-gradient(225deg, rgba(255,255,255,.10), rgba(255,255,255,0) 55%);
+  }
+  svg { position: absolute; inset: 0; }
+</style>
+</head>
+<body>
+<div class="tile">
+  <svg width="512" height="512" viewBox="0 0 108 108" xmlns="http://www.w3.org/2000/svg">
+    <path fill="#FFFFFF" fill-opacity="0.85"
+      d="M40,34 L60,34 A3,3 0 0 1 63,37 L63,40 L37,40 L37,37 A3,3 0 0 1 40,34 Z"/>
+    <path fill="#FFFFFF" fill-rule="evenodd"
+      d="M38,40 L70,40 A6,6 0 0 1 76,46 L76,66 A6,6 0 0 1 70,72 L38,72 A6,6 0 0 1 32,66 L32,46 A6,6 0 0 1 38,40 Z M64,52 L68,52 A4,4 0 0 1 72,56 A4,4 0 0 1 68,60 L64,60 A4,4 0 0 1 60,56 A4,4 0 0 1 64,52 Z"/>
+  </svg>
+</div>
+</body>
+</html>

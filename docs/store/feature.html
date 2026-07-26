@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<style>
+  html, body { margin: 0; padding: 0; width: 1024px; height: 500px; overflow: hidden; }
+  .banner {
+    position: relative; width: 1024px; height: 500px;
+    background: linear-gradient(120deg, #0d4534 0%, #176B4E 45%, #1f8a63 100%);
+    font-family: 'Segoe UI', Roboto, sans-serif; color: #fff;
+    display: flex; align-items: center; gap: 56px; padding: 0 72px; box-sizing: border-box;
+  }
+  /* Soft light sweep, echoing the launcher icon's diagonal highlight. */
+  .banner::after {
+    content: ""; position: absolute; inset: 0;
+    background: linear-gradient(215deg, rgba(255,255,255,.12), rgba(255,255,255,0) 60%);
+  }
+  .mark {
+    flex: 0 0 auto; width: 200px; height: 200px; border-radius: 46px;
+    background: rgba(255,255,255,.10); display: flex; align-items: center;
+    justify-content: center; box-shadow: 0 18px 40px rgba(0,0,0,.22);
+  }
+  .txt { position: relative; z-index: 1; }
+  h1 { font-size: 86px; margin: 0; letter-spacing: -2px; }
+  p { font-size: 31px; margin: 14px 0 0; color: rgba(255,255,255,.92); line-height: 1.32; }
+  .chips { margin-top: 26px; display: flex; gap: 12px; }
+  .chip {
+    font-size: 20px; padding: 9px 20px; border-radius: 999px;
+    background: rgba(255,255,255,.14); border: 1px solid rgba(255,255,255,.22);
+  }
+</style>
+</head>
+<body>
+<div class="banner">
+  <div class="mark">
+    <svg width="150" height="150" viewBox="30 30 50 50" xmlns="http://www.w3.org/2000/svg">
+      <path fill="#FFFFFF" fill-opacity="0.85"
+        d="M40,34 L60,34 A3,3 0 0 1 63,37 L63,40 L37,40 L37,37 A3,3 0 0 1 40,34 Z"/>
+      <path fill="#FFFFFF" fill-rule="evenodd"
+        d="M38,40 L70,40 A6,6 0 0 1 76,46 L76,66 A6,6 0 0 1 70,72 L38,72 A6,6 0 0 1 32,66 L32,46 A6,6 0 0 1 38,40 Z M64,52 L68,52 A4,4 0 0 1 72,56 A4,4 0 0 1 68,60 L64,60 A4,4 0 0 1 60,56 A4,4 0 0 1 64,52 Z"/>
+    </svg>
+  </div>
+  <div class="txt">
+    <h1>Kosht</h1>
+    <p>Личные финансы, которые не бросишь<br>через неделю</p>
+    <div class="chips">
+      <span class="chip">Офлайн</span>
+      <span class="chip">Без рекламы</span>
+      <span class="chip">Скан чеков</span>
+    </div>
+  </div>
+</div>
+</body>
+</html>

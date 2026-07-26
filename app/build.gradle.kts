@@ -11,6 +11,43 @@ val gitCommitCount: Int = providers.exec {
 
 val appVersionName = "2.$gitCommitCount"
 
+/**
+ * Release signing credentials, in order: environment variables (CI), then
+ * the git-ignored .env file (local). Anything missing means the release
+ * build keeps using the debug key — installable, but not publishable.
+ */
+val signingEnv: Map<String, String> = run {
+    val fromFile = rootProject.file(".env").takeIf { it.exists() }
+        ?.readLines()
+        .orEmpty()
+        .mapNotNull { line ->
+            val trimmed = line.trim()
+            if (trimmed.isEmpty() || trimmed.startsWith("#")) return@mapNotNull null
+            val key = trimmed.substringBefore('=').trim()
+            val value = trimmed.substringAfter('=', "").trim()
+            if (key.isEmpty() || value.isEmpty()) null else key to value
+        }
+        .toMap()
+    val keys = listOf(
+        "KOSHT_KEYSTORE_FILE",
+        "KOSHT_KEY_ALIAS",
+        "KOSHT_STORE_PASSWORD",
+        "KOSHT_KEY_PASSWORD"
+    )
+    keys.mapNotNull { key ->
+        val value = providers.environmentVariable(key).orNull ?: fromFile[key]
+        value?.takeIf { it.isNotBlank() }?.let { key to it }
+    }.toMap()
+}
+
+val releaseKeystore = signingEnv["KOSHT_KEYSTORE_FILE"]
+    ?.let { rootProject.file(it) }
+    ?.takeIf { it.exists() }
+
+val hasReleaseSigning = releaseKeystore != null && signingEnv.keys.containsAll(
+    listOf("KOSHT_KEY_ALIAS", "KOSHT_STORE_PASSWORD", "KOSHT_KEY_PASSWORD")
+)
+
 android {
     namespace = "by.mlastovsky.kosht"
     compileSdk {
@@ -31,6 +68,17 @@ android {
     // APK artifacts are named kosht-<version>-<variant>.apk
     base.archivesName.set("kosht-$appVersionName")
 
+    signingConfigs {
+        if (hasReleaseSigning) {
+            create("release") {
+                storeFile = releaseKeystore
+                storePassword = signingEnv["KOSHT_STORE_PASSWORD"]
+                keyAlias = signingEnv["KOSHT_KEY_ALIAS"]
+                keyPassword = signingEnv["KOSHT_KEY_PASSWORD"]
+            }
+        }
+    }
+
     buildTypes {
         release {
             optimization {
@@ -40,9 +88,13 @@ android {
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
             )
-            // Personal app installed directly on the developer's phone:
-            // sign release builds with the debug key so they are installable.
-            signingConfig = signingConfigs.getByName("debug")
+            // Store builds use the real key from .env / CI secrets; without
+            // it the debug key keeps personal installs working.
+            signingConfig = if (hasReleaseSigning) {
+                signingConfigs.getByName("release")
+            } else {
+                signingConfigs.getByName("debug")
+            }
         }
     }
     compileOptions {
