@@ -16,29 +16,45 @@ val appVersionName = "2.$gitCommitCount"
  * the git-ignored .env file (local). Anything missing means the release
  * build keeps using the debug key — installable, but not publishable.
  */
-val signingEnv: Map<String, String> = run {
-    val fromFile = rootProject.file(".env").takeIf { it.exists() }
-        ?.readLines()
-        .orEmpty()
-        .mapNotNull { line ->
-            val trimmed = line.trim()
-            if (trimmed.isEmpty() || trimmed.startsWith("#")) return@mapNotNull null
-            val key = trimmed.substringBefore('=').trim()
-            val value = trimmed.substringAfter('=', "").trim()
-            if (key.isEmpty() || value.isEmpty()) null else key to value
-        }
-        .toMap()
-    val keys = listOf(
-        "KOSHT_KEYSTORE_FILE",
-        "KOSHT_KEY_ALIAS",
-        "KOSHT_STORE_PASSWORD",
-        "KOSHT_KEY_PASSWORD"
-    )
-    keys.mapNotNull { key ->
-        val value = providers.environmentVariable(key).orNull ?: fromFile[key]
-        value?.takeIf { it.isNotBlank() }?.let { key to it }
-    }.toMap()
-}
+val dotEnv: Map<String, String> = rootProject.file(".env").takeIf { it.exists() }
+    ?.readLines()
+    .orEmpty()
+    .mapNotNull { line ->
+        val trimmed = line.trim()
+        if (trimmed.isEmpty() || trimmed.startsWith("#")) return@mapNotNull null
+        val key = trimmed.substringBefore('=').trim()
+        // Values may be quoted, as they are when copied out of a dashboard.
+        val value = trimmed.substringAfter('=', "").trim().trim('"')
+        if (key.isEmpty() || value.isEmpty()) null else key to value
+    }
+    .toMap()
+
+/** Environment first (CI), then the git-ignored .env, then the fallback. */
+fun config(key: String, fallback: String = ""): String =
+    providers.environmentVariable(key).orNull?.takeIf { it.isNotBlank() }
+        ?: dotEnv[key]?.takeIf { it.isNotBlank() }
+        ?: fallback
+
+val signingEnv: Map<String, String> = listOf(
+    "KOSHT_KEYSTORE_FILE",
+    "KOSHT_KEY_ALIAS",
+    "KOSHT_STORE_PASSWORD",
+    "KOSHT_KEY_PASSWORD"
+).mapNotNull { key -> config(key).takeIf { it.isNotBlank() }?.let { key to it } }.toMap()
+
+/**
+ * Supabase client credentials. Only the project URL and the anon key ever
+ * reach the APK: the anon key is meant to be public and carries no rights of
+ * its own — row level security on `sync_rows` is what protects the data. The
+ * service-role key and the database password stay in .env, out of the build.
+ */
+val supabaseUrl = config("SUPABASE_URL", "https://sqwueufwjgunbarfbnpx.supabase.co")
+val supabaseAnonKey = config(
+    "SUPABASE_ANON_KEY",
+    "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNxd3VldWZ3" +
+        "amd1bmJhcmZibnB4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODUwMDA1MjksImV4cCI6MjEwMDU3Nj" +
+        "UyOX0.-7e_Daj_FDJoZLoOptZLX2U3y85IhLRK3Ko-pK79okg"
+)
 
 val releaseKeystore = signingEnv["KOSHT_KEYSTORE_FILE"]
     ?.let { rootProject.file(it) }
@@ -63,6 +79,9 @@ android {
         versionName = appVersionName
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+
+        buildConfigField("String", "SUPABASE_URL", "\"$supabaseUrl\"")
+        buildConfigField("String", "SUPABASE_ANON_KEY", "\"$supabaseAnonKey\"")
     }
 
     // APK artifacts are named kosht-<version>-<variant>.apk
@@ -103,6 +122,7 @@ android {
     }
     buildFeatures {
         compose = true
+        buildConfig = true
     }
 }
 
@@ -124,9 +144,11 @@ dependencies {
     ksp(libs.androidx.room.compiler)
     implementation(libs.androidx.datastore.preferences)
     implementation(libs.tesseract4android)
+    implementation(libs.zxing.core)
     implementation(libs.androidx.work.runtime)
 
     testImplementation(libs.junit)
+    testImplementation(libs.json)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)
     debugImplementation(libs.androidx.compose.ui.tooling)

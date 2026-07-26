@@ -2,7 +2,7 @@
 
 **Track spending in seconds. See where your money goes. Actually save.**
 
-Kosht is a beautifully crafted personal finance app for Android that turns money tracking from a chore into a habit you'll enjoy. No accounts, no subscriptions, no cloud — your data never leaves your phone.
+Kosht is a beautifully crafted personal finance app for Android that turns money tracking from a chore into a habit you'll enjoy. No subscriptions, no ads, and nothing you have to sign up for — an account exists only if you want the same figures on a second phone.
 
 ---
 
@@ -26,6 +26,24 @@ Kosht is a beautifully crafted personal finance app for Android that turns money
   </tr>
 </table>
 
+<details>
+<summary><b>☀️ The same app in light theme</b></summary>
+
+<table>
+  <tr>
+    <td align="center"><img src="screenshots/light/01_home.png" width="260"/><br/><b>Home</b></td>
+    <td align="center"><img src="screenshots/light/04_stats.png" width="260"/><br/><b>Charts</b></td>
+    <td align="center"><img src="screenshots/light/05_calendar.png" width="260"/><br/><b>Heatmap</b></td>
+  </tr>
+  <tr>
+    <td align="center"><img src="screenshots/light/06_report.png" width="260"/><br/><b>Report</b></td>
+    <td align="center"><img src="screenshots/light/08_wallet.png" width="260"/><br/><b>Wallet</b></td>
+    <td align="center"><img src="screenshots/light/09_settings.png" width="260"/><br/><b>Settings &amp; account</b></td>
+  </tr>
+</table>
+
+</details>
+
 ---
 
 ## 🚀 Key Features
@@ -39,8 +57,23 @@ Adding a record drops you straight into a roomy bottom-sheet calculator — the 
 ### 💳 Multiple accounts
 Cards, cash, whatever you use. One account by default keeps the app dead simple; add more and Kosht unlocks per-account balances on Home, an account picker in the editor, an account choice when confirming a recurring payment and an account filter in Statistics. Tap an account to set its real balance, or use the pencil to rename it and change its icon and color.
 
-### 📸 Receipt scanning — fully offline
-Snap a photo of a receipt and Kosht reads the total, date and store name for you, then attaches the photo to the record. Recognition runs 100% on your device — receipts never leave your phone. Review and correct anything before saving.
+### 📸 Receipt scanning — QR first, OCR always
+Snap a receipt and Kosht reads the total, date and store for you.
+
+- **QR codes come first.** Shops that print one hand over exact figures instead of guessed ones — and on the short slips that carry nothing but a QR, it is the only thing there is to read. The electronic receipt behind the code is fetched and kept, so it opens later even with no connection.
+- **A code is only trusted once it proves itself.** Loyalty cards, Wi-Fi passwords and adverts share the same square shape; a payload counts as a receipt only when it carries fiscal fields or leads to a page an amount can actually be read from.
+- **No QR, no problem.** The photo goes through on-device recognition instead — 100% offline, nothing uploaded.
+
+Either way a review dialog shows what was read, and every field stays editable before you save.
+
+### ☁️ Your money on every device — only if you ask
+Sign in and records, categories, accounts, debts, goals, challenges and awards live in the cloud too, so a second phone shows the same figures the moment you sign in there.
+
+- **Per-record merge.** Two phones edited offline both keep their work; "newest wins" only ever applies within one and the same record.
+- **Deletions travel too**, so something you removed on one device does not come back from the other.
+- **Offline is the normal case.** Keep adding records with no connection — everything goes up the moment the internet returns.
+- **Settings → Account** shows the address, when it last synced, a manual *Sync now* and the automatic switch. Signing out leaves every record on the phone.
+- Receipt photos stay on the device: amounts, dates and notes travel, images do not.
 
 ### 📊 Statistics three ways
 - **Charts** — an animated category donut and daily spending bars
@@ -69,7 +102,7 @@ Snap a photo of a receipt and Kosht reads the total, date and store name for you
 An evening nudge only if nothing is logged, recurring payments awaiting confirmation, and a Monday money digest. All of them are quiet by design — no heads-up popups, no forced sound — and a tap takes you straight into the app.
 
 ### 🎨 Made for you
-Light & dark themes, Material You dynamic colors, English & Russian interface, a profile with photo or built-in avatars — and interface toggles to hide anything you don't need. Your data stays on your device. Always.
+Light & dark themes, Material You dynamic colors, English & Russian interface, a profile with photo or built-in avatars — and interface toggles to hide anything you don't need. Without an account nothing ever leaves the phone; with one, only you can read it.
 
 ### 📖 Learn it in minutes
 An illustrated **guide lives right inside Settings**, and a full **PDF manual** with screenshots is one tap away (also in [`docs/MANUAL.pdf`](docs/MANUAL.pdf)).
@@ -78,7 +111,11 @@ An illustrated **guide lives right inside Settings**, and a full **PDF manual** 
 
 ## 📦 Download & Updates
 
-Every push to `master` automatically builds a fresh APK. You do not have to watch the repo: tap **Settings → Version** and Kosht checks the latest release for you — it either confirms you are up to date or offers the new APK for download (offline it simply says the check is unavailable). You can still grab builds by hand from the **[Releases](../../releases)** page.
+Every push to `master` automatically builds a fresh APK, and Kosht updates itself.
+
+Tap **Settings → Version**: it either confirms you are up to date or **downloads and installs the update without leaving the app** — no browser, nothing left behind in Downloads, and your records stay exactly where they are. Android asks once for permission to let Kosht install its own updates; offline the check simply says it is unavailable. Builds are still on the **[Releases](../../releases)** page if you prefer to grab them by hand.
+
+> Every published build is signed with the same key, and CI refuses to publish one that is not. An update signed differently is one Android will not install over the old app — Kosht now says so plainly instead of failing with a system error.
 
 Requires Android 8.0+.
 

@@ -35,7 +35,7 @@
     <string name="settings_profile">Profile</string>
     <string name="profile_name">Name</string>
     <string name="profile_nickname">Nickname</string>
-    <string name="profile_default_name">Friend</string>
+    <string name="profile_default_name">User</string>
     <string name="profile_edit_hint">Tap to set up your profile</string>
     <string name="profile_photo_hint">Tap the avatar to pick a photo, press and hold to remove it</string>
     <string name="home_income">Income</string>
@@ -135,11 +135,58 @@
     <string name="update_latest_title">You are up to date</string>
     <string name="update_latest_text">No updates available — this is the latest version.</string>
     <string name="update_available_title">Update available</string>
-    <string name="update_available_text">Version %1$s is out. Download the APK and open it to update; your data stays in place.</string>
+    <string name="update_available_text">Version %1$s is out. Kosht downloads and installs it right here — no browser, and your data stays in place.</string>
     <string name="update_offline">No connection — cannot check for updates right now. Check your internet.</string>
-    <string name="update_download">Download</string>
+    <string name="update_download">Update</string>
     <string name="update_later">Later</string>
+    <string name="update_downloading_title">Downloading update</string>
+    <string name="update_downloading_text">Version %1$s is downloading inside the app.</string>
+    <string name="update_installing_title">Installing</string>
+    <string name="update_installing_text">Android is installing version %1$s. Kosht will restart on its own.</string>
+    <string name="update_failed_title">Update did not finish</string>
+    <string name="update_failed_text">The download or the install was interrupted. Check your connection and try again.</string>
+    <string name="update_retry">Try again</string>
+    <string name="update_permission_title">Allow the install</string>
+    <string name="update_permission_text">Android asks once for permission to let Kosht install its own updates. Turn on “Allow from this source”, then come back.</string>
+    <string name="update_permission_open">Open settings</string>
+    <string name="update_signature_title">Signed with a different key</string>
+    <string name="update_signature_text">This release is signed with a different key, so Android refuses to install it over the current build. Sync your account first, then reinstall Kosht — signing in restores your data.</string>
     <string name="rates_offline">No connection. Showing the rates from the last update.</string>
+
+    <!-- Electronic receipts behind a QR -->
+    <string name="ereceipt_title">Electronic receipt</string>
+    <string name="ereceipt_open">Open the electronic receipt</string>
+    <string name="ereceipt_remove">Detach</string>
+    <string name="ereceipt_unavailable">The saved copy is gone and there is nothing to open it from.</string>
+    <string name="ereceipt_from_qr">Read from the QR code on the receipt</string>
+
+    <!-- Account and cloud sync -->
+    <string name="account_title">Account</string>
+    <string name="account_sync">Cloud sync</string>
+    <string name="account_signed_out">Sign in to keep your records on every device</string>
+    <string name="account_sign_in">Sign in</string>
+    <string name="account_sign_up">Create account</string>
+    <string name="account_sign_out">Sign out</string>
+    <string name="account_email">Email</string>
+    <string name="account_password">Password</string>
+    <string name="account_auto_sync">Sync automatically</string>
+    <string name="account_auto_sync_hint">Changes go up as soon as there is a connection</string>
+    <string name="account_sync_now">Sync now</string>
+    <string name="account_last_sync">Last sync: %1$s</string>
+    <string name="account_last_sync_never">Not synced yet</string>
+    <string name="account_sync_done">Everything is up to date</string>
+    <string name="account_sync_received">Synced — %1$d records came in</string>
+    <string name="account_sync_offline">No connection — Kosht will sync as soon as it is back</string>
+    <string name="account_sync_failed">Sync failed: %1$s</string>
+    <string name="account_confirm_email">Almost there — confirm the address from your inbox, then sign in.</string>
+    <string name="account_offline">No connection. Try again once you are online.</string>
+    <string name="account_password_short">Use at least 6 characters</string>
+    <string name="account_email_invalid">Enter a valid email address</string>
+    <string name="account_not_configured">Cloud sync is not configured in this build.</string>
+    <string name="onboarding_title">Your money, on every device</string>
+    <string name="onboarding_text">With an account Kosht keeps records, accounts and goals in sync between your phones. Everything keeps working offline — changes go up as soon as there is a connection.</string>
+    <string name="onboarding_skip">Continue without an account</string>
+    <string name="onboarding_have_account">I already have an account</string>
 
     <!-- Notifications -->
     <string name="settings_notifications">Notifications</string>
@@ -284,13 +331,15 @@
     <string name="guide_pdf_desc">An illustrated step-by-step manual with screenshots — open it, save it or share it</string>
     <string name="guide_pdf_open">Open PDF</string>
     <string name="guide_pdf_error">No PDF viewer found</string>
-    <string name="guide_intro">A quick tour of every screen. Everything works offline and your data never leaves the phone.</string>
+    <string name="guide_intro">A quick tour of every screen. Everything works offline; data leaves the phone only if you switch on cloud sync.</string>
+    <string name="guide_sync_title">Account &amp; sync</string>
+    <string name="guide_sync_body">On first launch Kosht offers to create an account or sign in to an existing one — or to carry on without one, which keeps everything exactly as it was. With an account your records, categories, accounts, debts, goals, challenges and awards live in the cloud too, so a second phone shows the same figures right after signing in. Sync is per record: two devices edited offline both keep their work, and the newer change wins only for the very same record. Deletions travel as well, so nothing you removed comes back. Nothing waits on a connection — you keep adding records offline and everything goes up the moment the internet returns. Settings → Account shows the address, when it last synced, a manual Sync now button and the automatic switch; Sign out leaves all data on the phone. Receipt photos stay on the device: amounts, dates and notes travel, images do not.</string>
     <string name="guide_home_title">Home</string>
     <string name="guide_home_body">The big card shows your total balance (all income minus all expenses) with this month\'s income and expenses below it. If your currency is not BYN, the ≈ line shows the equivalent at the live rate. In the top row: the 🔥 chip is your under-budget streak, the trophy opens Achievements, the avatar is your profile. "Recent" lists the latest records — tap one to edit, "All" jumps to History. The big + button adds a transaction.</string>
     <string name="guide_editor_title">Adding a transaction</string>
     <string name="guide_editor_body">Switch Expense/Income at the top. For a new record the calculator opens by itself in a bottom sheet; type the sum (comma adds cents) and hit Apply — tap the amount any time to open it again. Pick a category in the carousel — the "New" circle creates your own with a name, icon and color. The date chip opens a calendar (defaults to today). Write an optional note. In the bottom row the scanner icon reads a receipt photo and the photo icon attaches one from camera or gallery; tap the thumbnail to view or remove it. Save finishes. When editing an existing record a trash icon appears in the top bar.</string>
     <string name="guide_scan_title">Receipt scanning</string>
-    <string name="guide_scan_body">In the editor tap the scanner icon (in the bottom row, next to the photo icon), then shoot the receipt or pick it from the gallery. Recognition runs fully offline. A review dialog shows what was read — correct the amount and store if needed, the date is applied automatically. Apply fills the form and attaches the photo; every field stays editable afterwards.</string>
+    <string name="guide_scan_body">In the editor tap the scanner icon (in the bottom row, next to the photo icon), then shoot the receipt or pick it from the gallery. Kosht looks for a QR code first — shops that print one hand over exact figures instead of guessed ones, and on short slips that carry nothing but a QR it is the only thing to read. The electronic receipt behind the code is downloaded and kept, so it opens later even with no connection: the receipt icon in the editor shows it. Codes that turn out to be a loyalty card, a Wi-Fi password or an advert are ignored. With no usable QR the photo goes through fully offline recognition instead. Either way a review dialog shows what was read — correct the amount and store if needed, the date is applied automatically. Apply fills the form and attaches the photo; every field stays editable afterwards.</string>
     <string name="guide_history_title">History</string>
     <string name="guide_history_body">Arrows switch months. The search field filters by note and custom category names. Chips: All / Expense / Income, "Category" opens a category picker (tap ✕ on the chip to clear), "Period" opens a calendar where you select a single day or a range — the period replaces month navigation until you clear it with ✕. Records are grouped by day with a net total per day. Swipe a row left to delete — an Undo snackbar appears. Tap a row to edit it.</string>
     <string name="guide_stats_title">Statistics</string>
@@ -306,7 +355,7 @@
     <string name="guide_calc_title">Amount calculator</string>
     <string name="guide_calc_body">The calculator lives in a full-width bottom sheet: it opens by itself for a new record and whenever you tap the amount. The right column of the keypad holds ÷ × − +. Type expressions like 12,50+3,90+8. While an operation is unfinished the big button turns into = — tap it to evaluate. Apply writes the result into the amount field and closes the sheet; Cancel or a swipe down leaves the amount untouched. Multiplication and division take precedence, as they should.</string>
     <string name="guide_settings_title">Settings</string>
-    <string name="guide_settings_body">Profile — tap to set a photo from the gallery or one of the built-in avatars, press and hold the avatar to remove the photo, and set your name and nickname (used in greetings and reports). Interface toggles hide anything you do not need and control whether the calculator opens by itself when adding a record. The Report block sets the period the statistics report covers and ticks off exactly which metric rows it shows. Tap Version to check for a newer build: Kosht either says you are up to date or offers to download the new APK, and offline it just says the check is not possible right now. Theme: system/light/dark plus Material You dynamic colors. Language: system, Russian or English. Currency — switching converts every stored amount at the live NBRB rate. Daily budget powers the streak. Notifications: an evening reminder (only if nothing was logged), payments awaiting confirmation and a Monday summary — each with its own switch.</string>
+    <string name="guide_settings_body">Profile — tap to set a photo from the gallery or one of the built-in avatars, press and hold the avatar to remove the photo, and set your name and nickname (used in greetings and reports). Interface toggles hide anything you do not need and control whether the calculator opens by itself when adding a record. The Report block sets the period the statistics report covers and ticks off exactly which metric rows it shows. The Account block signs you in or out of cloud sync and shows when it last ran. Tap Version to check for a newer build: Kosht either says you are up to date or downloads and installs the update right there — no browser, nothing left in Downloads, and your data stays in place. Android asks once for permission to let Kosht install its own updates. Offline it just says the check is not possible right now. Theme: system/light/dark plus Material You dynamic colors. Language: system, Russian or English. Currency — switching converts every stored amount at the live NBRB rate. Daily budget powers the streak. Notifications: an evening reminder (only if nothing was logged), payments awaiting confirmation and a Monday summary — each with its own switch.</string>
 
     <!-- Built-in categories -->
     <string name="category_groceries">Groceries</string>

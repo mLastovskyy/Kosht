@@ -18,6 +18,7 @@ import androidx.compose.material.icons.automirrored.rounded.ReceiptLong
 import androidx.compose.material.icons.rounded.AccountBalanceWallet
 import androidx.compose.material.icons.rounded.Add
 import androidx.compose.material.icons.rounded.Calculate
+import androidx.compose.material.icons.rounded.CloudSync
 import androidx.compose.material.icons.rounded.CreditCard
 import androidx.compose.material.icons.rounded.DocumentScanner
 import androidx.compose.material.icons.rounded.EmojiEvents
@@ -81,6 +82,11 @@ private val sections = listOf(
         Icons.Rounded.EmojiEvents,
         R.string.guide_achievements_title,
         R.string.guide_achievements_body
+    ),
+    GuideSection(
+        Icons.Rounded.CloudSync,
+        R.string.guide_sync_title,
+        R.string.guide_sync_body
     ),
     GuideSection(
         Icons.Rounded.Settings,
