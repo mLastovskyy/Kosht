@@ -9,16 +9,44 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.io.File
 
-/**
- * On-device receipt OCR (Tesseract with the Russian fast model bundled in
- * assets). Fully offline: the photo never leaves the phone.
- */
-class ReceiptScanner(private val context: Context) {
+/** What a scan produced, whichever route it came by. */
+data class ScannedReceipt(
+    val parsed: ParsedReceipt,
+    /** Set when the figures came from an electronic receipt behind a QR. */
+    val sourceUrl: String? = null,
+    /** Offline copy of that electronic receipt, app-private path. */
+    val documentPath: String? = null
+)
 
-    suspend fun scan(uri: Uri): ParsedReceipt? = withContext(Dispatchers.Default) {
+/**
+ * Reads a photographed receipt two ways.
+ *
+ * A QR is tried first: shops that print one hand over exact figures, which
+ * beats guessing them from a crumpled slip — and on the short slips that
+ * carry nothing but a QR it is the only thing there is to read. When no code
+ * is found, or it turns out not to lead to a receipt, the photo goes through
+ * the offline OCR that was always here (Tesseract, Russian model in assets).
+ */
+class ReceiptScanner(
+    private val context: Context,
+    private val eReceipts: EReceiptFetcher = EReceiptFetcher(context)
+) {
+
+    suspend fun scan(uri: Uri): ScannedReceipt? = withContext(Dispatchers.Default) {
         val bitmap = decodeDownscaled(uri, MAX_DIMENSION) ?: return@withContext null
+        QrReader.decode(bitmap)?.let { payload ->
+            eReceipts.resolve(payload)?.let { receipt ->
+                return@withContext ScannedReceipt(
+                    parsed = receipt.parsed,
+                    sourceUrl = receipt.sourceUrl,
+                    documentPath = receipt.documentPath
+                )
+            }
+        }
         val text = recognize(bitmap) ?: return@withContext null
-        ReceiptParser.parse(text).takeIf { it.amountMinor != null }
+        ReceiptParser.parse(text)
+            .takeIf { it.amountMinor != null }
+            ?.let { ScannedReceipt(it) }
     }
 
     private fun recognize(bitmap: Bitmap): String? {

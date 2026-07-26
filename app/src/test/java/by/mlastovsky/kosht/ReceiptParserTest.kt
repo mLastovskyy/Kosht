@@ -62,16 +62,78 @@ class ReceiptParserTest {
     }
 
     @Test
-    fun `merchant is the first meaningful line`() {
+    fun `merchant drops the legal form and keeps the trade name`() {
         val text = """
             ООО «Евроторг»
             ИТОГО 5,00
         """.trimIndent()
-        assertEquals("ООО «Евроторг»", ReceiptParser.parse(text).merchant)
+        assertEquals("Евроторг", ReceiptParser.parse(text).merchant)
     }
 
     @Test
     fun `no amounts means null total`() {
         assertNull(ReceiptParser.parse("просто текст без цифр").amountMinor)
+    }
+
+    @Test
+    fun `a date is not an amount`() {
+        // 26.07.2026 must not be read as 26 rubles 07 kopecks.
+        val text = """
+            Магазин
+            26.07.2026 19:30
+            Хлеб 1,89
+        """.trimIndent()
+        assertEquals(189L, ReceiptParser.parse(text).amountMinor)
+    }
+
+    @Test
+    fun `the VAT share on the total line is not the total`() {
+        val text = """
+            Продукты
+            ИТОГО К ОПЛАТЕ 15,40 в т.ч. НДС 20% 2,57
+        """.trimIndent()
+        assertEquals(1540L, ReceiptParser.parse(text).amountMinor)
+    }
+
+    @Test
+    fun `cash tendered and change are never the total`() {
+        val text = """
+            Товар 17,30
+            ИТОГО 17,30
+            НАЛИЧНЫМИ 50,00
+            СДАЧА 32,70
+        """.trimIndent()
+        assertEquals(1730L, ReceiptParser.parse(text).amountMinor)
+    }
+
+    @Test
+    fun `document headers are not mistaken for the shop`() {
+        val text = """
+            КАССОВЫЙ ЧЕК
+            УНП 190237046
+            г. Минск, ул. Притыцкого 156
+            ООО "Виталюр"
+            ИТОГО 8,20
+        """.trimIndent()
+        assertEquals("Виталюр", ReceiptParser.parse(text).merchant)
+    }
+
+    @Test
+    fun `a known chain is recognised however the header is printed`() {
+        val text = """
+            КАССОВЫЙ ЧЕК
+            ЧТУП "Евроторг" магазин Евроопт №312
+            УНП 191234567
+            ИТОГО 24,15
+        """.trimIndent()
+        val parsed = ReceiptParser.parse(text)
+        assertEquals("Евроопт", parsed.merchant)
+        assertEquals(2415L, parsed.amountMinor)
+    }
+
+    @Test
+    fun `thousands separated by a space stay one amount`() {
+        val text = "ИТОГО К ОПЛАТЕ 1 234,56"
+        assertEquals(123456L, ReceiptParser.parse(text).amountMinor)
     }
 }

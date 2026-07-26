@@ -44,6 +44,9 @@ data class EditorUiState(
     val currencyCode: String = SettingsRepository.DEFAULT_CURRENCY,
     val scanning: Boolean = false,
     val photoPath: String? = null,
+    /** Electronic receipt reached through a scanned QR, if there was one. */
+    val receiptUrl: String? = null,
+    val receiptDocPath: String? = null,
     val pendingScan: PendingScan? = null,
     val accounts: List<by.mlastovsky.kosht.data.db.AccountEntity> = emptyList(),
     val accountId: Long? = null,
@@ -66,13 +69,18 @@ data class EditorUiState(
             (by.mlastovsky.kosht.util.Expr.evaluateToMinor(amountInput, currencyCode) ?: 0L) > 0L
 }
 
-/** OCR result awaiting user review before it is applied to the draft. */
+/** Scan result awaiting user review before it is applied to the draft. */
 data class PendingScan(
     val amountInput: String,
     val date: LocalDate?,
     val merchant: String?,
-    val photoPath: String?
-)
+    val photoPath: String?,
+    /** Set when the figures came from an electronic receipt behind a QR. */
+    val receiptUrl: String? = null,
+    val receiptDocPath: String? = null
+) {
+    val fromQr: Boolean get() = receiptUrl != null || receiptDocPath != null
+}
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class EditorViewModel(
@@ -96,6 +104,8 @@ class EditorViewModel(
         val categoryId: Long? = null,
         val photoPath: String? = null,
         val accountId: Long? = null,
+        val receiptUrl: String? = null,
+        val receiptDocPath: String? = null,
         /** Original entity when editing, to preserve id/createdAt/time of day. */
         val original: TransactionEntity? = null
     )
@@ -151,6 +161,8 @@ class EditorViewModel(
             currencyCode = settings.currencyCode,
             scanning = extras.scanning,
             photoPath = d.photoPath,
+            receiptUrl = d.receiptUrl,
+            receiptDocPath = d.receiptDocPath,
             pendingScan = extras.pending,
             accounts = extras.accounts,
             accountId = d.accountId ?: extras.accounts.firstOrNull()?.id,
@@ -176,6 +188,8 @@ class EditorViewModel(
                             categoryId = tx.categoryId,
                             photoPath = tx.photoPath,
                             accountId = tx.accountId,
+                            receiptUrl = tx.receiptUrl,
+                            receiptDocPath = tx.receiptDocPath,
                             original = tx
                         )
                     }
@@ -286,17 +300,19 @@ class EditorViewModel(
         if (scanning.value) return
         viewModelScope.launch {
             scanning.value = true
-            val parsed = receiptScanner.scan(uri)
+            val scanned = receiptScanner.scan(uri)
             val savedPhoto = photoStore.saveFromUri(uri)
             scanning.value = false
-            val amount = parsed?.amountMinor
+            val amount = scanned?.parsed?.amountMinor
             if (amount != null) {
-                // Let the user review/correct the OCR result before applying.
+                // Let the user review/correct the result before applying.
                 pendingScan.value = PendingScan(
                     amountInput = minorToInput(amount),
-                    date = parsed.date,
-                    merchant = parsed.merchant,
-                    photoPath = savedPhoto
+                    date = scanned.parsed.date,
+                    merchant = scanned.parsed.merchant,
+                    photoPath = savedPhoto,
+                    receiptUrl = scanned.sourceUrl,
+                    receiptDocPath = scanned.documentPath
                 )
                 onResult(true)
             } else {
@@ -313,20 +329,26 @@ class EditorViewModel(
             if (pending.photoPath != null && d.photoPath != null) {
                 photoStore.delete(d.photoPath)
             }
+            if (pending.receiptDocPath != null) photoStore.delete(d.receiptDocPath)
             d.copy(
                 type = TransactionType.EXPENSE,
                 amountInput = amountInput.replace(',', '.').trim(),
                 date = pending.date ?: d.date,
                 note = note.trim().take(200),
-                photoPath = pending.photoPath ?: d.photoPath
+                photoPath = pending.photoPath ?: d.photoPath,
+                receiptUrl = pending.receiptUrl ?: d.receiptUrl,
+                receiptDocPath = pending.receiptDocPath ?: d.receiptDocPath
             )
         }
         pendingScan.value = null
     }
 
-    /** Discards the scan result and its photo. */
+    /** Discards the scan result along with everything it downloaded. */
     fun dismissScan() {
-        photoStore.delete(pendingScan.value?.photoPath)
+        pendingScan.value?.let {
+            photoStore.delete(it.photoPath)
+            photoStore.delete(it.receiptDocPath)
+        }
         pendingScan.value = null
     }
 
@@ -344,6 +366,14 @@ class EditorViewModel(
         draft.update { d ->
             photoStore.delete(d.photoPath)
             d.copy(photoPath = null)
+        }
+    }
+
+    /** Detaches the electronic receipt and drops its downloaded copy. */
+    fun removeEReceipt() {
+        draft.update { d ->
+            photoStore.delete(d.receiptDocPath)
+            d.copy(receiptUrl = null, receiptDocPath = null)
         }
     }
 
@@ -376,7 +406,9 @@ class EditorViewModel(
                         timestamp = timestamp,
                         photoPath = draft.value.photoPath,
                         accountId = state.accountId,
-                        bynMinor = bynMinor
+                        bynMinor = bynMinor,
+                        receiptUrl = draft.value.receiptUrl,
+                        receiptDocPath = draft.value.receiptDocPath
                     )
                 )
             } else {
@@ -390,7 +422,9 @@ class EditorViewModel(
                         createdAt = System.currentTimeMillis(),
                         photoPath = draft.value.photoPath,
                         accountId = state.accountId,
-                        bynMinor = bynMinor
+                        bynMinor = bynMinor,
+                        receiptUrl = draft.value.receiptUrl,
+                        receiptDocPath = draft.value.receiptDocPath
                     )
                 )
             }
@@ -419,6 +453,7 @@ class EditorViewModel(
         val original = draft.value.original ?: return
         viewModelScope.launch {
             photoStore.delete(original.photoPath)
+            photoStore.delete(original.receiptDocPath)
             repository.deleteTransaction(original)
             onDone()
         }

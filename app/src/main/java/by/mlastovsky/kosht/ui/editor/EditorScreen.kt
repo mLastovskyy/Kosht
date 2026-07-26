@@ -48,6 +48,7 @@ import androidx.compose.material.icons.rounded.DocumentScanner
 import androidx.compose.material.icons.rounded.Event
 import androidx.compose.material.icons.rounded.PhotoCamera
 import androidx.compose.material.icons.rounded.PhotoLibrary
+import androidx.compose.material.icons.automirrored.rounded.ReceiptLong
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.AssistChip
 import androidx.compose.material3.Button
@@ -111,6 +112,7 @@ import java.time.Instant
 import java.time.ZoneOffset
 import java.util.Currency
 import java.util.Locale
+import by.mlastovsky.kosht.ui.components.TextInput
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -128,6 +130,7 @@ fun EditorScreen(
     var showAccountPicker by remember { mutableStateOf(false) }
     var showCalculator by remember { mutableStateOf(false) }
     var showPhotoView by remember { mutableStateOf(false) }
+    var showEReceipt by remember { mutableStateOf(false) }
     var cameraTarget by remember { mutableStateOf<Uri?>(null) }
     val scanFailedMessage = stringResource(R.string.scan_failed)
 
@@ -298,6 +301,15 @@ fun EditorScreen(
                     tint = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
+            if (state.receiptUrl != null || state.receiptDocPath != null) {
+                IconButton(onClick = { showEReceipt = true }) {
+                    Icon(
+                        Icons.AutoMirrored.Rounded.ReceiptLong,
+                        contentDescription = stringResource(R.string.ereceipt_open),
+                        tint = MaterialTheme.colorScheme.primary
+                    )
+                }
+            }
             if (state.photoPath == null) {
                 IconButton(onClick = { showAttachSource = true }) {
                     Icon(
@@ -341,6 +353,7 @@ fun EditorScreen(
             singleLine = true,
             shape = MaterialTheme.shapes.medium,
             textStyle = MaterialTheme.typography.bodyMedium,
+            keyboardOptions = TextInput.Sentence,
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(horizontal = 16.dp, vertical = 6.dp)
@@ -532,6 +545,18 @@ fun EditorScreen(
             onDismiss = { showPhotoView = false }
         )
     }
+
+    if (showEReceipt) {
+        EReceiptDialog(
+            url = state.receiptUrl,
+            documentPath = state.receiptDocPath,
+            onRemove = {
+                viewModel.removeEReceipt()
+                showEReceipt = false
+            },
+            onDismiss = { showEReceipt = false }
+        )
+    }
 }
 
 private fun newCameraUri(context: android.content.Context): Uri {
@@ -592,7 +617,13 @@ private fun ScanReviewDialog(
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 Text(
-                    text = stringResource(R.string.scan_review_hint),
+                    text = stringResource(
+                        if (pending.fromQr) {
+                            R.string.ereceipt_from_qr
+                        } else {
+                            R.string.scan_review_hint
+                        }
+                    ),
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -620,6 +651,7 @@ private fun ScanReviewDialog(
                     onValueChange = { noteText = it.take(200) },
                     label = { Text(stringResource(R.string.editor_note_hint)) },
                     singleLine = true,
+                    keyboardOptions = TextInput.Sentence,
                     modifier = Modifier.fillMaxWidth()
                 )
                 if (pending.date != null) {
@@ -1080,7 +1112,7 @@ private fun NewCategoryDialog(
                     onValueChange = { name = it.take(40) },
                     placeholder = { Text(stringResource(R.string.category_name_hint)) },
                     singleLine = true,
-                    keyboardOptions = KeyboardOptions.Default,
+                    keyboardOptions = TextInput.Sentence,
                     modifier = Modifier.fillMaxWidth()
                 )
                 Text(

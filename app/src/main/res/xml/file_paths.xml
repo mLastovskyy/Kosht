@@ -2,4 +2,6 @@
 <paths>
     <cache-path name="receipts" path="receipts/" />
     <cache-path name="docs" path="docs/" />
+    <!-- Downloaded electronic receipts, so they can be opened elsewhere. -->
+    <files-path name="receipt_docs" path="receipts/" />
 </paths>
