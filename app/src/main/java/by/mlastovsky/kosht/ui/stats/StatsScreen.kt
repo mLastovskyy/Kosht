@@ -92,7 +92,6 @@ fun StatsScreen(
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     var viewMode by rememberSaveable { mutableStateOf(0) }
-    var showReportFields by remember { mutableStateOf(false) }
     var selectedEpochDay by rememberSaveable {
         mutableLongStateOf(LocalDate.now().toEpochDay())
     }
@@ -105,14 +104,12 @@ fun StatsScreen(
             .statusBarsPadding()
     ) {
         if (viewMode == 2) {
-            // The report window has its own kind (week/month/quarter/year)
-            // and navigation, independent of the charts' month.
+            // The report walks its own timeline, independent of the
+            // charts' month.
             ReportPeriodBar(
                 state = state,
-                onPeriodChange = viewModel::setReportPeriod,
                 onPrevious = viewModel::previousReportPeriod,
-                onNext = viewModel::nextReportPeriod,
-                onConfigureFields = { showReportFields = true }
+                onNext = viewModel::nextReportPeriod
             )
         } else {
             MonthSelector(
@@ -198,17 +195,6 @@ fun StatsScreen(
                     )
                 }
             }
-        }
-
-        if (showReportFields) {
-            ReportFieldsDialog(
-                selected = state.reportFields,
-                onConfirm = { fields ->
-                    viewModel.setReportFields(fields)
-                    showReportFields = false
-                },
-                onDismiss = { showReportFields = false }
-            )
         }
 
         if (state.loaded && !state.hasData && viewMode != 2) {
@@ -342,20 +328,15 @@ private fun CalendarContent(
 }
 
 /**
- * One compact row for the report: arrows walk the timeline, the title
- * doubles as the week/month/quarter/year picker, and the slider icon
- * configures which metrics are shown.
+ * Report timeline: arrows walk through periods, the title says which one
+ * is shown. The period kind and the visible metrics live in Settings.
  */
 @Composable
 private fun ReportPeriodBar(
     state: StatsUiState,
-    onPeriodChange: (ReportPeriod) -> Unit,
     onPrevious: () -> Unit,
-    onNext: () -> Unit,
-    onConfigureFields: () -> Unit
+    onNext: () -> Unit
 ) {
-    var periodMenuOpen by remember { mutableStateOf(false) }
-
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -365,138 +346,18 @@ private fun ReportPeriodBar(
         IconButton(onClick = onPrevious) {
             Icon(Icons.AutoMirrored.Rounded.KeyboardArrowLeft, contentDescription = null)
         }
-        Box(modifier = Modifier.weight(1f)) {
-            Row(
-                horizontalArrangement = Arrangement.Center,
-                verticalAlignment = Alignment.CenterVertically,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .clip(MaterialTheme.shapes.medium)
-                    .clickable { periodMenuOpen = true }
-                    .padding(vertical = 6.dp)
-            ) {
-                Text(
-                    text = reportPeriodTitle(state),
-                    style = MaterialTheme.typography.titleLarge,
-                    textAlign = TextAlign.Center,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
-                )
-                Icon(
-                    Icons.Rounded.ArrowDropDown,
-                    contentDescription = stringResource(R.string.report_period_pick),
-                    tint = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            }
-            DropdownMenu(
-                expanded = periodMenuOpen,
-                onDismissRequest = { periodMenuOpen = false }
-            ) {
-                ReportPeriod.entries.forEach { period ->
-                    DropdownMenuItem(
-                        text = {
-                            Text(
-                                stringResource(
-                                    when (period) {
-                                        ReportPeriod.WEEK -> R.string.report_period_week
-                                        ReportPeriod.MONTH -> R.string.report_period_month
-                                        ReportPeriod.QUARTER -> R.string.report_period_quarter
-                                        ReportPeriod.YEAR -> R.string.report_period_year
-                                    }
-                                )
-                            )
-                        },
-                        leadingIcon = {
-                            if (state.reportPeriod == period) {
-                                Icon(
-                                    Icons.Rounded.Check,
-                                    contentDescription = null,
-                                    tint = MaterialTheme.colorScheme.primary
-                                )
-                            }
-                        },
-                        onClick = {
-                            onPeriodChange(period)
-                            periodMenuOpen = false
-                        }
-                    )
-                }
-            }
-        }
+        Text(
+            text = reportPeriodTitle(state),
+            style = MaterialTheme.typography.titleLarge,
+            textAlign = TextAlign.Center,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+            modifier = Modifier.weight(1f)
+        )
         IconButton(onClick = onNext, enabled = state.reportShift < 0) {
             Icon(Icons.AutoMirrored.Rounded.KeyboardArrowRight, contentDescription = null)
         }
-        IconButton(onClick = onConfigureFields) {
-            Icon(
-                Icons.Rounded.Tune,
-                contentDescription = stringResource(R.string.report_fields_title),
-                tint = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-        }
     }
-}
-
-/** Checkbox list of report metric rows; the choice is persisted. */
-@Composable
-private fun ReportFieldsDialog(
-    selected: Set<by.mlastovsky.kosht.model.ReportField>,
-    onConfirm: (Set<by.mlastovsky.kosht.model.ReportField>) -> Unit,
-    onDismiss: () -> Unit
-) {
-    var fields by remember { mutableStateOf(selected) }
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = { Text(stringResource(R.string.report_fields_title)) },
-        text = {
-            Column {
-                by.mlastovsky.kosht.model.ReportField.entries.forEach { field ->
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .clickable {
-                                fields = if (field in fields) fields - field else fields + field
-                            }
-                            .padding(vertical = 2.dp)
-                    ) {
-                        Checkbox(
-                            checked = field in fields,
-                            onCheckedChange = { checked ->
-                                fields = if (checked) fields + field else fields - field
-                            }
-                        )
-                        Text(
-                            text = stringResource(
-                                when (field) {
-                                    by.mlastovsky.kosht.model.ReportField.SPENT ->
-                                        R.string.report_spent
-                                    by.mlastovsky.kosht.model.ReportField.INCOME ->
-                                        R.string.report_income
-                                    by.mlastovsky.kosht.model.ReportField.NET ->
-                                        R.string.report_net
-                                    by.mlastovsky.kosht.model.ReportField.AVG_DAY ->
-                                        R.string.report_avg_day
-                                    by.mlastovsky.kosht.model.ReportField.FREE_DAYS ->
-                                        R.string.report_free_days
-                                    by.mlastovsky.kosht.model.ReportField.TOP_CATEGORY ->
-                                        R.string.report_top_category
-                                }
-                            ),
-                            style = MaterialTheme.typography.bodyLarge
-                        )
-                    }
-                }
-            }
-        },
-        confirmButton = {
-            TextButton(onClick = { onConfirm(fields) }) {
-                Text(stringResource(R.string.action_apply))
-            }
-        },
-        dismissButton = {
-            TextButton(onClick = onDismiss) { Text(stringResource(R.string.action_cancel)) }
-        }
-    )
 }
 
 @Composable

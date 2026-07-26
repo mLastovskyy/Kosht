@@ -17,7 +17,9 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.flatMapLatest
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
@@ -99,31 +101,48 @@ class StatsViewModel(
         val month: YearMonth = YearMonth.now(),
         val type: TransactionType = TransactionType.EXPENSE,
         val accountId: Long? = null,
-        val reportPeriod: ReportPeriod = ReportPeriod.MONTH,
         val reportShift: Int = 0
     )
 
     private val selector = MutableStateFlow(Selector())
+
+    /** The report window kind lives in Settings; only the shift is local. */
+    private val reportPeriod = settingsRepository.settings
+        .map { parseReportPeriod(it.reportPeriod) }
+        .distinctUntilChanged()
+
+    private data class ReportWindow(val period: ReportPeriod, val shift: Int)
+
+    private val reportWindow = combine(reportPeriod, selector) { period, s ->
+        ReportWindow(period, s.reportShift)
+    }.distinctUntilChanged()
 
     private val transactions = selector.flatMapLatest { s ->
         val range = Dates.monthRange(s.month)
         repository.observeBetween(range.first, range.last + 1)
     }
 
-    private val reportTransactions = selector.flatMapLatest { s ->
-        val (start, end) = reportBounds(s.reportPeriod, s.reportShift)
+    private val reportTransactions = reportWindow.flatMapLatest { w ->
+        val (start, end) = reportBounds(w.period, w.shift)
         repository.observeBetween(
             Dates.toEpochMillis(start),
             Dates.toEpochMillis(end.plusDays(1))
         )
     }
 
-    private val prevReportTransactions = selector.flatMapLatest { s ->
-        val (start, end) = reportBounds(s.reportPeriod, s.reportShift - 1)
+    private val prevReportTransactions = reportWindow.flatMapLatest { w ->
+        val (start, end) = reportBounds(w.period, w.shift - 1)
         repository.observeBetween(
             Dates.toEpochMillis(start),
             Dates.toEpochMillis(end.plusDays(1))
         )
+    }
+
+    init {
+        // Switching the window kind in Settings starts from the current one.
+        viewModelScope.launch {
+            reportPeriod.collect { selector.update { s -> s.copy(reportShift = 0) } }
+        }
     }
 
     private data class ReportContext(
@@ -155,6 +174,7 @@ class StatsViewModel(
         } else {
             filter { (it.transaction.accountId ?: primaryId) == s.accountId }
         }
+        val activeReportPeriod = parseReportPeriod(settings.reportPeriod)
         val relevant = all.byAccount().filter { it.transaction.type == s.type }
         val total = relevant.sumOf { it.transaction.amountMinor }
 
@@ -186,14 +206,14 @@ class StatsViewModel(
             daily = daily.toList(),
             byDay = relevant.groupBy { Dates.toLocalDate(it.transaction.timestamp) },
             report = buildReport(
-                period = s.reportPeriod,
+                period = activeReportPeriod,
                 shift = s.reportShift,
                 current = report.current.byAccount(),
                 prev = report.prev.byAccount(),
                 savings = report.savings,
                 profile = report.profile
             ),
-            reportPeriod = s.reportPeriod,
+            reportPeriod = activeReportPeriod,
             reportShift = s.reportShift,
             reportFields = settings.reportFields
                 .mapNotNull { name -> ReportField.entries.firstOrNull { it.name == name } }
@@ -301,10 +321,6 @@ class StatsViewModel(
     fun setAccountFilter(accountId: Long?) =
         selector.update { it.copy(accountId = accountId) }
 
-    /** Switching the window kind jumps back to the current period. */
-    fun setReportPeriod(period: ReportPeriod) =
-        selector.update { it.copy(reportPeriod = period, reportShift = 0) }
-
     fun previousReportPeriod() =
         selector.update { it.copy(reportShift = it.reportShift - 1) }
 
@@ -312,13 +328,10 @@ class StatsViewModel(
         if (s.reportShift < 0) s.copy(reportShift = s.reportShift + 1) else s
     }
 
-    fun setReportFields(fields: Set<ReportField>) {
-        viewModelScope.launch {
-            settingsRepository.setReportFields(fields.map { it.name }.toSet())
-        }
-    }
-
     private companion object {
+
+        fun parseReportPeriod(name: String): ReportPeriod =
+            ReportPeriod.entries.firstOrNull { it.name == name } ?: ReportPeriod.MONTH
 
         /** Calendar bounds of the report window shifted by whole periods. */
         fun reportBounds(period: ReportPeriod, shift: Int): Pair<LocalDate, LocalDate> {

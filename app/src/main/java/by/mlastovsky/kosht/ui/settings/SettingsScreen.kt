@@ -9,6 +9,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -22,8 +23,10 @@ import androidx.compose.material.icons.automirrored.rounded.HelpOutline
 import androidx.compose.material.icons.rounded.AccountBalanceWallet
 import androidx.compose.material.icons.rounded.BrightnessMedium
 import androidx.compose.material.icons.rounded.Calculate
+import androidx.compose.material.icons.rounded.DateRange
 import androidx.compose.material.icons.rounded.DeleteOutline
 import androidx.compose.material.icons.rounded.CurrencyExchange
+import androidx.compose.material.icons.rounded.Tune
 import androidx.compose.material.icons.rounded.Info
 import androidx.compose.material.icons.rounded.LocalFireDepartment
 import androidx.compose.material.icons.rounded.WavingHand
@@ -35,6 +38,7 @@ import androidx.compose.material.icons.rounded.Repeat
 import androidx.compose.material.icons.rounded.Speed
 import androidx.compose.material.icons.rounded.Summarize
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Checkbox
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.ListItem
@@ -81,6 +85,8 @@ fun SettingsScreen(
 
     val profile by viewModel.profile.collectAsStateWithLifecycle()
     var showProfileDialog by remember { mutableStateOf(false) }
+    var showReportPeriod by remember { mutableStateOf(false) }
+    var showReportFields by remember { mutableStateOf(false) }
     val defaultName = stringResource(R.string.profile_default_name)
 
     Column(
@@ -239,6 +245,64 @@ fun SettingsScreen(
                 checked = current.autoCalculator,
                 onChange = viewModel::setAutoCalculator
             )
+        }
+
+        SectionHeader(stringResource(R.string.settings_report))
+
+        SettingsCard {
+            val activePeriod = remember(current.reportPeriod) {
+                by.mlastovsky.kosht.ui.stats.ReportPeriod.entries
+                    .firstOrNull { it.name == current.reportPeriod }
+                    ?: by.mlastovsky.kosht.ui.stats.ReportPeriod.MONTH
+            }
+            val activeFields = remember(current.reportFields) {
+                current.reportFields.mapNotNull { name ->
+                    by.mlastovsky.kosht.model.ReportField.entries.firstOrNull { it.name == name }
+                }.toSet()
+            }
+            ListItem(
+                headlineContent = { Text(stringResource(R.string.settings_report_period)) },
+                supportingContent = { Text(stringResource(reportPeriodLabel(activePeriod))) },
+                leadingContent = { Icon(Icons.Rounded.DateRange, contentDescription = null) },
+                colors = transparentListColors(),
+                modifier = Modifier.clickable { showReportPeriod = true }
+            )
+            ListItem(
+                headlineContent = { Text(stringResource(R.string.report_fields_title)) },
+                supportingContent = {
+                    Text(
+                        stringResource(
+                            R.string.settings_report_fields_desc,
+                            activeFields.size,
+                            by.mlastovsky.kosht.model.ReportField.entries.size
+                        )
+                    )
+                },
+                leadingContent = { Icon(Icons.Rounded.Tune, contentDescription = null) },
+                colors = transparentListColors(),
+                modifier = Modifier.clickable { showReportFields = true }
+            )
+
+            if (showReportPeriod) {
+                ReportPeriodDialog(
+                    selected = activePeriod,
+                    onConfirm = { period ->
+                        viewModel.setReportPeriod(period)
+                        showReportPeriod = false
+                    },
+                    onDismiss = { showReportPeriod = false }
+                )
+            }
+            if (showReportFields) {
+                ReportFieldsDialog(
+                    selected = activeFields,
+                    onConfirm = { fields ->
+                        viewModel.setReportFields(fields)
+                        showReportFields = false
+                    },
+                    onDismiss = { showReportFields = false }
+                )
+            }
         }
 
         SectionHeader(stringResource(R.string.settings_notifications))
@@ -458,6 +522,118 @@ private fun DailyBudgetDialog(
                 enabled = minor > 0,
                 onClick = { onSet(minor) }
             ) { Text(stringResource(R.string.editor_save)) }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) { Text(stringResource(R.string.action_cancel)) }
+        }
+    )
+}
+
+private fun reportPeriodLabel(period: by.mlastovsky.kosht.ui.stats.ReportPeriod): Int =
+    when (period) {
+        by.mlastovsky.kosht.ui.stats.ReportPeriod.WEEK -> R.string.report_period_week
+        by.mlastovsky.kosht.ui.stats.ReportPeriod.MONTH -> R.string.report_period_month
+        by.mlastovsky.kosht.ui.stats.ReportPeriod.QUARTER -> R.string.report_period_quarter
+        by.mlastovsky.kosht.ui.stats.ReportPeriod.YEAR -> R.string.report_period_year
+    }
+
+/** Which window the statistics report covers. */
+@Composable
+private fun ReportPeriodDialog(
+    selected: by.mlastovsky.kosht.ui.stats.ReportPeriod,
+    onConfirm: (by.mlastovsky.kosht.ui.stats.ReportPeriod) -> Unit,
+    onDismiss: () -> Unit
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(stringResource(R.string.settings_report_period)) },
+        text = {
+            Column {
+                by.mlastovsky.kosht.ui.stats.ReportPeriod.entries.forEach { period ->
+                    Row(
+                        verticalAlignment = androidx.compose.ui.Alignment.CenterVertically,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .selectable(
+                                selected = period == selected,
+                                onClick = { onConfirm(period) }
+                            )
+                            .padding(vertical = 10.dp)
+                    ) {
+                        RadioButton(
+                            selected = period == selected,
+                            onClick = { onConfirm(period) }
+                        )
+                        Text(
+                            text = stringResource(reportPeriodLabel(period)),
+                            style = MaterialTheme.typography.bodyLarge
+                        )
+                    }
+                }
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = onDismiss) { Text(stringResource(R.string.action_close)) }
+        }
+    )
+}
+
+/** Checkbox list of report metric rows; the choice is persisted. */
+@Composable
+private fun ReportFieldsDialog(
+    selected: Set<by.mlastovsky.kosht.model.ReportField>,
+    onConfirm: (Set<by.mlastovsky.kosht.model.ReportField>) -> Unit,
+    onDismiss: () -> Unit
+) {
+    var fields by remember { mutableStateOf(selected) }
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(stringResource(R.string.report_fields_title)) },
+        text = {
+            Column {
+                by.mlastovsky.kosht.model.ReportField.entries.forEach { field ->
+                    Row(
+                        verticalAlignment = androidx.compose.ui.Alignment.CenterVertically,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable {
+                                fields = if (field in fields) fields - field else fields + field
+                            }
+                            .padding(vertical = 2.dp)
+                    ) {
+                        Checkbox(
+                            checked = field in fields,
+                            onCheckedChange = { checked ->
+                                fields = if (checked) fields + field else fields - field
+                            }
+                        )
+                        Text(
+                            text = stringResource(
+                                when (field) {
+                                    by.mlastovsky.kosht.model.ReportField.SPENT ->
+                                        R.string.report_spent
+                                    by.mlastovsky.kosht.model.ReportField.INCOME ->
+                                        R.string.report_income
+                                    by.mlastovsky.kosht.model.ReportField.NET ->
+                                        R.string.report_net
+                                    by.mlastovsky.kosht.model.ReportField.AVG_DAY ->
+                                        R.string.report_avg_day
+                                    by.mlastovsky.kosht.model.ReportField.FREE_DAYS ->
+                                        R.string.report_free_days
+                                    by.mlastovsky.kosht.model.ReportField.TOP_CATEGORY ->
+                                        R.string.report_top_category
+                                }
+                            ),
+                            style = MaterialTheme.typography.bodyLarge
+                        )
+                    }
+                }
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = { onConfirm(fields) }) {
+                Text(stringResource(R.string.action_apply))
+            }
         },
         dismissButton = {
             TextButton(onClick = onDismiss) { Text(stringResource(R.string.action_cancel)) }

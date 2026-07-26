@@ -38,6 +38,8 @@ data class AppSettings(
     val multiAccount: Boolean,
     /** Names of [by.mlastovsky.kosht.model.ReportField] rows shown in the report. */
     val reportFields: Set<String>,
+    /** Name of the [by.mlastovsky.kosht.ui.stats.ReportPeriod] the report covers. */
+    val reportPeriod: String,
     /** Open the calculator automatically when adding a new record. */
     val autoCalculator: Boolean
 )
@@ -71,11 +73,16 @@ class SettingsRepository(private val context: Context) {
         val convertOnCurrencyChange = booleanPreferencesKey("convert_on_currency_change")
         val multiAccount = booleanPreferencesKey("multi_account")
         val reportFields = stringSetPreferencesKey("report_fields")
+        val reportPeriod = stringPreferencesKey("report_period")
         val autoCalculator = booleanPreferencesKey("auto_calculator")
     }
 
     suspend fun setReportFields(fields: Set<String>) {
         context.dataStore.edit { it[Keys.reportFields] = fields }
+    }
+
+    suspend fun setReportPeriod(period: String) {
+        context.dataStore.edit { it[Keys.reportPeriod] = period }
     }
 
     suspend fun setAutoCalculator(value: Boolean) {
@@ -144,6 +151,7 @@ class SettingsRepository(private val context: Context) {
             // Absent preference = all rows; an explicit empty set is honored.
             reportFields = prefs[Keys.reportFields]
                 ?: by.mlastovsky.kosht.model.ReportField.entries.map { it.name }.toSet(),
+            reportPeriod = prefs[Keys.reportPeriod] ?: DEFAULT_REPORT_PERIOD,
             autoCalculator = prefs[Keys.autoCalculator] ?: true
         )
     }
@@ -184,5 +192,6 @@ class SettingsRepository(private val context: Context) {
 
     companion object {
         const val DEFAULT_CURRENCY = "BYN"
+        const val DEFAULT_REPORT_PERIOD = "MONTH"
     }
 }

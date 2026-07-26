@@ -111,6 +111,16 @@ class SettingsViewModel(
         viewModelScope.launch { settingsRepository.setAutoCalculator(value) }
     }
 
+    fun setReportPeriod(period: by.mlastovsky.kosht.ui.stats.ReportPeriod) {
+        viewModelScope.launch { settingsRepository.setReportPeriod(period.name) }
+    }
+
+    fun setReportFields(fields: Set<by.mlastovsky.kosht.model.ReportField>) {
+        viewModelScope.launch {
+            settingsRepository.setReportFields(fields.map { it.name }.toSet())
+        }
+    }
+
     companion object {
         val SUPPORTED_CURRENCIES = listOf("BYN", "USD", "EUR", "PLN", "UAH", "RUB", "GBP", "KZT")
     }

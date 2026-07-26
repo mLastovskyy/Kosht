@@ -45,7 +45,7 @@ Snap a photo of a receipt and Kosht reads the total, date and store name for you
 ### 📊 Statistics three ways
 - **Charts** — an animated category donut and daily spending bars
 - **Calendar heatmap** — instantly spot your expensive days
-- **Report, on your terms** — pick the window (week, month, quarter, year) and walk back through past periods; every metric is compared with the previous period of the same length, and you choose exactly which rows to show. Plus personalized rule-based tips ("Groceries take 45% of spending — try a weekly limit challenge")
+- **Report, on your terms** — set the window (week, month, quarter, year) and the visible metric rows once in Settings, then just walk back through past periods with the arrows; every metric is compared with the previous period of the same length. Plus personalized rule-based tips ("Groceries take 45% of spending — try a weekly limit challenge")
 
 ### 💱 Multi-currency done right
 - **Live official rates** from the National Bank, refreshed automatically or by hand — with the update time always visible
