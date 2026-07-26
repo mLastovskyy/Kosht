@@ -39,6 +39,7 @@ import androidx.compose.material.icons.rounded.Speed
 import androidx.compose.material.icons.rounded.Summarize
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Checkbox
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.ListItem
@@ -360,17 +361,67 @@ fun SettingsScreen(
             modifier = Modifier.clickable(onClick = onOpenGuide)
         )
 
-        val versionName = remember {
+        val packageInfo = remember {
             runCatching {
-                context.packageManager.getPackageInfo(context.packageName, 0).versionName
-            }.getOrNull() ?: "—"
+                context.packageManager.getPackageInfo(context.packageName, 0)
+            }.getOrNull()
         }
+        val versionName = packageInfo?.versionName ?: "—"
+        val versionCode = remember(packageInfo) {
+            packageInfo?.let { androidx.core.content.pm.PackageInfoCompat.getLongVersionCode(it) }
+                ?: 0L
+        }
+        val updateCheck by viewModel.updateCheck.collectAsStateWithLifecycle()
         ListItem(
             headlineContent = { Text(stringResource(R.string.settings_version)) },
-            supportingContent = { Text(versionName) },
+            supportingContent = {
+                Text(
+                    if (updateCheck is UpdateCheckState.Checking) {
+                        stringResource(R.string.update_checking)
+                    } else {
+                        versionName + " · " + stringResource(R.string.update_check_hint)
+                    }
+                )
+            },
             leadingContent = { Icon(Icons.Rounded.Info, contentDescription = null) },
-            colors = transparentListColors()
+            trailingContent = {
+                if (updateCheck is UpdateCheckState.Checking) {
+                    CircularProgressIndicator(modifier = Modifier.size(20.dp), strokeWidth = 2.dp)
+                }
+            },
+            colors = transparentListColors(),
+            modifier = Modifier.clickable { viewModel.checkForUpdate(versionCode) }
         )
+
+        val offlineUpdateMessage = stringResource(R.string.update_offline)
+        (updateCheck as? UpdateCheckState.Done)?.let { done ->
+            val status = done.status
+            if (status is by.mlastovsky.kosht.data.UpdateStatus.Failed) {
+                // Unreachable server is not worth a dialog — a toast says it.
+                androidx.compose.runtime.LaunchedEffect(done) {
+                    android.widget.Toast
+                        .makeText(context, offlineUpdateMessage, android.widget.Toast.LENGTH_LONG)
+                        .show()
+                    viewModel.dismissUpdateCheck()
+                }
+            } else {
+                UpdateResultDialog(
+                    available = status as? by.mlastovsky.kosht.data.UpdateStatus.Available,
+                    onDownload = { url ->
+                        runCatching {
+                            context.startActivity(
+                                android.content.Intent(
+                                    android.content.Intent.ACTION_VIEW,
+                                    android.net.Uri.parse(url)
+                                )
+                            )
+                        }
+                        viewModel.dismissUpdateCheck()
+                    },
+                    onDismiss = viewModel::dismissUpdateCheck
+                )
+            }
+        }
         }
 
         androidx.compose.foundation.layout.Spacer(Modifier.padding(bottom = 24.dp))
@@ -525,6 +576,52 @@ private fun DailyBudgetDialog(
         },
         dismissButton = {
             TextButton(onClick = onDismiss) { Text(stringResource(R.string.action_cancel)) }
+        }
+    )
+}
+
+/** Version check result: a newer build to download, or already latest. */
+@Composable
+private fun UpdateResultDialog(
+    available: by.mlastovsky.kosht.data.UpdateStatus.Available?,
+    onDownload: (String) -> Unit,
+    onDismiss: () -> Unit
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = {
+            Text(
+                stringResource(
+                    if (available != null) {
+                        R.string.update_available_title
+                    } else {
+                        R.string.update_latest_title
+                    }
+                )
+            )
+        },
+        text = {
+            Text(
+                if (available != null) {
+                    stringResource(R.string.update_available_text, available.versionName)
+                } else {
+                    stringResource(R.string.update_latest_text)
+                }
+            )
+        },
+        confirmButton = {
+            if (available != null) {
+                TextButton(onClick = { onDownload(available.downloadUrl) }) {
+                    Text(stringResource(R.string.update_download))
+                }
+            } else {
+                TextButton(onClick = onDismiss) { Text(stringResource(R.string.action_close)) }
+            }
+        },
+        dismissButton = {
+            if (available != null) {
+                TextButton(onClick = onDismiss) { Text(stringResource(R.string.update_later)) }
+            }
         }
     )
 }

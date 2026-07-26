@@ -6,20 +6,48 @@ import androidx.lifecycle.viewModelScope
 import by.mlastovsky.kosht.data.AppSettings
 import by.mlastovsky.kosht.data.PhotoStore
 import by.mlastovsky.kosht.data.SettingsRepository
+import by.mlastovsky.kosht.data.UpdateChecker
+import by.mlastovsky.kosht.data.UpdateStatus
 import by.mlastovsky.kosht.data.UserProfile
 import by.mlastovsky.kosht.model.AppLanguage
 import by.mlastovsky.kosht.model.ThemeMode
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
+/** State of the manual update check behind the version row. */
+sealed interface UpdateCheckState {
+    data object Idle : UpdateCheckState
+    data object Checking : UpdateCheckState
+    data class Done(val status: UpdateStatus) : UpdateCheckState
+}
+
 class SettingsViewModel(
     private val settingsRepository: SettingsRepository,
     private val photoStore: PhotoStore,
-    private val currencyChanger: by.mlastovsky.kosht.data.CurrencyChanger
+    private val currencyChanger: by.mlastovsky.kosht.data.CurrencyChanger,
+    private val updateChecker: UpdateChecker
 ) : ViewModel() {
+
+    private val _updateCheck = MutableStateFlow<UpdateCheckState>(UpdateCheckState.Idle)
+
+    val updateCheck: StateFlow<UpdateCheckState> = _updateCheck.asStateFlow()
+
+    fun checkForUpdate(currentVersionCode: Long) {
+        if (_updateCheck.value is UpdateCheckState.Checking) return
+        viewModelScope.launch {
+            _updateCheck.value = UpdateCheckState.Checking
+            _updateCheck.value = UpdateCheckState.Done(updateChecker.check(currentVersionCode))
+        }
+    }
+
+    fun dismissUpdateCheck() {
+        _updateCheck.value = UpdateCheckState.Idle
+    }
 
     val settings: StateFlow<AppSettings?> = settingsRepository.settings
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), null)

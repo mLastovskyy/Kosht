@@ -62,5 +62,9 @@ class AppContainer(context: Context) {
 
     val photoStore: PhotoStore by lazy { PhotoStore(appContext) }
 
+    val updateChecker: by.mlastovsky.kosht.data.UpdateChecker by lazy {
+        by.mlastovsky.kosht.data.UpdateChecker()
+    }
+
     val settingsRepository: SettingsRepository = SettingsRepository(context)
 }
