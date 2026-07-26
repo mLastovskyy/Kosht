@@ -76,6 +76,9 @@ fun HomeScreen(
     var transferInAction by remember {
         mutableStateOf<by.mlastovsky.kosht.data.db.TransactionEntity?>(null)
     }
+    // The avatar is not decoration: it opens the profile, the same dialog
+    // Settings opens, wherever it is tapped.
+    var showProfile by remember { mutableStateOf(false) }
 
     LazyColumn(
         modifier = Modifier
@@ -143,7 +146,8 @@ fun HomeScreen(
                     }
                     Avatar(
                         photoPath = profile.photoPath,
-                        fallbackText = displayName.ifBlank { "🙂" }
+                        fallbackText = displayName.ifBlank { "🙂" },
+                        modifier = Modifier.clickable { showProfile = true }
                     )
                 }
             }
@@ -255,6 +259,12 @@ fun HomeScreen(
         by.mlastovsky.kosht.ui.transfer.TransferDialog(
             initial = transfer,
             onDismiss = { transferInAction = null }
+        )
+    }
+
+    if (showProfile) {
+        by.mlastovsky.kosht.ui.profile.ProfileDialog(
+            onDismiss = { showProfile = false }
         )
     }
 }

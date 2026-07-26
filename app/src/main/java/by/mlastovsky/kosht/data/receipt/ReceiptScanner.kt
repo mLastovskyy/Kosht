@@ -4,6 +4,7 @@ import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.net.Uri
+import androidx.core.graphics.scale
 import com.googlecode.tesseract.android.TessBaseAPI
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -43,12 +44,65 @@ class ReceiptScanner(
                 )
             }
         }
-        val lines = recognize(bitmap)
+        // Read the prepared image first, and fall back to the photo as taken:
+        // a slip on a dark table can come out better raw than stretched.
+        val lines = recognize(prepared(bitmap)).ifEmpty { recognize(bitmap) }
         if (lines.isEmpty()) return@withContext null
         ReceiptParser.parse(lines)
             .takeIf { it.amountMinor != null }
             ?.let { ScannedReceipt(it) }
     }
+
+    /**
+     * The photo as OCR likes it: grey, stretched to full contrast, and never
+     * smaller than the recognizer needs.
+     *
+     * A receipt is black ink on white paper, so colour carries nothing and
+     * only the range between the paper and the ink matters — a phone photo
+     * usually spends that range on shadows instead. Stretching what is
+     * actually there costs one pass over the pixels and does more for a
+     * crumpled slip than any amount of cleverness afterwards. Plain
+     * android.graphics: no library, no service, nothing to keep up to date.
+     */
+    private fun prepared(source: Bitmap): Bitmap = runCatching {
+        val scale = (MIN_DIMENSION.toFloat() / minOf(source.width, source.height))
+            .coerceIn(1f, MAX_UPSCALE)
+        val width = (source.width * scale).toInt()
+        val height = (source.height * scale).toInt()
+        val pixels = IntArray(source.width * source.height)
+        source.getPixels(pixels, 0, source.width, 0, 0, source.width, source.height)
+
+        val grey = IntArray(pixels.size)
+        var darkest = 255
+        var lightest = 0
+        for (i in pixels.indices) {
+            val pixel = pixels[i]
+            // Rec. 601 luma, the weighting the eye actually uses.
+            val value = (
+                ((pixel shr 16 and 0xFF) * 299 +
+                    (pixel shr 8 and 0xFF) * 587 +
+                    (pixel and 0xFF) * 114) / 1000
+                ).coerceIn(0, 255)
+            grey[i] = value
+            if (value < darkest) darkest = value
+            if (value > lightest) lightest = value
+        }
+        // A flat image has nothing to stretch; leave it be rather than turn
+        // its noise into contrast.
+        val span = lightest - darkest
+        if (span < MIN_SPAN) return@runCatching source
+        for (i in grey.indices) {
+            val stretched = (grey[i] - darkest) * 255 / span
+            pixels[i] = 0xFF shl 24 or (stretched shl 16) or (stretched shl 8) or stretched
+        }
+        val stretched = Bitmap.createBitmap(
+            pixels,
+            source.width,
+            source.height,
+            Bitmap.Config.ARGB_8888
+        )
+        if (scale <= 1f) stretched else stretched.scale(width, height)
+    }.getOrDefault(source)
 
     /**
      * Recognized lines, each carrying how tall it was printed relative to the
@@ -132,5 +186,14 @@ class ReceiptScanner(
     private companion object {
         const val LANGUAGE = "rus"
         const val MAX_DIMENSION = 2200
+
+        /** Below this, thermal print is too small for the recognizer. */
+        const val MIN_DIMENSION = 1000
+
+        /** Enlarging beyond this only makes blur bigger. */
+        const val MAX_UPSCALE = 2f
+
+        /** A range narrower than this is fog, not a photograph of a receipt. */
+        const val MIN_SPAN = 32
     }
 }

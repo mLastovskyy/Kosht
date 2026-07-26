@@ -542,6 +542,11 @@ fun SettingsScreen(
         }
         }
 
+        // Deleting the account and everything in it, kept at the very end of
+        // the screen and away from "Sign out": one is a door, the other is a
+        // demolition, and the two of them side by side invited a mistake.
+        if (accountViewModel.isConfigured) PointOfNoReturn(accountViewModel)
+
         androidx.compose.foundation.layout.Spacer(Modifier.padding(bottom = 24.dp))
     }
 
@@ -568,22 +573,10 @@ fun SettingsScreen(
     }
 
     if (showProfileDialog) {
-        profile?.let { p ->
-            ProfileDialog(
-                initialName = p.name,
-                initialNickname = p.nickname,
-                photoPath = p.photoPath,
-                defaultName = defaultName,
-                onPickPhoto = viewModel::setProfilePhoto,
-                onPickEmoji = viewModel::setProfileEmoji,
-                onRemovePhoto = viewModel::removeProfilePhoto,
-                onSave = { name, nickname ->
-                    viewModel.saveProfile(name, nickname)
-                    showProfileDialog = false
-                },
-                onDismiss = { showProfileDialog = false }
-            )
-        }
+        // The same dialog the avatar opens on Home; it brings its own state.
+        by.mlastovsky.kosht.ui.profile.ProfileDialog(
+            onDismiss = { showProfileDialog = false }
+        )
     }
 
     if (showLanguageDialog) {
@@ -718,7 +711,6 @@ private fun AccountSettings(
     val report by viewModel.report.collectAsStateWithLifecycle()
     var showDetails by remember { mutableStateOf(false) }
     var confirmSignOut by remember { mutableStateOf(false) }
-    var confirmDelete by remember { mutableStateOf(false) }
     val purgedMessage = stringResource(R.string.account_photos_purged)
 
     val doneMessage = stringResource(R.string.account_sync_done)
@@ -859,24 +851,6 @@ private fun AccountSettings(
             colors = transparentListColors(),
             modifier = Modifier.clickable { confirmSignOut = true }
         )
-        ListItem(
-            headlineContent = {
-                Text(
-                    text = stringResource(R.string.legal_delete),
-                    color = MaterialTheme.colorScheme.error
-                )
-            },
-            leadingContent = {
-                Icon(
-                    imageVector = Icons.Rounded.DeleteForever,
-                    contentDescription = null,
-                    tint = MaterialTheme.colorScheme.error
-                )
-            },
-            colors = transparentListColors(),
-            modifier = Modifier.clickable { confirmDelete = true }
-        )
-
         if (showDetails) {
             SyncDetailsDialog(
                 email = current.email.orEmpty(),
@@ -910,15 +884,6 @@ private fun AccountSettings(
                         Text(stringResource(R.string.action_cancel))
                     }
                 }
-            )
-        }
-        if (confirmDelete) {
-            DeleteAccountDialog(
-                onConfirm = {
-                    confirmDelete = false
-                    viewModel.deleteAccount { ok -> toastDeletion(context, ok) }
-                },
-                onDismiss = { confirmDelete = false }
             )
         }
     }
@@ -1062,6 +1027,54 @@ private fun DocumentRow(
         colors = transparentListColors(),
         modifier = Modifier.clickable { openDocument(asset, fileName) }
     )
+}
+
+/**
+ * Deleting the account and its data — the one thing in the app that cannot be
+ * undone, so it lives at the bottom of the last screen rather than next to
+ * "Sign out". Far from a stray finger, still one scroll away from anyone who
+ * actually wants it, and it appears only when there is an account to delete.
+ */
+@Composable
+private fun PointOfNoReturn(
+    accountViewModel: by.mlastovsky.kosht.ui.account.AccountViewModel
+) {
+    val account by accountViewModel.account.collectAsStateWithLifecycle()
+    if (account?.signedIn != true) return
+    val context = LocalContext.current
+    var confirmDelete by remember { mutableStateOf(false) }
+
+    SectionHeader(stringResource(R.string.settings_danger))
+    SettingsCard {
+        ListItem(
+            headlineContent = {
+                Text(
+                    text = stringResource(R.string.legal_delete),
+                    color = MaterialTheme.colorScheme.error
+                )
+            },
+            supportingContent = { Text(stringResource(R.string.legal_delete_hint)) },
+            leadingContent = {
+                Icon(
+                    imageVector = Icons.Rounded.DeleteForever,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.error
+                )
+            },
+            colors = transparentListColors(),
+            modifier = Modifier.clickable { confirmDelete = true }
+        )
+    }
+
+    if (confirmDelete) {
+        DeleteAccountDialog(
+            onConfirm = {
+                confirmDelete = false
+                accountViewModel.deleteAccount { ok -> toastDeletion(context, ok) }
+            },
+            onDismiss = { confirmDelete = false }
+        )
+    }
 }
 
 /** Download/install progress; [percent] below zero shows a spinner instead. */
@@ -1285,128 +1298,6 @@ private fun ReportFieldsDialog(
     )
 }
 
-private val PRESET_AVATARS = listOf("🦊", "🐻", "🐼", "🦁", "🐸", "🚀", "💎", "🌟", "🔥", "🤑")
-
-@OptIn(androidx.compose.foundation.ExperimentalFoundationApi::class)
-@Composable
-private fun ProfileDialog(
-    initialName: String,
-    initialNickname: String,
-    photoPath: String?,
-    defaultName: String,
-    onPickPhoto: (android.net.Uri) -> Unit,
-    onPickEmoji: (String) -> Unit,
-    onRemovePhoto: () -> Unit,
-    onSave: (name: String, nickname: String) -> Unit,
-    onDismiss: () -> Unit
-) {
-    var name by remember { mutableStateOf(initialName) }
-    var nickname by remember { mutableStateOf(initialNickname) }
-    var confirmRemovePhoto by remember { mutableStateOf(false) }
-    val photoLauncher = rememberLauncherForActivityResult(
-        ActivityResultContracts.PickVisualMedia()
-    ) { uri -> if (uri != null) onPickPhoto(uri) }
-
-    if (confirmRemovePhoto) {
-        AlertDialog(
-            onDismissRequest = { confirmRemovePhoto = false },
-            title = { Text(stringResource(R.string.photo_remove)) },
-            text = { Text(stringResource(R.string.photo_remove_confirm)) },
-            confirmButton = {
-                TextButton(
-                    onClick = {
-                        onRemovePhoto()
-                        confirmRemovePhoto = false
-                    }
-                ) {
-                    Text(
-                        stringResource(R.string.editor_delete),
-                        color = MaterialTheme.colorScheme.error
-                    )
-                }
-            },
-            dismissButton = {
-                TextButton(onClick = { confirmRemovePhoto = false }) {
-                    Text(stringResource(R.string.action_cancel))
-                }
-            }
-        )
-    }
-
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = { Text(stringResource(R.string.settings_profile)) },
-        text = {
-            Column(
-                horizontalAlignment = androidx.compose.ui.Alignment.CenterHorizontally,
-                verticalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(12.dp)
-            ) {
-                // No explicit delete button: press and hold removes the
-                // photo, the hint below spells that out.
-                Avatar(
-                    photoPath = photoPath,
-                    fallbackText = nickname.ifBlank { name.ifBlank { defaultName } },
-                    size = 72.dp,
-                    modifier = Modifier.combinedClickable(
-                        onClick = {
-                            photoLauncher.launch(
-                                androidx.activity.result.PickVisualMediaRequest(
-                                    ActivityResultContracts.PickVisualMedia.ImageOnly
-                                )
-                            )
-                        },
-                        onLongClick = { if (photoPath != null) confirmRemovePhoto = true }
-                    )
-                )
-                Text(
-                    text = stringResource(R.string.profile_photo_hint),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    textAlign = androidx.compose.ui.text.style.TextAlign.Center
-                )
-                androidx.compose.foundation.lazy.LazyRow(
-                    horizontalArrangement =
-                        androidx.compose.foundation.layout.Arrangement.spacedBy(8.dp)
-                ) {
-                    items(PRESET_AVATARS.size) { index ->
-                        val emoji = PRESET_AVATARS[index]
-                        Avatar(
-                            photoPath = by.mlastovsky.kosht.ui.components
-                                .EMOJI_AVATAR_PREFIX + emoji,
-                            fallbackText = emoji,
-                            size = 44.dp,
-                            modifier = Modifier.clickable { onPickEmoji(emoji) }
-                        )
-                    }
-                }
-                OutlinedTextField(
-                    value = name,
-                    onValueChange = { name = it.take(40) },
-                    label = { Text(stringResource(R.string.profile_name)) },
-                    singleLine = true,
-                    keyboardOptions = TextInput.Name,
-                    modifier = Modifier.fillMaxWidth()
-                )
-                OutlinedTextField(
-                    value = nickname,
-                    onValueChange = { nickname = it.take(24) },
-                    label = { Text(stringResource(R.string.profile_nickname)) },
-                    singleLine = true,
-                    keyboardOptions = TextInput.Name,
-                    modifier = Modifier.fillMaxWidth()
-                )
-            }
-        },
-        confirmButton = {
-            TextButton(onClick = { onSave(name, nickname) }) {
-                Text(stringResource(R.string.editor_save))
-            }
-        },
-        dismissButton = {
-            TextButton(onClick = onDismiss) { Text(stringResource(R.string.action_cancel)) }
-        }
-    )
-}
 
 @Composable
 private fun NotificationToggle(

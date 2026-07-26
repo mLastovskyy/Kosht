@@ -93,6 +93,12 @@ object AppViewModelProvider {
             )
         }
         initializer {
+            by.mlastovsky.kosht.ui.profile.ProfileViewModel(
+                app().container.settingsRepository,
+                app().container.photoStore
+            )
+        }
+        initializer {
             by.mlastovsky.kosht.ui.transfer.TransferViewModel(
                 app().container.transactionRepository,
                 app().container.accountRepository,

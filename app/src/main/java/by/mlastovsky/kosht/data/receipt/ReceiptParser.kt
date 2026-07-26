@@ -133,9 +133,14 @@ object ReceiptParser {
     /**
      * Same reading, but told how big each line was printed — which is what
      * decides the shop name when nothing else on the slip gives it away.
+     *
+     * The lines go through [OcrDigits] first: a price printed as `1,4О` is a
+     * price, and repairing the handful of letters OCR mistakes for digits is
+     * what turns an unreadable slip into a readable one — with no service,
+     * no key and nothing leaving the phone.
      */
     fun parse(lines: List<ReceiptLine>): ParsedReceipt {
-        val cleaned = lines
+        val cleaned = OcrDigits.repair(lines)
             .map { it.copy(text = it.text.trim()) }
             .filter { it.text.isNotEmpty() }
         val texts = cleaned.map { it.text }

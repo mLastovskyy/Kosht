@@ -76,7 +76,8 @@ Snap a receipt and Kosht reads the total, date and store for you.
 
 - **QR codes come first.** Shops that print one hand over exact figures instead of guessed ones — and on the short slips that carry nothing but a QR, it is the only thing there is to read. The electronic receipt behind the code is fetched and kept, so it opens later even with no connection.
 - **A code is only trusted once it proves itself.** Loyalty cards, Wi-Fi passwords and adverts share the same square shape; a payload counts as a receipt only when it carries fiscal fields or leads to a page an amount can actually be read from.
-- **No QR, no problem.** The photo goes through on-device recognition instead — 100% offline, nothing uploaded.
+- **No QR, no problem.** The photo goes through on-device recognition instead — 100% offline, nothing uploaded, no keys and no services.
+- **The photo is prepared, and the reading is repaired.** It is turned grey, stretched to full contrast and enlarged when small — a receipt is ink on paper, so that is where the detail lives. Afterwards the letters recognition mistakes for digits are put right: `1,4О`, `l2,50` and `З,20` are prices, and only tokens already shaped like an amount are touched, so names keep their letters, dates stay dates and no figure is ever invented.
 - **The shop is read, not guessed.** A familiar chain is matched by name; an unfamiliar one is found the way a person finds it — the largest print at the top of the slip, a trade name in quotes, a legal form, the line beside the tax number. Addresses, cashiers, document headers and scanning noise are ruled out, and when nothing looks like a name — or the line is longer than a note field takes — it is left empty rather than filled with half a line from the receipt.
 - **The shopping itself is read too**, when the slip lists it: name, price and quantity per line, straight into the record's item list (see below).
 - **A scanned record says so.** A small scanner mark stays with it in the editor and in every list, so months later you still know the figures were not typed by hand.
@@ -123,7 +124,7 @@ Signing up is an email, a six-digit code that Kosht mails you (good for five min
 An evening nudge only if nothing is logged, planned payments awaiting confirmation, a Monday money digest, and awards as you earn them. Each arrives with the phone's notification sound and a short vibration — a notification nobody hears is a notification nobody acts on — while staying out of the way otherwise: no heads-up popups over what you are doing, and Android's own per-channel settings can quiet any of them down again. A tap takes you straight into the app.
 
 ### 🎨 Made for you
-Light & dark themes, Material You dynamic colors, English & Russian interface, a profile with photo or built-in avatars — and interface toggles to hide anything you don't need. Without an account nothing ever leaves the phone; with one, only you can read it.
+Light & dark themes, Material You dynamic colors, English & Russian interface, a profile with photo or built-in avatars — tap the avatar anywhere, on Home as well as in Settings, and the same profile dialog opens — and interface toggles to hide anything you don't need. Without an account nothing ever leaves the phone; with one, only you can read it.
 
 ### 🔒 Consent you can actually withdraw
 Collecting an email address makes this an operator of personal data under the Belarusian law of 07.05.2021 No. 99-З, and the app is built to match rather than to look like it does.
