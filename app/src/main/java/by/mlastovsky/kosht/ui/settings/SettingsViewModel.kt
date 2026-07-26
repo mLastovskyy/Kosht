@@ -19,33 +19,107 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
-/** State of the manual update check behind the version row. */
+/** State of the update flow behind the version row: check, download, install. */
 sealed interface UpdateCheckState {
     data object Idle : UpdateCheckState
+
     data object Checking : UpdateCheckState
+
     data class Done(val status: UpdateStatus) : UpdateCheckState
+
+    /** Streaming the APK into app cache; percent is -1 while size is unknown. */
+    data class Downloading(
+        val available: UpdateStatus.Available,
+        val percent: Int
+    ) : UpdateCheckState
+
+    /** Bytes handed to the system installer; it takes over from here. */
+    data class Installing(val available: UpdateStatus.Available) : UpdateCheckState
+
+    /** Download or install did not go through — offer the same release again. */
+    data class UpdateFailed(val available: UpdateStatus.Available) : UpdateCheckState
+
+    /** The release is signed with another key; no retry can fix that. */
+    data object SignatureMismatch : UpdateCheckState
+
+    /** "Install unknown apps" is still off for Kosht; needs a one-time grant. */
+    data class NeedsInstallPermission(
+        val available: UpdateStatus.Available
+    ) : UpdateCheckState
 }
 
 class SettingsViewModel(
     private val settingsRepository: SettingsRepository,
     private val photoStore: PhotoStore,
     private val currencyChanger: by.mlastovsky.kosht.data.CurrencyChanger,
-    private val updateChecker: UpdateChecker
+    private val updateChecker: UpdateChecker,
+    private val updateInstaller: by.mlastovsky.kosht.data.UpdateInstaller
 ) : ViewModel() {
 
     private val _updateCheck = MutableStateFlow<UpdateCheckState>(UpdateCheckState.Idle)
 
     val updateCheck: StateFlow<UpdateCheckState> = _updateCheck.asStateFlow()
 
+    private var updateJob: kotlinx.coroutines.Job? = null
+
+    init {
+        // The package installer answers asynchronously, through a broadcast.
+        viewModelScope.launch {
+            by.mlastovsky.kosht.data.InstallEvents.outcomes.collect { outcome ->
+                val installing = _updateCheck.value as? UpdateCheckState.Installing ?: return@collect
+                _updateCheck.value = when (outcome) {
+                    by.mlastovsky.kosht.data.InstallOutcome.Cancelled -> UpdateCheckState.Idle
+                    by.mlastovsky.kosht.data.InstallOutcome.SignatureMismatch ->
+                        UpdateCheckState.SignatureMismatch
+                    by.mlastovsky.kosht.data.InstallOutcome.Failed ->
+                        UpdateCheckState.UpdateFailed(installing.available)
+                }
+            }
+        }
+    }
+
     fun checkForUpdate(currentVersionCode: Long) {
-        if (_updateCheck.value is UpdateCheckState.Checking) return
+        if (_updateCheck.value !is UpdateCheckState.Idle) return
         viewModelScope.launch {
             _updateCheck.value = UpdateCheckState.Checking
             _updateCheck.value = UpdateCheckState.Done(updateChecker.check(currentVersionCode))
         }
     }
 
+    /** Downloads the release inside the app and hands it to the installer. */
+    fun installUpdate(available: UpdateStatus.Available) {
+        if (!updateInstaller.canInstall()) {
+            _updateCheck.value = UpdateCheckState.NeedsInstallPermission(available)
+            return
+        }
+        updateJob?.cancel()
+        updateJob = viewModelScope.launch {
+            _updateCheck.value = UpdateCheckState.Downloading(available, 0)
+            val apk = updateInstaller.download(available.downloadUrl) { percent ->
+                _updateCheck.value = UpdateCheckState.Downloading(available, percent)
+            }
+            if (apk == null) {
+                _updateCheck.value = UpdateCheckState.UpdateFailed(available)
+                return@launch
+            }
+            // Cheaper and clearer than letting the system reject it later.
+            if (!updateInstaller.signedWithSameKey(apk)) {
+                apk.delete()
+                _updateCheck.value = UpdateCheckState.SignatureMismatch
+                return@launch
+            }
+            _updateCheck.value = UpdateCheckState.Installing(available)
+            if (!updateInstaller.install(apk)) {
+                _updateCheck.value = UpdateCheckState.UpdateFailed(available)
+            }
+        }
+    }
+
+    fun unknownSourcesIntent(): android.content.Intent = updateInstaller.unknownSourcesIntent()
+
     fun dismissUpdateCheck() {
+        updateJob?.cancel()
+        updateJob = null
         _updateCheck.value = UpdateCheckState.Idle
     }
 
