@@ -34,6 +34,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import by.mlastovsky.kosht.R
+import by.mlastovsky.kosht.ui.components.AccountBadge
 import by.mlastovsky.kosht.data.db.AccountEntity
 import by.mlastovsky.kosht.data.db.TransactionEntity
 import by.mlastovsky.kosht.ui.AccountVisuals
@@ -253,11 +254,11 @@ private fun AccountChips(
                 selected = account.id == selectedId,
                 onClick = { onSelect(account.id) },
                 leadingIcon = {
-                    Icon(
-                        CategoryVisuals.icon(account.iconKey),
-                        contentDescription = null,
-                        tint = Color(account.colorArgb),
-                        modifier = Modifier.size(18.dp)
+                    AccountBadge(
+                        iconKey = account.iconKey,
+                        color = Color(account.colorArgb),
+                        iconPath = account.iconPath,
+                        size = 18.dp
                     )
                 },
                 label = { Text(AccountVisuals.displayName(account), maxLines = 1) }

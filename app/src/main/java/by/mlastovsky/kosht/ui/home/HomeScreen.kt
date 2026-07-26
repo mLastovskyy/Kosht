@@ -51,6 +51,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import by.mlastovsky.kosht.R
+import by.mlastovsky.kosht.ui.components.AccountBadge
 import by.mlastovsky.kosht.data.db.TransactionEntity
 import by.mlastovsky.kosht.ui.AccountVisuals
 import by.mlastovsky.kosht.ui.AppViewModelProvider
@@ -185,12 +186,11 @@ fun HomeScreen(
                                 .background(MaterialTheme.colorScheme.surfaceContainer)
                                 .padding(horizontal = 12.dp, vertical = 8.dp)
                         ) {
-                            Icon(
-                                imageVector = CategoryVisuals
-                                    .icon(account.iconKey),
-                                contentDescription = null,
-                                tint = Color(account.colorArgb),
-                                modifier = Modifier.size(18.dp)
+                            AccountBadge(
+                                iconKey = account.iconKey,
+                                color = Color(account.colorArgb),
+                                iconPath = account.iconPath,
+                                size = 18.dp
                             )
                             Column {
                                 Text(

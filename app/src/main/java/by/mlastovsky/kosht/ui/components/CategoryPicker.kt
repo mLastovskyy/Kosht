@@ -2,13 +2,9 @@ package by.mlastovsky.kosht.ui.components
 
 import android.net.Uri
 import android.view.HapticFeedbackConstants
-import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.activity.result.PickVisualMediaRequest
-import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
-import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectDragGesturesAfterLongPress
@@ -17,7 +13,6 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -32,7 +27,6 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Add
-import androidx.compose.material.icons.rounded.AddAPhoto
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -55,7 +49,6 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
-import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.res.stringResource
@@ -165,6 +158,7 @@ fun CategoryPickerRow(
         items(shown, key = { it.id }) { category ->
             val held = dragging == category.id
             val selected = category.id == selectedId
+            val reveal = rememberFullTextReveal()
             val scale by animateFloatAsState(
                 targetValue = if (selected) 1.08f else 1f,
                 animationSpec = spring(
@@ -185,7 +179,10 @@ fun CategoryPickerRow(
                         scaleY = HELD_SCALE
                     }
                     .clip(MaterialTheme.shapes.medium)
-                    .clickable { onSelect(category.id) }
+                    .clickable {
+                        onSelect(category.id)
+                        reveal.reveal()
+                    }
                     .then(
                         if (onReorder == null && onEdit == null) {
                             Modifier
@@ -243,7 +240,8 @@ fun CategoryPickerRow(
                     selected = selected,
                     badgeSize = badgeSize,
                     badgeScale = scale,
-                    iconPath = category.iconPath
+                    iconPath = category.iconPath,
+                    reveal = reveal
                 )
             }
         }
@@ -329,7 +327,8 @@ private fun CategoryTile(
     selected: Boolean,
     badgeSize: Dp,
     badgeScale: Float,
-    iconPath: String?
+    iconPath: String?,
+    reveal: FullTextReveal
 ) {
     CategoryBadge(
         iconKey = iconKey,
@@ -343,7 +342,14 @@ private fun CategoryTile(
         }
     )
     Spacer(Modifier.height(4.dp))
-    TileLabel(label, selected)
+    TruncatedText(
+        text = label,
+        style = MaterialTheme.typography.labelSmall,
+        fontWeight = if (selected) FontWeight.Bold else FontWeight.Normal,
+        reveal = reveal,
+        revealOnClick = false,
+        modifier = Modifier.widthIn(max = LABEL_MAX_WIDTH)
+    )
 }
 
 @Composable
@@ -373,18 +379,7 @@ fun CategoryDialog(
     var colorArgb by remember(initial?.id) {
         mutableLongStateOf(initial?.colorArgb ?: CategoryVisuals.pickableColors.first())
     }
-    var pickedUri by remember(initial?.id) { mutableStateOf<Uri?>(null) }
-    var cleared by remember(initial?.id) { mutableStateOf(false) }
-    val storedPath = initial?.iconPath?.takeIf { !cleared }
-    val hasPicture = pickedUri != null || storedPath != null
-    val picker = rememberLauncherForActivityResult(
-        ActivityResultContracts.PickVisualMedia()
-    ) { uri ->
-        if (uri != null) {
-            pickedUri = uri
-            cleared = false
-        }
-    }
+    val picture = rememberPictureChoice(initial?.iconPath)
 
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -405,40 +400,8 @@ fun CategoryDialog(
                     keyboardOptions = TextInput.Sentence,
                     modifier = Modifier.fillMaxWidth()
                 )
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(12.dp)
-                ) {
-                    CategoryPicturePreview(
-                        uri = pickedUri,
-                        path = storedPath,
-                        onClick = {
-                            picker.launch(
-                                PickVisualMediaRequest(
-                                    ActivityResultContracts.PickVisualMedia.ImageOnly
-                                )
-                            )
-                        }
-                    )
-                    Text(
-                        text = stringResource(
-                            if (hasPicture) R.string.category_picture_set
-                            else R.string.category_picture
-                        ),
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.weight(1f)
-                    )
-                    if (hasPicture) {
-                        TextButton(
-                            onClick = {
-                                pickedUri = null
-                                cleared = true
-                            }
-                        ) { Text(stringResource(R.string.category_picture_remove)) }
-                    }
-                }
-                if (!hasPicture) {
+                PicturePickerRow(picture)
+                if (!picture.hasPicture) {
                     Text(
                         stringResource(R.string.category_icon),
                         style = MaterialTheme.typography.labelLarge
@@ -483,8 +446,8 @@ fun CategoryDialog(
                             name = name.trim(),
                             iconKey = iconKey,
                             colorArgb = colorArgb,
-                            iconUri = pickedUri,
-                            iconCleared = cleared
+                            iconUri = picture.picked,
+                            iconCleared = picture.cleared
                         )
                     )
                 },
@@ -510,36 +473,6 @@ fun CategoryDialog(
             }
         }
     )
-}
-
-@Composable
-private fun CategoryPicturePreview(uri: Uri?, path: String?, onClick: () -> Unit) {
-    val fromFile = rememberBitmapFromPath(path, maxDimension = 256)
-    val fromPick = rememberBitmapFromUri(uri, maxDimension = 256)
-    val picture = fromPick ?: fromFile
-    Box(
-        modifier = Modifier
-            .size(56.dp)
-            .clip(CircleShape)
-            .background(MaterialTheme.colorScheme.surfaceContainerHigh)
-            .clickable(onClick = onClick),
-        contentAlignment = Alignment.Center
-    ) {
-        if (picture != null) {
-            Image(
-                bitmap = picture,
-                contentDescription = null,
-                contentScale = ContentScale.Crop,
-                modifier = Modifier.fillMaxSize()
-            )
-        } else {
-            Icon(
-                Icons.Rounded.AddAPhoto,
-                contentDescription = null,
-                tint = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-        }
-    }
 }
 
 private const val ADD_KEY = "add"

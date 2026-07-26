@@ -1,6 +1,7 @@
 package by.mlastovsky.kosht.di
 
 import android.content.Context
+import by.mlastovsky.kosht.BuildConfig
 import by.mlastovsky.kosht.data.AccountRepository
 import by.mlastovsky.kosht.data.CurrencyChanger
 import by.mlastovsky.kosht.data.Housekeeping
@@ -12,7 +13,6 @@ import by.mlastovsky.kosht.data.UpdateChecker
 import by.mlastovsky.kosht.data.UpdateInstaller
 import by.mlastovsky.kosht.data.WalletRepository
 import by.mlastovsky.kosht.data.awards.AwardTracker
-import by.mlastovsky.kosht.BuildConfig
 import by.mlastovsky.kosht.data.db.KoshtDatabase
 import by.mlastovsky.kosht.data.lock.AppLock
 import by.mlastovsky.kosht.data.lock.AppLockRepository
@@ -51,7 +51,8 @@ class AppContainer(
         AccountRepository(
             database.accountDao(),
             database.transactionDao(),
-            database.recurringDao()
+            database.recurringDao(),
+            photoStore
         )
     }
 

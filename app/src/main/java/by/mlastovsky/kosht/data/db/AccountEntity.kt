@@ -15,6 +15,7 @@ data class AccountEntity(
     val iconKey: String,
     val colorArgb: Long,
     val position: Int,
+    val iconPath: String? = null,
 
     @ColumnInfo(defaultValue = "0")
     val adjustmentMinor: Long = 0,

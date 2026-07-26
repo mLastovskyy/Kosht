@@ -1,5 +1,6 @@
 package by.mlastovsky.kosht.ui.wallet
 
+import android.net.Uri
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import by.mlastovsky.kosht.data.AccountRepository
@@ -298,9 +299,11 @@ class WalletViewModel(
         viewModelScope.launch { settingsRepository.setMultiAccount(enabled) }
     }
 
-    fun addAccount(name: String, iconKey: String, colorArgb: Long) {
+    fun addAccount(name: String, iconKey: String, colorArgb: Long, iconUri: Uri? = null) {
         if (name.isBlank()) return
-        viewModelScope.launch { accountRepository.addAccount(name, iconKey, colorArgb) }
+        viewModelScope.launch {
+            accountRepository.addAccount(name, iconKey, colorArgb, iconUri)
+        }
     }
 
     fun deleteAccount(account: AccountEntity) {
@@ -316,17 +319,19 @@ class WalletViewModel(
         name: String,
         iconKey: String,
         colorArgb: Long,
-        renamed: Boolean
+        renamed: Boolean,
+        iconUri: Uri?,
+        iconCleared: Boolean
     ) {
-        if (name.isBlank()) return
         viewModelScope.launch {
-            accountRepository.updateAccount(
-                account.copy(
-                    name = name.trim(),
-                    iconKey = iconKey,
-                    colorArgb = colorArgb,
-                    key = if (renamed) null else account.key
-                )
+            accountRepository.updateAppearance(
+                account,
+                name,
+                iconKey,
+                colorArgb,
+                renamed,
+                iconUri,
+                iconCleared
             )
         }
     }

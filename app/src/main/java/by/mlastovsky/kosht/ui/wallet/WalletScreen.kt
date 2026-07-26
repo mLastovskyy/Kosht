@@ -185,7 +185,8 @@ fun WalletScreen(
                     CategoryBadge(
                         iconKey = account.iconKey,
                         color = Color(account.colorArgb),
-                        size = 40.dp
+                        size = 40.dp,
+                        iconPath = account.iconPath
                     )
                     Text(
                         text = AccountVisuals.displayName(account),
@@ -406,8 +407,8 @@ fun WalletScreen(
 
     if (showAddAccount) {
         AddAccountDialog(
-            onConfirm = { name, iconKey, color ->
-                viewModel.addAccount(name, iconKey, color)
+            onConfirm = { name, iconKey, color, iconUri ->
+                viewModel.addAccount(name, iconKey, color, iconUri)
                 showAddAccount = false
             },
             onDismiss = { showAddAccount = false }
@@ -424,8 +425,16 @@ fun WalletScreen(
                 viewModel.setAccountBalance(account, target)
                 accountInAction = null
             },
-            onUpdateAppearance = { name, iconKey, colorArgb, renamed ->
-                viewModel.updateAccountAppearance(account, name, iconKey, colorArgb, renamed)
+            onUpdateAppearance = { name, iconKey, colorArgb, renamed, iconUri, iconCleared ->
+                viewModel.updateAccountAppearance(
+                    account,
+                    name,
+                    iconKey,
+                    colorArgb,
+                    renamed,
+                    iconUri,
+                    iconCleared
+                )
             },
             onDelete = {
                 viewModel.deleteAccount(account)

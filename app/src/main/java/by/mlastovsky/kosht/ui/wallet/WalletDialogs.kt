@@ -53,6 +53,10 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import by.mlastovsky.kosht.R
+import by.mlastovsky.kosht.ui.components.rememberPictureChoice
+import by.mlastovsky.kosht.ui.components.PicturePickerRow
+import by.mlastovsky.kosht.ui.components.AccountBadge
+import android.net.Uri
 import by.mlastovsky.kosht.data.db.AccountEntity
 import by.mlastovsky.kosht.data.db.CategoryEntity
 import by.mlastovsky.kosht.data.db.DebtEntity
@@ -753,11 +757,11 @@ private fun AccountChips(
                 selected = selectedId == account.id,
                 onClick = { onSelect(account.id) },
                 leadingIcon = {
-                    Icon(
-                        CategoryVisuals.icon(account.iconKey),
-                        contentDescription = null,
-                        tint = Color(account.colorArgb),
-                        modifier = Modifier.size(18.dp)
+                    AccountBadge(
+                        iconKey = account.iconKey,
+                        color = Color(account.colorArgb),
+                        iconPath = account.iconPath,
+                        size = 18.dp
                     )
                 },
                 label = {
@@ -773,7 +777,7 @@ private fun AccountChips(
 
 @Composable
 fun AddAccountDialog(
-    onConfirm: (name: String, iconKey: String, colorArgb: Long) -> Unit,
+    onConfirm: (name: String, iconKey: String, colorArgb: Long, iconUri: Uri?) -> Unit,
     onDismiss: () -> Unit
 ) {
     var name by remember { mutableStateOf("") }
@@ -783,6 +787,7 @@ fun AddAccountDialog(
     var colorArgb by remember {
         mutableLongStateOf(CategoryVisuals.pickableColors.first())
     }
+    val picture = rememberPictureChoice(null)
 
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -797,28 +802,31 @@ fun AddAccountDialog(
                     keyboardOptions = TextInput.Sentence,
                     modifier = Modifier.fillMaxWidth()
                 )
-                LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    items(AccountVisuals.pickableIconKeys) { key ->
-                        CategoryBadge(
-                            iconKey = key,
-                            color = Color(colorArgb),
-                            selected = key == iconKey,
-                            size = 40.dp,
-                            modifier = Modifier
-                                .clip(CircleShape)
-                                .clickable { iconKey = key }
-                        )
+                PicturePickerRow(picture)
+                if (!picture.hasPicture) {
+                    LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        items(AccountVisuals.pickableIconKeys) { key ->
+                            CategoryBadge(
+                                iconKey = key,
+                                color = Color(colorArgb),
+                                selected = key == iconKey,
+                                size = 40.dp,
+                                modifier = Modifier
+                                    .clip(CircleShape)
+                                    .clickable { iconKey = key }
+                            )
+                        }
                     }
-                }
-                LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    items(CategoryVisuals.pickableColors) { color ->
-                        Box(
-                            modifier = Modifier
-                                .size(if (color == colorArgb) 40.dp else 32.dp)
-                                .clip(CircleShape)
-                                .background(Color(color))
-                                .clickable { colorArgb = color }
-                        )
+                    LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        items(CategoryVisuals.pickableColors) { color ->
+                            Box(
+                                modifier = Modifier
+                                    .size(if (color == colorArgb) 40.dp else 32.dp)
+                                    .clip(CircleShape)
+                                    .background(Color(color))
+                                    .clickable { colorArgb = color }
+                            )
+                        }
                     }
                 }
             }
@@ -826,7 +834,7 @@ fun AddAccountDialog(
         confirmButton = {
             TextButton(
                 enabled = name.isNotBlank(),
-                onClick = { onConfirm(name.trim(), iconKey, colorArgb) }
+                onClick = { onConfirm(name.trim(), iconKey, colorArgb, picture.picked) }
             ) { Text(stringResource(R.string.action_add)) }
         },
         dismissButton = {
@@ -842,7 +850,14 @@ fun AccountBalanceDialog(
     currencyCode: String,
     deletable: Boolean,
     onSetBalance: (targetMinor: Long) -> Unit,
-    onUpdateAppearance: (name: String, iconKey: String, colorArgb: Long, renamed: Boolean) -> Unit,
+    onUpdateAppearance: (
+        name: String,
+        iconKey: String,
+        colorArgb: Long,
+        renamed: Boolean,
+        iconUri: Uri?,
+        iconCleared: Boolean
+    ) -> Unit,
     onDelete: () -> Unit,
     onDismiss: () -> Unit
 ) {
@@ -854,6 +869,7 @@ fun AccountBalanceDialog(
     var name by remember { mutableStateOf(resolvedName) }
     var iconKey by remember { mutableStateOf(account.iconKey) }
     var colorArgb by remember { mutableLongStateOf(account.colorArgb) }
+    val picture = rememberPictureChoice(account.iconPath)
     val target = Money.parseToMinor(balanceText.replace("-", ""), currencyCode)
         ?.let { if (balanceText.startsWith("-")) -it else it }
 
@@ -861,10 +877,11 @@ fun AccountBalanceDialog(
         onDismissRequest = onDismiss,
         title = {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Icon(
-                    CategoryVisuals.icon(iconKey),
-                    contentDescription = null,
-                    tint = Color(colorArgb)
+                AccountBadge(
+                    iconKey = iconKey,
+                    color = Color(colorArgb),
+                    iconPath = picture.path,
+                    size = 28.dp
                 )
                 Spacer(Modifier.width(10.dp))
                 Text(
@@ -905,28 +922,31 @@ fun AccountBalanceDialog(
                         keyboardOptions = TextInput.Name,
                         modifier = Modifier.fillMaxWidth()
                     )
-                    LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        items(AccountVisuals.pickableIconKeys) { key ->
-                            CategoryBadge(
-                                iconKey = key,
-                                color = Color(colorArgb),
-                                selected = key == iconKey,
-                                size = 40.dp,
-                                modifier = Modifier
-                                    .clip(CircleShape)
-                                    .clickable { iconKey = key }
-                            )
+                    PicturePickerRow(picture)
+                    if (!picture.hasPicture) {
+                        LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            items(AccountVisuals.pickableIconKeys) { key ->
+                                CategoryBadge(
+                                    iconKey = key,
+                                    color = Color(colorArgb),
+                                    selected = key == iconKey,
+                                    size = 40.dp,
+                                    modifier = Modifier
+                                        .clip(CircleShape)
+                                        .clickable { iconKey = key }
+                                )
+                            }
                         }
-                    }
-                    LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        items(CategoryVisuals.pickableColors) { color ->
-                            Box(
-                                modifier = Modifier
-                                    .size(if (color == colorArgb) 40.dp else 32.dp)
-                                    .clip(CircleShape)
-                                    .background(Color(color))
-                                    .clickable { colorArgb = color }
-                            )
+                        LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            items(CategoryVisuals.pickableColors) { color ->
+                                Box(
+                                    modifier = Modifier
+                                        .size(if (color == colorArgb) 40.dp else 32.dp)
+                                        .clip(CircleShape)
+                                        .background(Color(color))
+                                        .clickable { colorArgb = color }
+                                )
+                            }
                         }
                     }
                 }
@@ -951,9 +971,17 @@ fun AccountBalanceDialog(
                 onClick = {
                     val trimmed = name.trim()
                     val appearanceChanged = trimmed != resolvedName ||
-                        iconKey != account.iconKey || colorArgb != account.colorArgb
+                        iconKey != account.iconKey || colorArgb != account.colorArgb ||
+                        picture.picked != null || picture.cleared
                     if (appearanceChanged) {
-                        onUpdateAppearance(trimmed, iconKey, colorArgb, trimmed != resolvedName)
+                        onUpdateAppearance(
+                            trimmed,
+                            iconKey,
+                            colorArgb,
+                            trimmed != resolvedName,
+                            picture.picked,
+                            picture.cleared
+                        )
                     }
                     onSetBalance(target!!)
                 }

@@ -156,3 +156,31 @@ fun EmptyState(
         )
     }
 }
+
+@Composable
+fun AccountBadge(
+    iconKey: String,
+    color: Color,
+    modifier: Modifier = Modifier,
+    size: Dp = 24.dp,
+    iconPath: String? = null
+) {
+    val picture = rememberBitmapFromPath(iconPath, maxDimension = PICTURE_PIXELS)
+    if (picture != null) {
+        Image(
+            bitmap = picture,
+            contentDescription = null,
+            contentScale = ContentScale.Crop,
+            modifier = modifier
+                .size(size)
+                .clip(CircleShape)
+        )
+        return
+    }
+    Icon(
+        imageVector = CategoryVisuals.icon(iconKey),
+        contentDescription = null,
+        tint = color,
+        modifier = modifier.size(size)
+    )
+}

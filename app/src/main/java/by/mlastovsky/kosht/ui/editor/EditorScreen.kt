@@ -15,6 +15,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.Orientation
 import androidx.compose.foundation.gestures.draggable
 import androidx.compose.foundation.gestures.rememberDraggableState
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -30,6 +31,8 @@ import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.Backspace
@@ -93,6 +96,7 @@ import androidx.core.content.FileProvider
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import by.mlastovsky.kosht.R
+import by.mlastovsky.kosht.ui.components.AccountBadge
 import by.mlastovsky.kosht.model.TransactionType
 import by.mlastovsky.kosht.ui.AccountVisuals
 import by.mlastovsky.kosht.ui.AppViewModelProvider
@@ -100,6 +104,7 @@ import by.mlastovsky.kosht.ui.CategoryVisuals
 import by.mlastovsky.kosht.ui.components.CategoryActions
 import by.mlastovsky.kosht.ui.components.CategoryPickerRow
 import by.mlastovsky.kosht.ui.components.TextInput
+import by.mlastovsky.kosht.ui.components.TruncatedText
 import by.mlastovsky.kosht.ui.components.rememberBitmapFromPath
 import by.mlastovsky.kosht.ui.relativeDate
 import by.mlastovsky.kosht.ui.theme.KoshtTheme
@@ -281,6 +286,13 @@ fun EditorScreen(
             horizontalArrangement = Arrangement.spacedBy(8.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
+          Row(
+            modifier = Modifier
+                .weight(1f)
+                .horizontalScroll(rememberScrollState()),
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            verticalAlignment = Alignment.CenterVertically
+          ) {
             AssistChip(
                 onClick = { showDatePicker = true },
                 leadingIcon = {
@@ -294,17 +306,18 @@ fun EditorScreen(
                     AssistChip(
                         onClick = { showAccountPicker = true },
                         leadingIcon = {
-                            Icon(
-                                CategoryVisuals.icon(account.iconKey),
-                                contentDescription = null,
-                                tint = Color(account.colorArgb),
-                                modifier = Modifier.size(18.dp)
+                            AccountBadge(
+                                iconKey = account.iconKey,
+                                color = Color(account.colorArgb),
+                                iconPath = account.iconPath,
+                                size = 18.dp
                             )
                         },
                         label = {
-                            Text(
-                                AccountVisuals.displayName(account),
-                                maxLines = 1
+                            TruncatedText(
+                                text = AccountVisuals.displayName(account),
+                                style = MaterialTheme.typography.labelLarge,
+                                modifier = Modifier.widthIn(max = CHIP_LABEL_MAX_WIDTH)
                             )
                         }
                     )
@@ -346,7 +359,7 @@ fun EditorScreen(
                     label = { Text(stringResource(R.string.scanned_mark), maxLines = 1) }
                 )
             }
-            Spacer(Modifier.weight(1f))
+          }
             IconButton(
                 onClick = { showScanSource = true },
                 enabled = !state.scanning
@@ -563,10 +576,10 @@ fun EditorScreen(
                                 Text(AccountVisuals.displayName(account))
                             },
                             leadingContent = {
-                                Icon(
-                                    CategoryVisuals.icon(account.iconKey),
-                                    contentDescription = null,
-                                    tint = Color(account.colorArgb)
+                                AccountBadge(
+                                    iconKey = account.iconKey,
+                                    color = Color(account.colorArgb),
+                                    iconPath = account.iconPath
                                 )
                             },
                             colors = ListItemDefaults.colors(
@@ -1035,6 +1048,8 @@ private fun Modifier.typeSwipe(
 }
 
 private val SWIPE_THRESHOLD = 56.dp
+
+private val CHIP_LABEL_MAX_WIDTH = 120.dp
 
 @Composable
 private fun Keypad(

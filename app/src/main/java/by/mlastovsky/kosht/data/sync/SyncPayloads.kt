@@ -180,6 +180,7 @@ object SyncPayloads {
         colorArgb = json.getLong("colorArgb"),
         position = json.getInt("position"),
         adjustmentMinor = json.optLong("adjustmentMinor"),
+        iconPath = local?.iconPath,
         sync = meta
     )
 

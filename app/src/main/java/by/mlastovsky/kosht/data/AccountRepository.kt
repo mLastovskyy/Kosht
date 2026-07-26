@@ -1,6 +1,7 @@
 package by.mlastovsky.kosht.data
 
 import by.mlastovsky.kosht.data.db.AccountBalance
+import android.net.Uri
 import by.mlastovsky.kosht.data.db.AccountDao
 import by.mlastovsky.kosht.data.db.AccountEntity
 import by.mlastovsky.kosht.data.db.RecurringDao
@@ -11,7 +12,8 @@ import kotlinx.coroutines.flow.first
 class AccountRepository(
     private val accountDao: AccountDao,
     private val transactionDao: TransactionDao,
-    private val recurringDao: RecurringDao
+    private val recurringDao: RecurringDao,
+    private val photoStore: PhotoStore
 ) {
 
     fun observeAccounts(): Flow<List<AccountEntity>> = accountDao.observeAll()
@@ -30,16 +32,50 @@ class AccountRepository(
 
     suspend fun updateAccount(account: AccountEntity) = accountDao.update(account)
 
-    suspend fun addAccount(name: String, iconKey: String, colorArgb: Long): Long =
+    suspend fun addAccount(
+        name: String,
+        iconKey: String,
+        colorArgb: Long,
+        iconUri: Uri? = null
+    ): Long =
         accountDao.insert(
             AccountEntity(
                 key = null,
                 name = name.trim(),
                 iconKey = iconKey,
                 colorArgb = colorArgb,
-                position = accountDao.maxPosition() + 1
+                position = accountDao.maxPosition() + 1,
+                iconPath = iconUri?.let { photoStore.saveFromUri(it, ACCOUNT_ICONS) }
             )
         )
+
+    suspend fun updateAppearance(
+        account: AccountEntity,
+        name: String,
+        iconKey: String,
+        colorArgb: Long,
+        renamed: Boolean,
+        iconUri: Uri?,
+        clearIcon: Boolean
+    ) {
+        if (name.isBlank()) return
+        val saved = iconUri?.let { photoStore.saveFromUri(it, ACCOUNT_ICONS) }
+        val iconPath = when {
+            saved != null -> saved
+            clearIcon -> null
+            else -> account.iconPath
+        }
+        if (iconPath != account.iconPath) photoStore.delete(account.iconPath)
+        accountDao.update(
+            account.copy(
+                name = name.trim(),
+                iconKey = iconKey,
+                colorArgb = colorArgb,
+                key = if (renamed) null else account.key,
+                iconPath = iconPath
+            )
+        )
+    }
 
     suspend fun deleteAccount(account: AccountEntity) {
         if (accountDao.count() <= 1) return
@@ -49,5 +85,10 @@ class AccountRepository(
         transactionDao.reassignTransferAccount(from = account.id, to = primary.id)
         recurringDao.reassignAccount(from = account.id, to = primary.id)
         accountDao.deleteById(account.id)
+        photoStore.delete(account.iconPath)
+    }
+
+    private companion object {
+        const val ACCOUNT_ICONS = "categories"
     }
 }
