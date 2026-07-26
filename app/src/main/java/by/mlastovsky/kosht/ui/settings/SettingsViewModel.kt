@@ -217,6 +217,10 @@ class SettingsViewModel(
         viewModelScope.launch { settingsRepository.setAutoCalculator(value) }
     }
 
+    fun replayTour() {
+        viewModelScope.launch { settingsRepository.setTourSeen(false) }
+    }
+
     fun setTransferFee(value: Boolean) {
         viewModelScope.launch { settingsRepository.setTransferFee(value) }
     }

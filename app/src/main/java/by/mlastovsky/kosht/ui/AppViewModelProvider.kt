@@ -18,6 +18,7 @@ import by.mlastovsky.kosht.ui.lock.AppLockViewModel
 import by.mlastovsky.kosht.ui.profile.ProfileViewModel
 import by.mlastovsky.kosht.ui.settings.SettingsViewModel
 import by.mlastovsky.kosht.ui.stats.StatsViewModel
+import by.mlastovsky.kosht.ui.tour.TourViewModel
 import by.mlastovsky.kosht.ui.transfer.TransferViewModel
 import by.mlastovsky.kosht.ui.wallet.WalletViewModel
 
@@ -100,6 +101,9 @@ object AppViewModelProvider {
                 app().container.settingsRepository,
                 app().container.accountRepository
             )
+        }
+        initializer {
+            TourViewModel(app().container.settingsRepository)
         }
         initializer {
             ProfileViewModel(

@@ -59,6 +59,8 @@ import by.mlastovsky.kosht.ui.navigation.MainTabs
 import by.mlastovsky.kosht.ui.navigation.Routes
 import by.mlastovsky.kosht.ui.settings.SettingsScreen
 import by.mlastovsky.kosht.ui.stats.StatsScreen
+import by.mlastovsky.kosht.ui.tour.TourScreen
+import by.mlastovsky.kosht.ui.tour.TourViewModel
 import by.mlastovsky.kosht.ui.wallet.WalletScreen
 import kotlinx.coroutines.launch
 
@@ -71,6 +73,11 @@ fun KoshtRoot(
     val state = account ?: return
     if (!state.onboarded && accountViewModel.isConfigured) {
         AccountOnboardingScreen(accountViewModel)
+        return
+    }
+
+    if (!TourSeen()) {
+        TourScreen()
         return
     }
 
@@ -227,6 +234,14 @@ fun KoshtRoot(
     AwardCelebration()
 
     UndoDeleteSnackbar(snackbarHostState)
+}
+
+@Composable
+private fun TourSeen(
+    viewModel: TourViewModel = viewModel(factory = AppViewModelProvider.Factory)
+): Boolean {
+    val seen by viewModel.seen.collectAsStateWithLifecycle()
+    return seen != false
 }
 
 @Composable

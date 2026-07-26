@@ -43,6 +43,7 @@ import androidx.compose.material.icons.rounded.DeleteOutline
 import androidx.compose.material.icons.rounded.Dialpad
 import androidx.compose.material.icons.rounded.Download
 import androidx.compose.material.icons.rounded.EmojiEvents
+import androidx.compose.material.icons.rounded.Explore
 import androidx.compose.material.icons.rounded.Fingerprint
 import androidx.compose.material.icons.rounded.Info
 import androidx.compose.material.icons.rounded.Language
@@ -440,6 +441,14 @@ fun SettingsScreen(
             leadingContent = { Icon(Icons.AutoMirrored.Rounded.HelpOutline, contentDescription = null) },
             colors = transparentListColors(),
             modifier = Modifier.clickable(onClick = onOpenGuide)
+        )
+
+        ListItem(
+            headlineContent = { Text(stringResource(R.string.tour_replay)) },
+            supportingContent = { Text(stringResource(R.string.tour_replay_desc)) },
+            leadingContent = { Icon(Icons.Rounded.Explore, contentDescription = null) },
+            colors = transparentListColors(),
+            modifier = Modifier.clickable(onClick = viewModel::replayTour)
         )
 
         DocumentRow(

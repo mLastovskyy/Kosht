@@ -83,6 +83,13 @@ class SettingsRepository(private val context: Context) {
         context.dataStore.edit { it[Keys.notificationsAsked] = true }
     }
 
+    val tourSeen: Flow<Boolean> = context.dataStore.data
+        .map { it[Keys.tourSeen] ?: false }
+
+    suspend fun setTourSeen(value: Boolean) {
+        context.dataStore.edit { it[Keys.tourSeen] = value }
+    }
+
     val policyVersionSeen: Flow<String?> = context.dataStore.data
         .map { it[Keys.policyVersionSeen]?.takeIf { version -> version.isNotBlank() } }
 
@@ -99,6 +106,7 @@ class SettingsRepository(private val context: Context) {
         val notifyWeeklySummary = booleanPreferencesKey("notify_weekly_summary")
         val notifyAwards = booleanPreferencesKey("notify_awards")
         val notificationsAsked = booleanPreferencesKey("notifications_asked")
+        val tourSeen = booleanPreferencesKey("tour_seen")
         val profileName = stringPreferencesKey("profile_name")
         val profileNickname = stringPreferencesKey("profile_nickname")
         val profilePhotoPath = stringPreferencesKey("profile_photo_path")
