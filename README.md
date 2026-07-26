@@ -78,7 +78,7 @@ An illustrated **guide lives right inside Settings**, and a full **PDF manual** 
 
 ## 📦 Download & Updates
 
-Every push to `master` automatically builds a fresh APK — grab the latest from the **[Releases](../../releases)** page, open it on your phone, done.
+Every push to `master` automatically builds a fresh APK. You do not have to watch the repo: tap **Settings → Version** and Kosht checks the latest release for you — it either confirms you are up to date or offers the new APK for download (offline it simply says the check is unavailable). You can still grab builds by hand from the **[Releases](../../releases)** page.
 
 Requires Android 8.0+.
 
