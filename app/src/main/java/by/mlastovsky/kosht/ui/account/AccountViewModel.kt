@@ -331,11 +331,6 @@ class AccountViewModel(
     /** Null until the answer is known, so the switch never guesses. */
     val marketingConsent: StateFlow<Boolean?> = _marketing.asStateFlow()
 
-    private val _exported = MutableStateFlow<String?>(null)
-
-    /** The account's data as JSON, once the user has asked for a copy. */
-    val exported: StateFlow<String?> = _exported.asStateFlow()
-
     fun loadMarketingConsent() {
         viewModelScope.launch { _marketing.value = accounts.marketingConsent() ?: false }
     }
@@ -349,14 +344,6 @@ class AccountViewModel(
                 _marketing.value = accounts.marketingConsent() ?: false
             }
         }
-    }
-
-    fun exportData() {
-        viewModelScope.launch { _exported.value = accounts.exportData() }
-    }
-
-    fun clearExport() {
-        _exported.value = null
     }
 
     fun deleteAccount(onDone: (Boolean) -> Unit) {

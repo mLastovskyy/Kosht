@@ -212,14 +212,13 @@ class SupabaseApi(
             }.getOrNull()
         }
 
-    /** Everything held about the account, as one JSON document. */
-    suspend fun exportData(session: SupabaseSession): String? = withContext(Dispatchers.IO) {
-        runCatching {
-            send("$baseUrl/rest/v1/rpc/export_my_data", "POST", session.accessToken, "{}")
-        }.getOrNull()
-    }
-
-    /** Erases the account and, by cascade, everything attached to it. */
+    /**
+     * Erases the account and, by cascade, everything attached to it.
+     *
+     * Its counterpart `export_my_data` is not called from here: a copy of the
+     * data is served on request to the address in the privacy policy, which is
+     * what the policy promises and what the law requires.
+     */
     suspend fun deleteAccount(session: SupabaseSession): Boolean = withContext(Dispatchers.IO) {
         runCatching {
             send("$baseUrl/rest/v1/rpc/delete_my_account", "POST", session.accessToken, "{}")

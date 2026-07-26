@@ -142,11 +142,6 @@ class SyncAccountRepository(
         return api.currentConsent(session, CONSENT_MARKETING)
     }
 
-    suspend fun exportData(): String? {
-        val session = validAccessToken() ?: return null
-        return api.exportData(session)
-    }
-
     /** Erases the cloud copy and forgets the session on this device. */
     suspend fun deleteAccount(): Boolean {
         val session = validAccessToken() ?: return false

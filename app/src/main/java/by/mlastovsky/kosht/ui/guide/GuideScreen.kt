@@ -95,11 +95,12 @@ private val sections = listOf(
     )
 )
 
-/** Copies the bundled PDF to cache and opens it in a viewer. */
+/** Writes the bundled manual into the phone's Downloads and opens it. */
 @Composable
 private fun PdfManualCard() {
     val context = androidx.compose.ui.platform.LocalContext.current
     val errorText = stringResource(R.string.guide_pdf_error)
+    val savedTemplate = stringResource(R.string.doc_saved)
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -123,24 +124,19 @@ private fun PdfManualCard() {
         }
         androidx.compose.material3.Button(
             onClick = {
-                runCatching {
-                    val dir = java.io.File(context.cacheDir, "docs").apply { mkdirs() }
-                    val file = java.io.File(dir, "kosht-manual.pdf")
-                    context.assets.open("manual.pdf").use { input ->
-                        file.outputStream().use { output -> input.copyTo(output) }
-                    }
-                    val uri = androidx.core.content.FileProvider.getUriForFile(
-                        context,
-                        context.packageName + ".fileprovider",
-                        file
-                    )
-                    val intent = android.content.Intent(android.content.Intent.ACTION_VIEW)
-                        .setDataAndType(uri, "application/pdf")
-                        .addFlags(android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION)
-                    context.startActivity(intent)
-                }.onFailure {
+                val message = when (
+                    val outcome = by.mlastovsky.kosht.util.PdfDocs
+                        .download(context, "manual.pdf", "kosht-manual.pdf")
+                ) {
+                    is by.mlastovsky.kosht.util.PdfDocs.Outcome.Saved ->
+                        String.format(savedTemplate, outcome.fileName)
+
+                    by.mlastovsky.kosht.util.PdfDocs.Outcome.Opened -> null
+                    by.mlastovsky.kosht.util.PdfDocs.Outcome.Failed -> errorText
+                }
+                message?.let {
                     android.widget.Toast
-                        .makeText(context, errorText, android.widget.Toast.LENGTH_SHORT)
+                        .makeText(context, it, android.widget.Toast.LENGTH_LONG)
                         .show()
                 }
             }

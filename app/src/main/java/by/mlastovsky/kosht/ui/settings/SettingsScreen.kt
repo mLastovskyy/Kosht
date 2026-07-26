@@ -24,6 +24,8 @@ import androidx.compose.material.icons.automirrored.rounded.HelpOutline
 import androidx.compose.material.icons.automirrored.rounded.Logout
 import androidx.compose.material.icons.rounded.DeleteForever
 import androidx.compose.material.icons.rounded.Download
+import androidx.compose.material.icons.rounded.EmojiEvents
+import androidx.compose.material.icons.rounded.MenuBook
 import androidx.compose.material.icons.rounded.MarkEmailRead
 import androidx.compose.material.icons.rounded.PrivacyTip
 import androidx.compose.material.icons.rounded.AccountBalanceWallet
@@ -142,14 +144,6 @@ fun SettingsScreen(
                 modifier = Modifier.clickable { showProfileDialog = true }
             )
             }
-        }
-
-        if (accountViewModel.isConfigured) {
-            SectionHeader(stringResource(R.string.account_title))
-            SettingsCard { AccountSettings(accountViewModel) }
-
-            SectionHeader(stringResource(R.string.legal_section))
-            SettingsCard { LegalSettings(accountViewModel) }
         }
 
         SectionHeader(stringResource(R.string.settings_appearance))
@@ -371,6 +365,23 @@ fun SettingsScreen(
                 viewModel.setNotifyWeeklySummary(enabled)
             }
         )
+        NotificationToggle(
+            titleRes = R.string.notif_setting_awards,
+            descRes = R.string.notif_setting_awards_desc,
+            icon = Icons.Rounded.EmojiEvents,
+            checked = current.notifyAwards,
+            onChange = { enabled ->
+                if (enabled) requestPermissionIfNeeded()
+                viewModel.setNotifyAwards(enabled)
+            }
+        )
+        // Mail is a notification too, and the only one that leaves the phone.
+        if (accountViewModel.isConfigured) MarketingToggle(accountViewModel)
+        }
+
+        if (accountViewModel.isConfigured) {
+            SectionHeader(stringResource(R.string.account_title))
+            SettingsCard { AccountSettings(accountViewModel) }
         }
 
         SectionHeader(stringResource(R.string.settings_about))
@@ -382,6 +393,27 @@ fun SettingsScreen(
             leadingContent = { Icon(Icons.AutoMirrored.Rounded.HelpOutline, contentDescription = null) },
             colors = transparentListColors(),
             modifier = Modifier.clickable(onClick = onOpenGuide)
+        )
+
+        // The documents belong with the app they describe, and a tap keeps a
+        // copy on the phone rather than only flashing it up on screen.
+        DocumentRow(
+            titleRes = R.string.legal_terms,
+            icon = Icons.AutoMirrored.Rounded.Article,
+            asset = "legal/terms.pdf",
+            fileName = "kosht-terms.pdf"
+        )
+        DocumentRow(
+            titleRes = R.string.legal_privacy,
+            icon = Icons.Rounded.PrivacyTip,
+            asset = "legal/privacy-policy.pdf",
+            fileName = "kosht-privacy-policy.pdf"
+        )
+        DocumentRow(
+            titleRes = R.string.guide_pdf_title,
+            icon = Icons.Rounded.MenuBook,
+            asset = "manual.pdf",
+            fileName = "kosht-manual.pdf"
         )
 
         val packageInfo = remember {
@@ -657,7 +689,11 @@ private fun DailyBudgetDialog(
 
 /**
  * Cloud account block: sign in or up when signed out, otherwise the address,
- * when it last synced, a manual trigger and the automatic-sync switch.
+ * when it last synced, a manual trigger, the automatic-sync switch, the way
+ * out and the way to erase the whole thing.
+ *
+ * Everything that belongs to the account is here, including deleting it —
+ * looking for that under "documents" is looking in the wrong place.
  */
 @Composable
 private fun AccountSettings(viewModel: by.mlastovsky.kosht.ui.account.AccountViewModel) {
@@ -666,6 +702,9 @@ private fun AccountSettings(viewModel: by.mlastovsky.kosht.ui.account.AccountVie
     val lastSyncAt by viewModel.lastSyncAt.collectAsStateWithLifecycle()
     val syncing by viewModel.syncing.collectAsStateWithLifecycle()
     val report by viewModel.report.collectAsStateWithLifecycle()
+    var showDetails by remember { mutableStateOf(false) }
+    var confirmSignOut by remember { mutableStateOf(false) }
+    var confirmDelete by remember { mutableStateOf(false) }
 
     val doneMessage = stringResource(R.string.account_sync_done)
     val offlineMessage = stringResource(R.string.account_sync_offline)
@@ -712,6 +751,8 @@ private fun AccountSettings(viewModel: by.mlastovsky.kosht.ui.account.AccountVie
             modifier = Modifier.clickable { viewModel.startSignUp() }
         )
     } else {
+        // A long address and a long date both have to be cut to one line, so
+        // tapping the row says the whole thing properly.
         ListItem(
             headlineContent = {
                 Text(
@@ -728,7 +769,8 @@ private fun AccountSettings(viewModel: by.mlastovsky.kosht.ui.account.AccountVie
                 )
             },
             leadingContent = { Icon(Icons.Rounded.CloudDone, contentDescription = null) },
-            colors = transparentListColors()
+            colors = transparentListColors(),
+            modifier = Modifier.clickable { showDetails = true }
         )
         ListItem(
             headlineContent = { Text(stringResource(R.string.account_sync_now)) },
@@ -757,94 +799,169 @@ private fun AccountSettings(viewModel: by.mlastovsky.kosht.ui.account.AccountVie
                 Icon(Icons.AutoMirrored.Rounded.Logout, contentDescription = null)
             },
             colors = transparentListColors(),
-            modifier = Modifier.clickable(onClick = viewModel::signOut)
+            modifier = Modifier.clickable { confirmSignOut = true }
         )
+        ListItem(
+            headlineContent = {
+                Text(
+                    text = stringResource(R.string.legal_delete),
+                    color = MaterialTheme.colorScheme.error
+                )
+            },
+            leadingContent = {
+                Icon(
+                    imageVector = Icons.Rounded.DeleteForever,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.error
+                )
+            },
+            colors = transparentListColors(),
+            modifier = Modifier.clickable { confirmDelete = true }
+        )
+
+        if (showDetails) {
+            SyncDetailsDialog(
+                email = current.email.orEmpty(),
+                lastSyncAt = lastSyncAt,
+                autoSync = current.autoSync,
+                syncing = syncing,
+                onSyncNow = {
+                    showDetails = false
+                    viewModel.syncNow()
+                },
+                onDismiss = { showDetails = false }
+            )
+        }
+        if (confirmSignOut) {
+            // Signing out is one tap next to "sync now"; a slip should not
+            // quietly cut the phone off from the account.
+            AlertDialog(
+                onDismissRequest = { confirmSignOut = false },
+                title = { Text(stringResource(R.string.account_sign_out_title)) },
+                text = { Text(stringResource(R.string.account_sign_out_text)) },
+                confirmButton = {
+                    TextButton(
+                        onClick = {
+                            confirmSignOut = false
+                            viewModel.signOut()
+                        }
+                    ) { Text(stringResource(R.string.account_sign_out)) }
+                },
+                dismissButton = {
+                    TextButton(onClick = { confirmSignOut = false }) {
+                        Text(stringResource(R.string.action_cancel))
+                    }
+                }
+            )
+        }
+        if (confirmDelete) {
+            DeleteAccountDialog(
+                onConfirm = {
+                    confirmDelete = false
+                    viewModel.deleteAccount { ok -> toastDeletion(context, ok) }
+                },
+                onDismiss = { confirmDelete = false }
+            )
+        }
     }
 
     by.mlastovsky.kosht.ui.account.AuthDialog(viewModel)
 }
 
+private fun toastDeletion(context: android.content.Context, deleted: Boolean) {
+    android.widget.Toast.makeText(
+        context,
+        context.getString(if (deleted) R.string.legal_deleted else R.string.legal_delete_failed),
+        android.widget.Toast.LENGTH_LONG
+    ).show()
+}
+
+/** The address and the sync state in full, for when the row had to cut them. */
+@Composable
+private fun SyncDetailsDialog(
+    email: String,
+    lastSyncAt: Long,
+    autoSync: Boolean,
+    syncing: Boolean,
+    onSyncNow: () -> Unit,
+    onDismiss: () -> Unit
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        icon = { Icon(Icons.Rounded.CloudDone, contentDescription = null) },
+        title = { Text(stringResource(R.string.account_sync)) },
+        text = {
+            Column(verticalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(8.dp)) {
+                DetailLine(stringResource(R.string.account_email), email)
+                DetailLine(
+                    label = stringResource(R.string.account_last_sync_label),
+                    value = by.mlastovsky.kosht.ui.account.fullSyncTime(lastSyncAt)
+                )
+                DetailLine(
+                    label = stringResource(R.string.account_auto_sync),
+                    value = stringResource(
+                        if (autoSync) R.string.state_on else R.string.state_off
+                    )
+                )
+            }
+        },
+        confirmButton = {
+            TextButton(enabled = !syncing, onClick = onSyncNow) {
+                Text(stringResource(R.string.account_sync_now))
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) { Text(stringResource(R.string.action_close)) }
+        }
+    )
+}
+
+@Composable
+private fun DetailLine(label: String, value: String) {
+    Column {
+        Text(
+            text = label,
+            style = MaterialTheme.typography.labelMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+        Text(text = value, style = MaterialTheme.typography.bodyLarge)
+    }
+}
+
+@Composable
+private fun DeleteAccountDialog(onConfirm: () -> Unit, onDismiss: () -> Unit) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(stringResource(R.string.legal_delete_title)) },
+        text = { Text(stringResource(R.string.legal_delete_text)) },
+        confirmButton = {
+            TextButton(onClick = onConfirm) {
+                Text(
+                    text = stringResource(R.string.legal_delete_confirm),
+                    color = MaterialTheme.colorScheme.error
+                )
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) { Text(stringResource(R.string.action_cancel)) }
+        }
+    )
+}
+
 /**
- * The documents and the choices that go with them, in one place: read either
- * agreement, switch the mailing off, take a copy of everything held, or erase
- * the account outright. Every right the law grants is a tap away rather than
- * an email to somebody.
+ * Being emailed about new features is a notification like any other, so it
+ * sits with them rather than filed under paperwork. Only shown once signed in:
+ * there is no address to write to before that.
  */
 @Composable
-private fun LegalSettings(viewModel: by.mlastovsky.kosht.ui.account.AccountViewModel) {
-    val context = LocalContext.current
+private fun MarketingToggle(viewModel: by.mlastovsky.kosht.ui.account.AccountViewModel) {
     val account by viewModel.account.collectAsStateWithLifecycle()
     val marketing by viewModel.marketingConsent.collectAsStateWithLifecycle()
-    val exported by viewModel.exported.collectAsStateWithLifecycle()
-    var confirmDelete by remember { mutableStateOf(false) }
     val signedIn = account?.signedIn == true
-
-    val pdfError = stringResource(R.string.guide_pdf_error)
-    fun openPdf(asset: String, file: String) {
-        if (!by.mlastovsky.kosht.util.AssetPdf.open(context, asset, file)) {
-            android.widget.Toast.makeText(context, pdfError, android.widget.Toast.LENGTH_SHORT)
-                .show()
-        }
-    }
 
     androidx.compose.runtime.LaunchedEffect(signedIn) {
         if (signedIn) viewModel.loadMarketingConsent()
     }
-
-    val exportFailed = stringResource(R.string.legal_export_failed)
-    exported?.let { json ->
-        androidx.compose.runtime.LaunchedEffect(json) {
-            val shared = runCatching {
-                val dir = java.io.File(context.cacheDir, "docs").apply { mkdirs() }
-                val file = java.io.File(dir, "kosht-my-data.json")
-                file.writeText(json)
-                val uri = androidx.core.content.FileProvider.getUriForFile(
-                    context,
-                    context.packageName + ".fileprovider",
-                    file
-                )
-                context.startActivity(
-                    android.content.Intent.createChooser(
-                        android.content.Intent(android.content.Intent.ACTION_SEND)
-                            .setType("application/json")
-                            .putExtra(android.content.Intent.EXTRA_STREAM, uri)
-                            .addFlags(android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION),
-                        null
-                    )
-                )
-            }.isSuccess
-            if (!shared) {
-                android.widget.Toast
-                    .makeText(context, exportFailed, android.widget.Toast.LENGTH_LONG)
-                    .show()
-            }
-            viewModel.clearExport()
-        }
-    }
-
-    ListItem(
-        headlineContent = { Text(stringResource(R.string.legal_terms)) },
-        leadingContent = {
-            Icon(Icons.AutoMirrored.Rounded.Article, contentDescription = null)
-        },
-        colors = transparentListColors(),
-        modifier = Modifier.clickable { openPdf("legal/terms.pdf", "kosht-terms.pdf") }
-    )
-    ListItem(
-        headlineContent = {
-            Text(
-                text = stringResource(R.string.legal_privacy),
-                maxLines = 2,
-                overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
-            )
-        },
-        leadingContent = { Icon(Icons.Rounded.PrivacyTip, contentDescription = null) },
-        colors = transparentListColors(),
-        modifier = Modifier.clickable {
-            openPdf("legal/privacy-policy.pdf", "kosht-privacy.pdf")
-        }
-    )
-
     if (!signedIn) return
 
     ListItem(
@@ -860,63 +977,48 @@ private fun LegalSettings(viewModel: by.mlastovsky.kosht.ui.account.AccountViewM
         colors = transparentListColors(),
         modifier = Modifier.clickable { viewModel.setMarketingConsent(marketing != true) }
     )
-    ListItem(
-        headlineContent = { Text(stringResource(R.string.legal_export)) },
-        leadingContent = { Icon(Icons.Rounded.Download, contentDescription = null) },
-        colors = transparentListColors(),
-        modifier = Modifier.clickable(onClick = viewModel::exportData)
-    )
+}
+
+/**
+ * A document row: one tap writes the PDF into the phone's Downloads and opens
+ * it, so it can be kept, printed or forwarded like any other file.
+ */
+@Composable
+private fun DocumentRow(
+    titleRes: Int,
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    asset: String,
+    fileName: String
+) {
+    val context = LocalContext.current
+    val savedTemplate = stringResource(R.string.doc_saved)
+    val failed = stringResource(R.string.guide_pdf_error)
     ListItem(
         headlineContent = {
             Text(
-                text = stringResource(R.string.legal_delete),
-                color = MaterialTheme.colorScheme.error
+                text = stringResource(titleRes),
+                maxLines = 2,
+                overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
             )
         },
-        leadingContent = {
-            Icon(
-                imageVector = Icons.Rounded.DeleteForever,
-                contentDescription = null,
-                tint = MaterialTheme.colorScheme.error
-            )
-        },
+        leadingContent = { Icon(icon, contentDescription = null) },
+        trailingContent = { Icon(Icons.Rounded.Download, contentDescription = null) },
         colors = transparentListColors(),
-        modifier = Modifier.clickable { confirmDelete = true }
-    )
+        modifier = Modifier.clickable {
+            val message = when (
+                val outcome = by.mlastovsky.kosht.util.PdfDocs.download(context, asset, fileName)
+            ) {
+                is by.mlastovsky.kosht.util.PdfDocs.Outcome.Saved ->
+                    String.format(savedTemplate, outcome.fileName)
 
-    val deleted = stringResource(R.string.legal_deleted)
-    val deleteFailed = stringResource(R.string.legal_delete_failed)
-    if (confirmDelete) {
-        AlertDialog(
-            onDismissRequest = { confirmDelete = false },
-            title = { Text(stringResource(R.string.legal_delete_title)) },
-            text = { Text(stringResource(R.string.legal_delete_text)) },
-            confirmButton = {
-                TextButton(
-                    onClick = {
-                        confirmDelete = false
-                        viewModel.deleteAccount { ok ->
-                            android.widget.Toast.makeText(
-                                context,
-                                if (ok) deleted else deleteFailed,
-                                android.widget.Toast.LENGTH_LONG
-                            ).show()
-                        }
-                    }
-                ) {
-                    Text(
-                        text = stringResource(R.string.legal_delete_confirm),
-                        color = MaterialTheme.colorScheme.error
-                    )
-                }
-            },
-            dismissButton = {
-                TextButton(onClick = { confirmDelete = false }) {
-                    Text(stringResource(R.string.action_cancel))
-                }
+                by.mlastovsky.kosht.util.PdfDocs.Outcome.Opened -> null
+                by.mlastovsky.kosht.util.PdfDocs.Outcome.Failed -> failed
             }
-        )
-    }
+            message?.let {
+                android.widget.Toast.makeText(context, it, android.widget.Toast.LENGTH_LONG).show()
+            }
+        }
+    )
 }
 
 /** Download/install progress; [percent] below zero shows a spinner instead. */

@@ -53,7 +53,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import by.mlastovsky.kosht.R
 import by.mlastovsky.kosht.data.sync.CodePurpose
 import by.mlastovsky.kosht.ui.AppViewModelProvider
-import by.mlastovsky.kosht.util.AssetPdf
+import by.mlastovsky.kosht.util.PdfDocs
 import kotlinx.coroutines.delay
 import java.text.DateFormat
 import java.util.Date
@@ -236,10 +236,16 @@ private fun EmailStep(
 private fun ConsentCheckboxes(state: AuthUiState, viewModel: AccountViewModel) {
     val context = LocalContext.current
     val pdfError = stringResource(R.string.guide_pdf_error)
+    val savedTemplate = stringResource(R.string.doc_saved)
+    // Opens the document and, where Android allows it, leaves a copy in
+    // Downloads — what someone is asked to agree to should be theirs to keep.
     fun openPdf(asset: String, file: String) {
-        if (!AssetPdf.open(context, asset, file)) {
-            Toast.makeText(context, pdfError, Toast.LENGTH_SHORT).show()
+        val message = when (val outcome = PdfDocs.download(context, asset, file)) {
+            is PdfDocs.Outcome.Saved -> String.format(savedTemplate, outcome.fileName)
+            PdfDocs.Outcome.Opened -> null
+            PdfDocs.Outcome.Failed -> pdfError
         }
+        message?.let { Toast.makeText(context, it, Toast.LENGTH_LONG).show() }
     }
 
     CheckRow(
@@ -255,7 +261,7 @@ private fun ConsentCheckboxes(state: AuthUiState, viewModel: AccountViewModel) {
                 style = MaterialTheme.typography.labelMedium
             )
         }
-        TextButton(onClick = { openPdf("legal/privacy-policy.pdf", "kosht-privacy.pdf") }) {
+        TextButton(onClick = { openPdf("legal/privacy-policy.pdf", "kosht-privacy-policy.pdf") }) {
             Text(
                 text = stringResource(R.string.legal_privacy),
                 style = MaterialTheme.typography.labelMedium,
@@ -557,9 +563,13 @@ private fun String.isValidEmail(): Boolean =
 fun lastSyncLabel(lastSyncAt: Long): String = if (lastSyncAt <= 0L) {
     stringResource(R.string.account_last_sync_never)
 } else {
-    stringResource(
-        R.string.account_last_sync,
-        DateFormat.getDateTimeInstance(DateFormat.SHORT, DateFormat.SHORT)
-            .format(Date(lastSyncAt))
-    )
+    stringResource(R.string.account_last_sync, fullSyncTime(lastSyncAt))
+}
+
+/** The moment itself, spelled out in full — for the details dialog. */
+@Composable
+fun fullSyncTime(lastSyncAt: Long): String = if (lastSyncAt <= 0L) {
+    stringResource(R.string.account_last_sync_never)
+} else {
+    DateFormat.getDateTimeInstance(DateFormat.LONG, DateFormat.SHORT).format(Date(lastSyncAt))
 }

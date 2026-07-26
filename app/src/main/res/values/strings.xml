@@ -173,7 +173,12 @@
     <string name="account_auto_sync_hint">Changes go up as soon as there is a connection</string>
     <string name="account_sync_now">Sync now</string>
     <string name="account_last_sync">Last sync: %1$s</string>
+    <string name="account_last_sync_label">Last sync</string>
     <string name="account_last_sync_never">Not synced yet</string>
+    <string name="account_sign_out_title">Sign out?</string>
+    <string name="account_sign_out_text">Records on this phone stay where they are, and so does the cloud copy — you can sign back in at any time.</string>
+    <string name="state_on">On</string>
+    <string name="state_off">Off</string>
     <string name="account_sync_done">Everything is up to date</string>
     <string name="account_sync_received">Synced — %1$d records came in</string>
     <string name="account_sync_offline">No connection — Kosht will sync as soon as it is back</string>
@@ -208,15 +213,12 @@
     <string name="auth_err_weak_password">Use at least 6 characters.</string>
 
     <!-- Documents and consent -->
-    <string name="legal_section">Documents &amp; consent</string>
     <string name="legal_terms">Terms of use</string>
     <string name="legal_privacy">Personal data policy</string>
-    <string name="legal_read">Read</string>
     <string name="legal_accept">I accept the Terms of use and the Personal data policy</string>
     <string name="legal_marketing">Email me about new features</string>
     <string name="legal_marketing_hint">Optional. You can switch it off at any time.</string>
-    <string name="legal_export">Download my data</string>
-    <string name="legal_export_failed">Could not prepare the file.</string>
+    <string name="doc_saved">Saved to Downloads: %1$s</string>
     <string name="legal_delete">Delete account and data</string>
     <string name="legal_delete_title">Delete the account?</string>
     <string name="legal_delete_text">The cloud copy and everything in it is erased for good, and this cannot be undone. Records already on this phone stay where they are.</string>
@@ -236,12 +238,15 @@
     <string name="channel_reminders">Reminders</string>
     <string name="channel_recurring">Recurring payments</string>
     <string name="channel_summary">Summaries</string>
+    <string name="channel_awards">Awards</string>
     <string name="notif_setting_daily">Daily reminder</string>
     <string name="notif_setting_daily_desc">Evening nudge if nothing is logged today</string>
     <string name="notif_setting_recurring">Payments awaiting confirmation</string>
     <string name="notif_setting_recurring_desc">When a monthly payment is due</string>
     <string name="notif_setting_weekly">Weekly summary</string>
     <string name="notif_setting_weekly_desc">Spending digest every Monday</string>
+    <string name="notif_setting_awards">Awards earned</string>
+    <string name="notif_setting_awards_desc">A quiet note when you unlock one</string>
     <string name="notif_daily_title">Don\'t forget your expenses</string>
     <string name="notif_daily_text">Nothing is logged today. It only takes a few seconds.</string>
     <string name="notif_recurring_title">Payments to confirm</string>
@@ -353,8 +358,34 @@
     <string name="badge_challenge_five_desc">Complete 5 challenges.</string>
     <string name="badge_five_hundred_desc">Add 500 records.</string>
     <string name="badge_streak100_desc">Stay within the daily budget 100 days in a row.</string>
+    <string name="badge_night_owl">Night owl</string>
+    <string name="badge_night_owl_desc">Log a record between midnight and five in the morning.</string>
+    <string name="badge_debt_closed">Debt settled</string>
+    <string name="badge_debt_closed_desc">Pay off a debt in full.</string>
+    <string name="badge_categories10">Everything in its place</string>
+    <string name="badge_categories10_desc">Spend across 10 different categories.</string>
+    <string name="badge_perfect_month">Perfect month</string>
+    <string name="badge_perfect_month_desc">Get through a whole calendar month without a single day over the budget.</string>
+    <string name="badge_surplus_three">Three in the black</string>
+    <string name="badge_surplus_three_desc">Finish three months in a row with income above spending.</string>
+    <string name="badge_photo100">Full archive</string>
+    <string name="badge_photo100_desc">Attach 100 receipt photos.</string>
+    <string name="badge_fortune">Fortune</string>
+    <string name="badge_fortune_desc">Save up a total of 5000 BYN.</string>
+    <string name="badge_year_tracked">A year of records</string>
+    <string name="badge_year_tracked_desc">Record something in 12 different months.</string>
+    <string name="badge_goal_ten">Goal collector</string>
+    <string name="badge_goal_ten_desc">Reach 10 savings goals.</string>
+    <string name="badge_challenge_twenty">Unbreakable</string>
+    <string name="badge_challenge_twenty_desc">Complete 20 challenges.</string>
+    <string name="badge_thousand">A thousand records</string>
+    <string name="badge_thousand_desc">Add 1000 records.</string>
+    <string name="badge_streak365">Year under budget</string>
+    <string name="badge_streak365_desc">Stay within the daily budget 365 days in a row.</string>
     <string name="award_unlocked_at">Earned %1$s</string>
     <string name="award_progress">Progress: %1$s</string>
+    <string name="award_unlocked_title">Award earned!</string>
+    <string name="award_unlocked_confirm">Nice</string>
     <string name="action_close">Close</string>
     <string name="challenge_until">Until %1$s</string>
     <string name="account_edit">Edit account</string>
@@ -371,8 +402,8 @@
     <string name="guide_title">How to use Kosht</string>
     <string name="guide_settings_entry_desc">Every screen and button explained</string>
     <string name="guide_pdf_title">Full PDF manual</string>
-    <string name="guide_pdf_desc">An illustrated step-by-step manual with screenshots — open it, save it or share it</string>
-    <string name="guide_pdf_open">Open PDF</string>
+    <string name="guide_pdf_desc">An illustrated step-by-step manual with screenshots — saved into your Downloads and opened, so it stays on the phone</string>
+    <string name="guide_pdf_open">Download PDF</string>
     <string name="guide_pdf_error">No PDF viewer found</string>
     <string name="guide_intro">A quick tour of every screen. Everything works offline; data leaves the phone only if you switch on cloud sync.</string>
     <string name="guide_sync_title">Account &amp; sync</string>
@@ -392,7 +423,9 @@ Settings → Account shows the address, when it last synced, a button to sync ri
 
 If the receipt has a QR code, Kosht reads the shop\'s electronic receipt through it — the figures come out exact, and even a slip with nothing but a QR on it works. That receipt is saved, and the receipt icon in the editor opens it again later, with or without a connection. A code that turns out to be a loyalty card or an advert is skipped.
 
-With no QR the photo itself is read, right on the phone. Either way a dialog shows what was found: correct the amount or the shop if needed, the date fills itself in. Apply puts everything into the form, and you can still change any of it afterwards.</string>
+With no QR the photo itself is read, right on the phone. Either way a dialog shows what was found: correct the amount or the shop if needed, the date fills itself in. Apply puts everything into the form, and you can still change any of it afterwards.
+
+The shop goes into the note. A familiar chain is recognised by name; an unfamiliar one is read off the way the slip is printed — the largest type at the top, a trade name in quotes, a legal form, the line beside the tax number. Addresses, cashiers, document headers, card details and scanning noise are thrown out, and if no line looks like a name the note is simply left empty rather than filled with something off the receipt.</string>
     <string name="guide_history_title">History</string>
     <string name="guide_history_body">Arrows switch months. The search field filters by note and custom category names. Chips: All / Expense / Income, "Category" opens a category picker (tap ✕ on the chip to clear), "Period" opens a calendar where you select a single day or a range — the period replaces month navigation until you clear it with ✕. Records are grouped by day with a net total per day. Swipe a row left to delete — an Undo snackbar appears. Tap a row to edit it.</string>
     <string name="guide_stats_title">Statistics</string>
@@ -402,13 +435,13 @@ With no QR the photo itself is read, right on the phone. Either way a dialog sho
     <string name="guide_savings_title">Debts, goals &amp; savings</string>
     <string name="guide_savings_body">Debts: + adds one — who, direction (I owe / owed to me), amount in any currency, note. The two tiles total both directions in BYN. Tap a debt to repay a part, close it or delete it. Goals: + creates a goal with a target amount; deposits linked to the goal fill its progress bar, and reaching the target celebrates 🎉. Savings: "Set aside" and "Withdraw" record movements (optionally toward a goal), the journal below lists them with BYN equivalents; the trash removes an entry.</string>
     <string name="guide_achievements_title">Achievements</string>
-    <string name="guide_achievements_body">Open with the trophy on Home. The streak card counts consecutive days you stayed within the daily budget (set it in Settings, auto = last month\'s average). Challenges: + creates one — Limit (spend under X, optionally in one category), No spend, or Save up (set aside X) — for a week, until month end or 30 days. Progress updates live; tap a challenge to edit its title, amount, category and end date, the trash removes it. Awards below scroll horizontally from easy to hard and unlock automatically as you use the app — tap any award to see how to earn it, your progress toward it (like "6 / 10"), and the date you earned it. Once earned an award stays yours forever, even if the streak resets.</string>
+    <string name="guide_achievements_body">Open with the trophy on Home. The streak card counts consecutive days you stayed within the daily budget (set it in Settings, auto = last month\'s average). Challenges: + creates one — Limit (spend under X, optionally in one category), No spend, or Save up (set aside X) — for a week, until month end or 30 days. Progress updates live; tap a challenge to edit its title, amount, category and end date, the trash removes it. Below are 30 awards, six to a page, easiest first: from the first record to a year inside the budget, a thousand records, five thousand saved, a perfect month without a single day over budget, three months in a row in the black, and twenty challenges completed. Tap any award to see how to earn it, your progress toward it (like "6 / 10"), and the date you earned it. An award unlocks the moment it is deserved, whichever screen you are on: a congratulation appears over the app and a quiet note lands in the shade — you never have to open this screen for it to count. Once earned an award stays yours forever, even if the streak resets.</string>
     <string name="guide_accounts_title">Accounts: cards &amp; cash</string>
     <string name="guide_accounts_body">By default there is a single account and the app looks perfectly simple. Add more (Settings → Accounts: name, icon, color — e.g. Cash, a second card) and Kosht lights up: the editor gets an account chip next to the date so you choose where the money comes from or goes to, confirming a recurring payment asks which account to deduct from, Home shows a balance pill per account under the main card, and Statistics gains an account filter. Tapping an account opens its card: the pencil (or a tap on the name) reveals renaming plus icon and color, the balance field sets the real amount, and the trash icon deletes it — its records move to the primary account.</string>
     <string name="guide_calc_title">Amount calculator</string>
     <string name="guide_calc_body">The calculator lives in a full-width bottom sheet: it opens by itself for a new record and whenever you tap the amount. The right column of the keypad holds ÷ × − +. Type expressions like 12,50+3,90+8. While an operation is unfinished the big button turns into = — tap it to evaluate. Apply writes the result into the amount field and closes the sheet; Cancel or a swipe down leaves the amount untouched. Multiplication and division take precedence, as they should.</string>
     <string name="guide_settings_title">Settings</string>
-    <string name="guide_settings_body">Profile — tap to set a photo from the gallery or one of the built-in avatars, press and hold the avatar to remove the photo, and set your name and nickname (used in greetings and reports). Interface toggles hide anything you do not need and control whether the calculator opens by itself when adding a record. The Report block sets the period the statistics report covers and ticks off exactly which metric rows it shows. The Account block signs you in or out of cloud sync and shows when it last ran. Tap Version to check for a newer build: Kosht either says you are up to date or downloads and installs the update right there — no browser, nothing left in Downloads, and your data stays in place. Android asks once for permission to let Kosht install its own updates. Offline it just says the check is not possible right now. Theme: system/light/dark plus Material You dynamic colors. Language: system, Russian or English. Currency — switching converts every stored amount at the live NBRB rate. Daily budget powers the streak. Notifications: an evening reminder (only if nothing was logged), payments awaiting confirmation and a Monday summary — each with its own switch.</string>
+    <string name="guide_settings_body">Profile — tap to set a photo from the gallery or one of the built-in avatars, press and hold the avatar to remove the photo, and set your name and nickname (used in greetings and reports). Interface toggles hide anything you do not need and control whether the calculator opens by itself when adding a record. The Report block sets the period the statistics report covers and ticks off exactly which metric rows it shows. Notifications: an evening reminder (only if nothing was logged), payments awaiting confirmation, a Monday summary, awards you earn, and — once signed in — whether Kosht may email you about new features. The Account block follows: tap the address row to see the full address, the exact time of the last sync and whether automatic sync is on; sign out asks first, and deleting the account and its data is the last row there. About holds the guide, the Terms, the Personal data policy and the full manual — each tap saves the PDF into your phone\'s Downloads and opens it, so it stays yours to read, print or forward. Tap Version to check for a newer build: Kosht either says you are up to date or downloads and installs the update right there — no browser, nothing left in Downloads, and your data stays in place. Android asks once for permission to let Kosht install its own updates. Offline it just says the check is not possible right now. Theme: system/light/dark plus Material You dynamic colors. Language: system, Russian or English. Currency — switching converts everything at the live NBRB rate: records, the daily budget, balance corrections, challenge limits, savings, goals, debts and recurring charges. Daily budget powers the streak.</string>
 
     <!-- Built-in categories -->
     <string name="category_groceries">Groceries</string>

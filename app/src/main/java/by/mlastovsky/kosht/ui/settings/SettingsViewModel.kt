@@ -189,6 +189,10 @@ class SettingsViewModel(
         viewModelScope.launch { settingsRepository.setNotifyWeeklySummary(enabled) }
     }
 
+    fun setNotifyAwards(enabled: Boolean) {
+        viewModelScope.launch { settingsRepository.setNotifyAwards(enabled) }
+    }
+
     fun setDailyBudget(minor: Long) {
         viewModelScope.launch { settingsRepository.setDailyBudgetMinor(minor) }
     }

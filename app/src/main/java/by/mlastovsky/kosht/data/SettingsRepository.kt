@@ -27,6 +27,8 @@ data class AppSettings(
     val notifyDailyReminder: Boolean,
     val notifyRecurringDue: Boolean,
     val notifyWeeklySummary: Boolean,
+    /** Tell the user in the shade when an award is earned. */
+    val notifyAwards: Boolean,
     /** Daily spending budget for the streak; 0 = auto from last month. */
     val dailyBudgetMinor: Long,
     val showGreeting: Boolean,
@@ -75,6 +77,7 @@ class SettingsRepository(private val context: Context) {
         val notifyDailyReminder = booleanPreferencesKey("notify_daily_reminder")
         val notifyRecurringDue = booleanPreferencesKey("notify_recurring_due")
         val notifyWeeklySummary = booleanPreferencesKey("notify_weekly_summary")
+        val notifyAwards = booleanPreferencesKey("notify_awards")
         val notificationsAsked = booleanPreferencesKey("notifications_asked")
         val profileName = stringPreferencesKey("profile_name")
         val profileNickname = stringPreferencesKey("profile_nickname")
@@ -155,6 +158,7 @@ class SettingsRepository(private val context: Context) {
             notifyDailyReminder = prefs[Keys.notifyDailyReminder] ?: false,
             notifyRecurringDue = prefs[Keys.notifyRecurringDue] ?: true,
             notifyWeeklySummary = prefs[Keys.notifyWeeklySummary] ?: false,
+            notifyAwards = prefs[Keys.notifyAwards] ?: true,
             dailyBudgetMinor = prefs[Keys.dailyBudgetMinor] ?: 0L,
             showGreeting = prefs[Keys.showGreeting] ?: true,
             showStreak = prefs[Keys.showStreak] ?: true,
@@ -179,6 +183,10 @@ class SettingsRepository(private val context: Context) {
 
     suspend fun setNotifyWeeklySummary(enabled: Boolean) {
         context.dataStore.edit { it[Keys.notifyWeeklySummary] = enabled }
+    }
+
+    suspend fun setNotifyAwards(enabled: Boolean) {
+        context.dataStore.edit { it[Keys.notifyAwards] = enabled }
     }
 
     suspend fun setCurrencyCode(code: String) {
