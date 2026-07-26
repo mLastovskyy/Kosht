@@ -4,6 +4,7 @@ import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -19,18 +20,30 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.rounded.KeyboardArrowLeft
+import androidx.compose.material.icons.automirrored.rounded.KeyboardArrowRight
+import androidx.compose.material.icons.rounded.ArrowDropDown
 import androidx.compose.material.icons.rounded.CalendarMonth
+import androidx.compose.material.icons.rounded.Check
 import androidx.compose.material.icons.rounded.DonutLarge
 import androidx.compose.material.icons.rounded.Insights
+import androidx.compose.material.icons.rounded.Tune
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Checkbox
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilledIconToggleButton
+import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.SegmentedButton
 import androidx.compose.material3.SegmentedButtonDefaults
 import androidx.compose.material3.SingleChoiceSegmentedButtonRow
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -41,6 +54,7 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
@@ -48,6 +62,8 @@ import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -60,10 +76,13 @@ import by.mlastovsky.kosht.ui.components.CategoryBadge
 import by.mlastovsky.kosht.ui.components.EmptyState
 import by.mlastovsky.kosht.ui.components.MonthSelector
 import by.mlastovsky.kosht.ui.components.TransactionRow
+import by.mlastovsky.kosht.ui.components.monthTitle
 import by.mlastovsky.kosht.ui.relativeDate
 import by.mlastovsky.kosht.util.Money
 import java.time.LocalDate
 import java.time.YearMonth
+import java.time.format.DateTimeFormatter
+import java.util.Locale
 import kotlin.math.roundToInt
 
 @Composable
@@ -73,6 +92,7 @@ fun StatsScreen(
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     var viewMode by rememberSaveable { mutableStateOf(0) }
+    var showReportFields by remember { mutableStateOf(false) }
     var selectedEpochDay by rememberSaveable {
         mutableLongStateOf(LocalDate.now().toEpochDay())
     }
@@ -84,24 +104,45 @@ fun StatsScreen(
             .fillMaxSize()
             .statusBarsPadding()
     ) {
-        MonthSelector(
-            month = state.month,
-            nextEnabled = !state.isCurrentMonth,
-            onPrevious = viewModel::previousMonth,
-            onNext = viewModel::nextMonth
-        )
+        if (viewMode == 2) {
+            // The report window has its own kind (week/month/quarter/year)
+            // and navigation, independent of the charts' month.
+            ReportPeriodBar(
+                state = state,
+                onPeriodChange = viewModel::setReportPeriod,
+                onPrevious = viewModel::previousReportPeriod,
+                onNext = viewModel::nextReportPeriod,
+                onConfigureFields = { showReportFields = true }
+            )
+        } else {
+            MonthSelector(
+                month = state.month,
+                nextEnabled = !state.isCurrentMonth,
+                onPrevious = viewModel::previousMonth,
+                onNext = viewModel::nextMonth
+            )
+        }
 
         Row(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(horizontal = 16.dp),
+            horizontalArrangement = if (viewMode == 2) {
+                Arrangement.spacedBy(8.dp, Alignment.CenterHorizontally)
+            } else {
+                Arrangement.Start
+            },
             verticalAlignment = Alignment.CenterVertically
         ) {
-            TypeToggle(
-                type = state.type,
-                onTypeChange = viewModel::setType,
-                modifier = Modifier.weight(1f)
-            )
+            // The report covers expenses and income at once, so the
+            // Expense/Income switch would be dead weight there.
+            if (viewMode != 2) {
+                TypeToggle(
+                    type = state.type,
+                    onTypeChange = viewModel::setType,
+                    modifier = Modifier.weight(1f)
+                )
+            }
             FilledIconToggleButton(
                 checked = viewMode == 0,
                 onCheckedChange = { viewMode = 0 }
@@ -155,6 +196,17 @@ fun StatsScreen(
                     )
                 }
             }
+        }
+
+        if (showReportFields) {
+            ReportFieldsDialog(
+                selected = state.reportFields,
+                onConfirm = { fields ->
+                    viewModel.setReportFields(fields)
+                    showReportFields = false
+                },
+                onDismiss = { showReportFields = false }
+            )
         }
 
         if (state.loaded && !state.hasData && viewMode != 2) {
@@ -284,6 +336,184 @@ private fun CalendarContent(
                 )
             }
         }
+    }
+}
+
+/**
+ * One compact row for the report: arrows walk the timeline, the title
+ * doubles as the week/month/quarter/year picker, and the slider icon
+ * configures which metrics are shown.
+ */
+@Composable
+private fun ReportPeriodBar(
+    state: StatsUiState,
+    onPeriodChange: (ReportPeriod) -> Unit,
+    onPrevious: () -> Unit,
+    onNext: () -> Unit,
+    onConfigureFields: () -> Unit
+) {
+    var periodMenuOpen by remember { mutableStateOf(false) }
+
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 8.dp, vertical = 4.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        IconButton(onClick = onPrevious) {
+            Icon(Icons.AutoMirrored.Rounded.KeyboardArrowLeft, contentDescription = null)
+        }
+        Box(modifier = Modifier.weight(1f)) {
+            Row(
+                horizontalArrangement = Arrangement.Center,
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clip(MaterialTheme.shapes.medium)
+                    .clickable { periodMenuOpen = true }
+                    .padding(vertical = 6.dp)
+            ) {
+                Text(
+                    text = reportPeriodTitle(state),
+                    style = MaterialTheme.typography.titleLarge,
+                    textAlign = TextAlign.Center,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+                Icon(
+                    Icons.Rounded.ArrowDropDown,
+                    contentDescription = stringResource(R.string.report_period_pick),
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+            DropdownMenu(
+                expanded = periodMenuOpen,
+                onDismissRequest = { periodMenuOpen = false }
+            ) {
+                ReportPeriod.entries.forEach { period ->
+                    DropdownMenuItem(
+                        text = {
+                            Text(
+                                stringResource(
+                                    when (period) {
+                                        ReportPeriod.WEEK -> R.string.report_period_week
+                                        ReportPeriod.MONTH -> R.string.report_period_month
+                                        ReportPeriod.QUARTER -> R.string.report_period_quarter
+                                        ReportPeriod.YEAR -> R.string.report_period_year
+                                    }
+                                )
+                            )
+                        },
+                        leadingIcon = {
+                            if (state.reportPeriod == period) {
+                                Icon(
+                                    Icons.Rounded.Check,
+                                    contentDescription = null,
+                                    tint = MaterialTheme.colorScheme.primary
+                                )
+                            }
+                        },
+                        onClick = {
+                            onPeriodChange(period)
+                            periodMenuOpen = false
+                        }
+                    )
+                }
+            }
+        }
+        IconButton(onClick = onNext, enabled = state.reportShift < 0) {
+            Icon(Icons.AutoMirrored.Rounded.KeyboardArrowRight, contentDescription = null)
+        }
+        IconButton(onClick = onConfigureFields) {
+            Icon(
+                Icons.Rounded.Tune,
+                contentDescription = stringResource(R.string.report_fields_title),
+                tint = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
+    }
+}
+
+/** Checkbox list of report metric rows; the choice is persisted. */
+@Composable
+private fun ReportFieldsDialog(
+    selected: Set<by.mlastovsky.kosht.model.ReportField>,
+    onConfirm: (Set<by.mlastovsky.kosht.model.ReportField>) -> Unit,
+    onDismiss: () -> Unit
+) {
+    var fields by remember { mutableStateOf(selected) }
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(stringResource(R.string.report_fields_title)) },
+        text = {
+            Column {
+                by.mlastovsky.kosht.model.ReportField.entries.forEach { field ->
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable {
+                                fields = if (field in fields) fields - field else fields + field
+                            }
+                            .padding(vertical = 2.dp)
+                    ) {
+                        Checkbox(
+                            checked = field in fields,
+                            onCheckedChange = { checked ->
+                                fields = if (checked) fields + field else fields - field
+                            }
+                        )
+                        Text(
+                            text = stringResource(
+                                when (field) {
+                                    by.mlastovsky.kosht.model.ReportField.SPENT ->
+                                        R.string.report_spent
+                                    by.mlastovsky.kosht.model.ReportField.INCOME ->
+                                        R.string.report_income
+                                    by.mlastovsky.kosht.model.ReportField.NET ->
+                                        R.string.report_net
+                                    by.mlastovsky.kosht.model.ReportField.AVG_DAY ->
+                                        R.string.report_avg_day
+                                    by.mlastovsky.kosht.model.ReportField.FREE_DAYS ->
+                                        R.string.report_free_days
+                                    by.mlastovsky.kosht.model.ReportField.TOP_CATEGORY ->
+                                        R.string.report_top_category
+                                }
+                            ),
+                            style = MaterialTheme.typography.bodyLarge
+                        )
+                    }
+                }
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = { onConfirm(fields) }) {
+                Text(stringResource(R.string.action_apply))
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) { Text(stringResource(R.string.action_cancel)) }
+        }
+    )
+}
+
+@Composable
+private fun reportPeriodTitle(state: StatsUiState): String {
+    val report = state.report ?: return ""
+    val start = report.periodStart
+    val end = report.periodEnd
+    return when (state.reportPeriod) {
+        ReportPeriod.WEEK -> {
+            val formatter = DateTimeFormatter.ofPattern("d MMM", Locale.getDefault())
+            start.format(formatter) + " – " + end.format(formatter)
+        }
+        ReportPeriod.MONTH -> monthTitle(YearMonth.from(start))
+        ReportPeriod.QUARTER -> stringResource(
+            R.string.report_quarter_label,
+            (start.monthValue - 1) / 3 + 1,
+            start.year
+        )
+        ReportPeriod.YEAR -> start.year.toString()
     }
 }
 

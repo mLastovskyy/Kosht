@@ -23,6 +23,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import by.mlastovsky.kosht.R
+import by.mlastovsky.kosht.model.ReportField
 import by.mlastovsky.kosht.ui.CategoryVisuals
 import by.mlastovsky.kosht.ui.components.CategoryBadge
 import by.mlastovsky.kosht.ui.theme.KoshtTheme
@@ -41,6 +42,8 @@ fun ReportContent(state: StatsUiState) {
             VerdictCard(report)
         }
         item(key = "metrics") {
+            // Rows are user-configurable via the tune icon in the period bar.
+            if (state.reportFields.isEmpty()) return@item
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -50,35 +53,45 @@ fun ReportContent(state: StatsUiState) {
                     .padding(16.dp),
                 verticalArrangement = Arrangement.spacedBy(10.dp)
             ) {
-                MetricRow(
-                    label = stringResource(R.string.report_spent),
-                    value = Money.format(report.expenseMinor, state.currencyCode),
-                    delta = report.deltaPercent
-                )
-                MetricRow(
-                    label = stringResource(R.string.report_income),
-                    value = Money.format(report.incomeMinor, state.currencyCode)
-                )
-                MetricRow(
-                    label = stringResource(R.string.report_net),
-                    value = (if (report.netMinor > 0) "+" else "") +
-                        Money.format(report.netMinor, state.currencyCode),
-                    valueColor = if (report.netMinor >= 0) {
-                        KoshtTheme.colors.income
-                    } else {
-                        KoshtTheme.colors.expense
-                    }
-                )
-                MetricRow(
-                    label = stringResource(R.string.report_avg_day),
-                    value = Money.format(report.avgPerDayMinor, state.currencyCode)
-                )
-                MetricRow(
-                    label = stringResource(R.string.report_free_days),
-                    value = report.daysWithoutSpending.toString()
-                )
+                if (ReportField.SPENT in state.reportFields) {
+                    MetricRow(
+                        label = stringResource(R.string.report_spent),
+                        value = Money.format(report.expenseMinor, state.currencyCode),
+                        delta = report.deltaPercent
+                    )
+                }
+                if (ReportField.INCOME in state.reportFields) {
+                    MetricRow(
+                        label = stringResource(R.string.report_income),
+                        value = Money.format(report.incomeMinor, state.currencyCode)
+                    )
+                }
+                if (ReportField.NET in state.reportFields) {
+                    MetricRow(
+                        label = stringResource(R.string.report_net),
+                        value = (if (report.netMinor > 0) "+" else "") +
+                            Money.format(report.netMinor, state.currencyCode),
+                        valueColor = if (report.netMinor >= 0) {
+                            KoshtTheme.colors.income
+                        } else {
+                            KoshtTheme.colors.expense
+                        }
+                    )
+                }
+                if (ReportField.AVG_DAY in state.reportFields) {
+                    MetricRow(
+                        label = stringResource(R.string.report_avg_day),
+                        value = Money.format(report.avgPerDayMinor, state.currencyCode)
+                    )
+                }
+                if (ReportField.FREE_DAYS in state.reportFields) {
+                    MetricRow(
+                        label = stringResource(R.string.report_free_days),
+                        value = report.daysWithoutSpending.toString()
+                    )
+                }
                 val top = report.topSlice
-                if (top != null) {
+                if (top != null && ReportField.TOP_CATEGORY in state.reportFields) {
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.spacedBy(8.dp)

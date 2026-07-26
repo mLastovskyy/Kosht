@@ -6,8 +6,10 @@ import by.mlastovsky.kosht.data.SettingsRepository
 import by.mlastovsky.kosht.data.TransactionRepository
 import by.mlastovsky.kosht.data.UserProfile
 import by.mlastovsky.kosht.data.WalletRepository
+import androidx.lifecycle.viewModelScope
 import by.mlastovsky.kosht.data.db.CategoryEntity
 import by.mlastovsky.kosht.data.db.TransactionWithCategory
+import by.mlastovsky.kosht.model.ReportField
 import by.mlastovsky.kosht.model.TransactionType
 import by.mlastovsky.kosht.util.Dates
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -18,6 +20,7 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.launch
 import java.time.LocalDate
 import java.time.YearMonth
 
@@ -28,6 +31,9 @@ data class CategorySlice(
 )
 
 enum class ReportVerdict { GREAT, OK, BAD }
+
+/** The report window: current week, month, quarter or year (± shifts). */
+enum class ReportPeriod { WEEK, MONTH, QUARTER, YEAR }
 
 enum class ReportTip {
     OVERSPEND,       // expenses exceed income
@@ -41,7 +47,7 @@ data class ReportUi(
     val verdict: ReportVerdict,
     val expenseMinor: Long,
     val prevExpenseMinor: Long,
-    /** Expenses change vs previous month in percent; null if no base. */
+    /** Expenses change vs the previous period in percent; null if no base. */
     val deltaPercent: Int?,
     val incomeMinor: Long,
     val netMinor: Long,
@@ -49,7 +55,9 @@ data class ReportUi(
     val daysWithoutSpending: Int,
     val topSlice: CategorySlice?,
     val tips: List<ReportTip>,
-    val userName: String
+    val userName: String,
+    val periodStart: LocalDate,
+    val periodEnd: LocalDate
 )
 
 data class StatsUiState(
@@ -63,6 +71,11 @@ data class StatsUiState(
     /** Transactions of the selected type grouped by day, for the calendar view. */
     val byDay: Map<LocalDate, List<TransactionWithCategory>> = emptyMap(),
     val report: ReportUi? = null,
+    val reportPeriod: ReportPeriod = ReportPeriod.MONTH,
+    /** 0 = current period, −1 = previous one, and so on. */
+    val reportShift: Int = 0,
+    /** Which metric rows the report shows. */
+    val reportFields: Set<ReportField> = ReportField.entries.toSet(),
     val accounts: List<by.mlastovsky.kosht.data.db.AccountEntity> = emptyList(),
     val accountFilter: Long? = null,
     val currencyCode: String = SettingsRepository.DEFAULT_CURRENCY
@@ -77,7 +90,7 @@ data class StatsUiState(
 @OptIn(ExperimentalCoroutinesApi::class)
 class StatsViewModel(
     repository: TransactionRepository,
-    settingsRepository: SettingsRepository,
+    private val settingsRepository: SettingsRepository,
     walletRepository: WalletRepository,
     accountRepository: by.mlastovsky.kosht.data.AccountRepository
 ) : ViewModel() {
@@ -85,7 +98,9 @@ class StatsViewModel(
     private data class Selector(
         val month: YearMonth = YearMonth.now(),
         val type: TransactionType = TransactionType.EXPENSE,
-        val accountId: Long? = null
+        val accountId: Long? = null,
+        val reportPeriod: ReportPeriod = ReportPeriod.MONTH,
+        val reportShift: Int = 0
     )
 
     private val selector = MutableStateFlow(Selector())
@@ -95,12 +110,24 @@ class StatsViewModel(
         repository.observeBetween(range.first, range.last + 1)
     }
 
-    private val prevMonthTransactions = selector.flatMapLatest { s ->
-        val range = Dates.monthRange(s.month.minusMonths(1))
-        repository.observeBetween(range.first, range.last + 1)
+    private val reportTransactions = selector.flatMapLatest { s ->
+        val (start, end) = reportBounds(s.reportPeriod, s.reportShift)
+        repository.observeBetween(
+            Dates.toEpochMillis(start),
+            Dates.toEpochMillis(end.plusDays(1))
+        )
+    }
+
+    private val prevReportTransactions = selector.flatMapLatest { s ->
+        val (start, end) = reportBounds(s.reportPeriod, s.reportShift - 1)
+        repository.observeBetween(
+            Dates.toEpochMillis(start),
+            Dates.toEpochMillis(end.plusDays(1))
+        )
     }
 
     private data class ReportContext(
+        val current: List<TransactionWithCategory>,
         val prev: List<TransactionWithCategory>,
         val savings: List<by.mlastovsky.kosht.data.db.SavingEntity>,
         val profile: UserProfile,
@@ -108,7 +135,8 @@ class StatsViewModel(
     )
 
     private val reportContext = combine(
-        prevMonthTransactions,
+        reportTransactions,
+        prevReportTransactions,
         walletRepository.observeSavingsSince(0L),
         settingsRepository.profile,
         accountRepository.observeAccounts(),
@@ -122,12 +150,12 @@ class StatsViewModel(
         reportContext
     ) { s, all, settings, report ->
         val primaryId = report.accounts.firstOrNull()?.id
-        val byAccount = if (s.accountId == null) {
-            all
+        fun List<TransactionWithCategory>.byAccount() = if (s.accountId == null) {
+            this
         } else {
-            all.filter { (it.transaction.accountId ?: primaryId) == s.accountId }
+            filter { (it.transaction.accountId ?: primaryId) == s.accountId }
         }
-        val relevant = byAccount.filter { it.transaction.type == s.type }
+        val relevant = all.byAccount().filter { it.transaction.type == s.type }
         val total = relevant.sumOf { it.transaction.amountMinor }
 
         val slices = relevant
@@ -157,7 +185,19 @@ class StatsViewModel(
             slices = slices,
             daily = daily.toList(),
             byDay = relevant.groupBy { Dates.toLocalDate(it.transaction.timestamp) },
-            report = buildReport(s.month, byAccount, report),
+            report = buildReport(
+                period = s.reportPeriod,
+                shift = s.reportShift,
+                current = report.current.byAccount(),
+                prev = report.prev.byAccount(),
+                savings = report.savings,
+                profile = report.profile
+            ),
+            reportPeriod = s.reportPeriod,
+            reportShift = s.reportShift,
+            reportFields = settings.reportFields
+                .mapNotNull { name -> ReportField.entries.firstOrNull { it.name == name } }
+                .toSet(),
             accounts = if (settings.multiAccount) report.accounts else emptyList(),
             accountFilter = s.accountId,
             currencyCode = settings.currencyCode
@@ -165,15 +205,19 @@ class StatsViewModel(
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), StatsUiState())
 
     private fun buildReport(
-        month: YearMonth,
+        period: ReportPeriod,
+        shift: Int,
         current: List<TransactionWithCategory>,
-        context: ReportContext
+        prev: List<TransactionWithCategory>,
+        savings: List<by.mlastovsky.kosht.data.db.SavingEntity>,
+        profile: UserProfile
     ): ReportUi {
+        val (start, end) = reportBounds(period, shift)
         val expenses = current.filter { it.transaction.type == TransactionType.EXPENSE }
         val expense = expenses.sumOf { it.transaction.amountMinor }
         val income = current.filter { it.transaction.type == TransactionType.INCOME }
             .sumOf { it.transaction.amountMinor }
-        val prevExpense = context.prev
+        val prevExpense = prev
             .filter { it.transaction.type == TransactionType.EXPENSE }
             .sumOf { it.transaction.amountMinor }
         val deltaPercent = if (prevExpense > 0) {
@@ -183,11 +227,13 @@ class StatsViewModel(
         }
         val net = income - expense
 
-        // For the current month, count only elapsed days.
-        val daysElapsed = if (month == YearMonth.now()) {
-            LocalDate.now().dayOfMonth
-        } else {
-            month.lengthOfMonth()
+        // For a period still running, count only elapsed days.
+        val today = LocalDate.now()
+        val daysTotal = (end.toEpochDay() - start.toEpochDay() + 1).toInt()
+        val daysElapsed = when {
+            today < start -> 0
+            today > end -> daysTotal
+            else -> (today.toEpochDay() - start.toEpochDay() + 1).toInt()
         }
         val spendingDays = expenses
             .map { Dates.toLocalDate(it.transaction.timestamp) }
@@ -206,16 +252,17 @@ class StatsViewModel(
             }
             .maxByOrNull { it.totalMinor }
 
-        val monthRange = Dates.monthRange(month)
-        val savedThisMonth = context.savings
-            .filter { it.timestamp in monthRange && it.amountMinor > 0 }
+        val periodMillis =
+            Dates.toEpochMillis(start) until Dates.toEpochMillis(end.plusDays(1))
+        val savedThisPeriod = savings
+            .filter { it.timestamp in periodMillis && it.amountMinor > 0 }
             .sumOf { it.amountMinor }
 
         val tips = buildList {
             if (income in 1 until expense) add(ReportTip.OVERSPEND)
             if (deltaPercent != null && deltaPercent > 20) add(ReportTip.GROWTH)
             if (topSlice != null && topSlice.share > 0.35f) add(ReportTip.TOP_HEAVY)
-            if (net > 0 && savedThisMonth == 0L) add(ReportTip.START_SAVING)
+            if (net > 0 && savedThisPeriod == 0L) add(ReportTip.START_SAVING)
             if (deltaPercent != null && deltaPercent < -10) add(ReportTip.KEEP_IT_UP)
         }
 
@@ -237,7 +284,9 @@ class StatsViewModel(
             daysWithoutSpending = daysWithoutSpending,
             topSlice = topSlice,
             tips = tips,
-            userName = context.profile.name.ifBlank { context.profile.nickname }
+            userName = profile.name.ifBlank { profile.nickname },
+            periodStart = start,
+            periodEnd = end
         )
     }
 
@@ -251,4 +300,57 @@ class StatsViewModel(
 
     fun setAccountFilter(accountId: Long?) =
         selector.update { it.copy(accountId = accountId) }
+
+    /** Switching the window kind jumps back to the current period. */
+    fun setReportPeriod(period: ReportPeriod) =
+        selector.update { it.copy(reportPeriod = period, reportShift = 0) }
+
+    fun previousReportPeriod() =
+        selector.update { it.copy(reportShift = it.reportShift - 1) }
+
+    fun nextReportPeriod() = selector.update { s ->
+        if (s.reportShift < 0) s.copy(reportShift = s.reportShift + 1) else s
+    }
+
+    fun setReportFields(fields: Set<ReportField>) {
+        viewModelScope.launch {
+            settingsRepository.setReportFields(fields.map { it.name }.toSet())
+        }
+    }
+
+    private companion object {
+
+        /** Calendar bounds of the report window shifted by whole periods. */
+        fun reportBounds(period: ReportPeriod, shift: Int): Pair<LocalDate, LocalDate> {
+            val today = LocalDate.now()
+            return when (period) {
+                ReportPeriod.WEEK -> {
+                    val start = today
+                        .with(
+                            java.time.temporal.TemporalAdjusters
+                                .previousOrSame(java.time.DayOfWeek.MONDAY)
+                        )
+                        .plusWeeks(shift.toLong())
+                    start to start.plusDays(6)
+                }
+
+                ReportPeriod.MONTH -> {
+                    val month = YearMonth.now().plusMonths(shift.toLong())
+                    month.atDay(1) to month.atEndOfMonth()
+                }
+
+                ReportPeriod.QUARTER -> {
+                    val quarterStartMonth = ((today.monthValue - 1) / 3) * 3 + 1
+                    val start = LocalDate.of(today.year, quarterStartMonth, 1)
+                        .plusMonths(3L * shift)
+                    start to start.plusMonths(3).minusDays(1)
+                }
+
+                ReportPeriod.YEAR -> {
+                    val start = LocalDate.of(today.year + shift, 1, 1)
+                    start to start.plusYears(1).minusDays(1)
+                }
+            }
+        }
+    }
 }
