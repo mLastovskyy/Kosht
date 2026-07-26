@@ -5,10 +5,6 @@ import androidx.room.Entity
 import androidx.room.Index
 import androidx.room.PrimaryKey
 
-/**
- * A savings goal ("накопить на..."). Deposits linked via SavingEntity.goalId
- * count toward [targetMinor]; the goal locks its own currency.
- */
 @Entity(tableName = "saving_goals", indices = [Index("uid")])
 data class SavingGoalEntity(
     @PrimaryKey(autoGenerate = true)

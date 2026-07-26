@@ -8,7 +8,6 @@ import by.mlastovsky.kosht.util.Dates
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 
-/** "Today" / "Yesterday" / "25 July" / "25 July 2025". */
 @Composable
 fun relativeDate(date: LocalDate): String {
     val today = Dates.today()

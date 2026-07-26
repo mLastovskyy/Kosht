@@ -38,11 +38,6 @@ interface AccountDao {
     @Query("UPDATE accounts SET adjustmentMinor = CAST(ROUND(adjustmentMinor * :factor) AS INTEGER)")
     suspend fun rescaleAdjustments(factor: Double)
 
-    /**
-     * Per-account balance; transactions without an account fall in the null
-     * group. A transfer counts twice on purpose: the amount and what it cost
-     * leave the source account, and the amount arrives at the destination.
-     */
     @Query(
         "SELECT accountId, COALESCE(SUM(delta), 0) AS balance FROM (" +
             "SELECT accountId AS accountId, CASE " +

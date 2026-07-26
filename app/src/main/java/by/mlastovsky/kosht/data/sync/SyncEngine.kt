@@ -1,10 +1,12 @@
 package by.mlastovsky.kosht.data.sync
 
 import androidx.room.withTransaction
+import by.mlastovsky.kosht.data.SettingsRepository
 import by.mlastovsky.kosht.data.db.KoshtDatabase
 import by.mlastovsky.kosht.data.db.SyncCursorEntity
 import by.mlastovsky.kosht.data.db.SyncEntity
 import by.mlastovsky.kosht.data.db.SyncMeta
+import java.io.IOException
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
@@ -12,9 +14,7 @@ import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import org.json.JSONArray
 import org.json.JSONObject
-import java.io.IOException
 
-/** How a sync attempt ended, in terms the settings screen can show. */
 sealed interface SyncOutcome {
     data class Success(val sent: Int, val received: Int) : SyncOutcome
 
@@ -25,32 +25,18 @@ sealed interface SyncOutcome {
     data class Failed(val message: String) : SyncOutcome
 }
 
-/**
- * Two-way per-record sync against the cloud `sync_rows` table.
- *
- * Records merge one at a time and the newer `updatedAt` wins, so two devices
- * editing different things offline both keep their work. Deletes travel as
- * tombstones, which is what stops a row deleted on one phone from being
- * resurrected by the other.
- *
- * Push always runs before pull: everything this device already knows is on
- * the server before anything new comes back, which keeps the watermarks
- * honest even when the sync is interrupted halfway.
- */
 class SyncEngine(
     private val database: KoshtDatabase,
     private val api: SupabaseApi,
     private val account: SyncAccountRepository,
-    private val settings: by.mlastovsky.kosht.data.SettingsRepository,
+    private val settings: SettingsRepository,
     private val photos: PhotoSync
 ) {
 
     private val dao = database.syncDao()
 
-    // One sync at a time; the app can ask from several places at once.
     private val running = Mutex()
 
-    /** Epoch millis of the last fully successful sync, 0 when never. */
     val lastSyncAt: Flow<Long> = dao.observeCursor().map { it?.lastSyncAt ?: 0 }
 
     suspend fun sync(): SyncOutcome {
@@ -62,13 +48,11 @@ class SyncEngine(
                 val cursor = dao.cursor() ?: SyncCursorEntity()
                 val pushed = push(session, cursor.pushedThrough)
                 val pulled = pull(session, cursor.pulledThrough)
-                // After the figures, and never at their expense: a photo that
-                // does not make it leaves everything else properly synced.
+
                 runCatching { photos.exchange(session) }
                 dao.saveCursor(
                     pulled = maxOf(cursor.pulledThrough, pulled.through),
-                    // Deliberately not raised to the remote watermark: a local
-                    // edit older than someone else's change must still go up.
+
                     pushed = maxOf(cursor.pushedThrough, pushed.through),
                     lastSyncAt = System.currentTimeMillis()
                 )
@@ -81,26 +65,18 @@ class SyncEngine(
         }
     }
 
-    /** Forgets both watermarks so the next sync exchanges everything again. */
     suspend fun resetCursor() = dao.resetCursor()
 
-    /**
-     * Deletes every receipt photo this account has in the cloud. Called when
-     * photo sync is switched off: a consent withdrawn has to take the files
-     * with it, and the originals are on the phone regardless.
-     */
     suspend fun purgePhotos(): Boolean {
         val session = account.validAccessToken() ?: return false
         return runCatching { photos.purge(session) }.isSuccess
     }
 
-    // ---- Push -------------------------------------------------------------
-
     private class Pushed(val through: Long, val count: Int)
 
     private suspend fun push(session: SupabaseSession, since: Long): Pushed {
         val index = buildIndex()
-        // Nulls are rows that cannot travel yet; they are filtered below.
+
         val rows = mutableListOf<SyncRow?>()
 
         dao.accountsChanged(since).forEach {
@@ -133,8 +109,7 @@ class SyncEngine(
         dao.awardsChanged(since).forEach {
             rows += row(SyncEntity.AWARDS, it.sync, SyncPayloads.of(it))
         }
-        // Preferences are not a table and have no trigger, so they carry their
-        // own stamp and there is exactly one row of them per account.
+
         val prefs = settings.syncSnapshot()
         if (prefs.updatedAt > since) {
             rows += SyncRow(
@@ -161,15 +136,14 @@ class SyncEngine(
             batch.forEach { array.put(it.toRemote(session.userId)) }
             api.push(session.accessToken, array)
         }
-        // The tombstone is the last thing that knows a record existed, so the
-        // photo it had is deleted while that knowledge is still here.
+
         runCatching {
             photos.deleteFor(
                 session = session,
                 uids = tombstones.filter { it.entity == SyncEntity.TRANSACTIONS }.map { it.uid }
             )
         }
-        // Only once the server has them is it safe to forget the deletes.
+
         tombstones.forEach { dao.dropTombstone(it.entity.table, it.uid) }
 
         return Pushed(
@@ -179,8 +153,7 @@ class SyncEngine(
     }
 
     private fun row(entity: SyncEntity, meta: SyncMeta, payload: JSONObject?): SyncRow? {
-        // A blank uid means a trigger has not run yet; a null payload means a
-        // reference this row needs has not been given an identity either.
+
         if (meta.uid.isBlank() || payload == null) return null
         return SyncRow(entity, meta.uid, meta.updatedAt, deleted = false, payload = payload)
     }
@@ -193,8 +166,6 @@ class SyncEngine(
         .put("deleted", deleted)
         .put("payload", payload)
 
-    // ---- Pull -------------------------------------------------------------
-
     private class Pulled(val through: Long, val applied: Int, val skipped: Int)
 
     private suspend fun pull(session: SupabaseSession, since: Long): Pulled {
@@ -205,15 +176,14 @@ class SyncEngine(
             val page = api.pull(session.accessToken, cursor, PULL_PAGE)
             val rows = page.toSyncRows()
             if (rows.isEmpty()) break
-            // Preferences live outside the database, so they are applied
-            // outside its transaction.
+
             val (prefs, records) = rows.partition { it.entity == SyncEntity.SETTINGS }
             applySettings(prefs)
             val result = apply(records)
             applied += result.applied
             skipped += result.skipped
             val newest = rows.maxOf { it.updatedAt }
-            // A page that does not move the watermark would loop forever.
+
             if (newest <= cursor) break
             cursor = newest
             if (page.length() < PULL_PAGE) break
@@ -233,19 +203,12 @@ class SyncEngine(
         )
     }
 
-    /**
-     * Settings from another device, applied only when they are newer than what
-     * this one last changed. A tombstone for them is meaningless: there is one
-     * row per account and it is never deleted, only overwritten.
-     */
     private suspend fun applySettings(rows: List<SyncRow>) {
         val newest = rows.filterNot { it.deleted }.maxByOrNull { it.updatedAt } ?: return
         val local = settings.syncSnapshot()
         if (newest.updatedAt <= local.updatedAt) return
         settings.applySynced(SyncPayloads.toSettings(newest.payload, newest.updatedAt, local))
     }
-
-    // ---- Merge ------------------------------------------------------------
 
     private class Applied(var applied: Int = 0, var skipped: Int = 0) {
         operator fun plusAssign(other: Applied) {
@@ -254,10 +217,6 @@ class SyncEngine(
         }
     }
 
-    /**
-     * Rows that others point at are created first and removed last, so a
-     * category never disappears while its transactions still reference it.
-     */
     private suspend fun apply(rows: List<SyncRow>): Applied = database.withTransaction {
         val byEntity = rows.groupBy { it.entity }
         fun of(entity: SyncEntity, deleted: Boolean) =
@@ -268,11 +227,9 @@ class SyncEngine(
         total += applyCategories(of(SyncEntity.CATEGORIES, deleted = false))
         total += applyGoals(of(SyncEntity.SAVING_GOALS, deleted = false))
 
-        // Anything just inserted now has a local id worth referencing.
         val index = buildIndex()
         total += applyTransactions(byEntity[SyncEntity.TRANSACTIONS].orEmpty(), index)
-        // After the records: a line needs the record it belongs to. Rebuilt
-        // index, because records that just arrived are what it points at.
+
         total += applyItems(byEntity[SyncEntity.TRANSACTION_ITEMS].orEmpty(), buildIndex())
         total += applyRecurring(byEntity[SyncEntity.RECURRING].orEmpty(), index)
         total += applySavings(byEntity[SyncEntity.SAVINGS].orEmpty(), index)
@@ -293,14 +250,9 @@ class SyncEngine(
         transactions = dao.transactionRefs()
     )
 
-    /** True when the remote copy is the newer one and should be applied. */
     private fun wins(remote: SyncRow, localUpdatedAt: Long?): Boolean =
         localUpdatedAt == null || remote.updatedAt > localUpdatedAt
 
-    /**
-     * The local row is gone; drop the tombstone the delete trigger just
-     * wrote, or this device would push back a delete it merely mirrored.
-     */
     private suspend fun deleted(entity: SyncEntity, uid: String) {
         dao.dropTombstone(entity.table, uid)
     }
@@ -337,8 +289,7 @@ class SyncEngine(
             if (!wins(row, local?.sync?.updatedAt)) return@forEach
             if (row.deleted) {
                 if (local != null) {
-                    // RESTRICT keeps a category alive while records use it;
-                    // the records' own tombstones arrive and free it later.
+
                     runCatching { dao.deleteCategory(row.uid) }
                         .onSuccess { result.applied++ }
                         .onFailure { result.skipped++ }
@@ -392,7 +343,7 @@ class SyncEngine(
             }
             val entity = SyncPayloads.toTransaction(row.payload, row.meta(), index, local)
             if (entity == null) {
-                // Its category has not arrived yet; the next sync picks it up.
+
                 result.skipped++
                 return@forEach
             }
@@ -419,7 +370,7 @@ class SyncEngine(
             }
             val entity = SyncPayloads.toItem(row.payload, row.meta(), index, local)
             if (entity == null) {
-                // Its record has not arrived yet; the next sync picks it up.
+
                 result.skipped++
                 return@forEach
             }
@@ -545,7 +496,6 @@ class SyncEngine(
 
     private fun SyncRow.meta() = SyncMeta(uid = uid, updatedAt = updatedAt)
 
-    /** SQLite caps the parameters one IN clause can carry. */
     private fun List<SyncRow>.uids(): List<List<String>> =
         map { it.uid }.chunked(LOOKUP_CHUNK)
 

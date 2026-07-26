@@ -16,11 +16,7 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import by.mlastovsky.kosht.R
 
 object Routes {
-    /**
-     * The five main screens together: one destination holding a pager, so they
-     * can be swiped through as well as tapped. Everything that opens *over* a
-     * tab — the editor, the guide, achievements — stays a destination of its own.
-     */
+
     const val TABS = "tabs"
 
     const val HOME = "home"

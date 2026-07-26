@@ -8,9 +8,9 @@ import by.mlastovsky.kosht.data.db.RateEntity
 import by.mlastovsky.kosht.data.db.SavingEntity
 import by.mlastovsky.kosht.model.ChallengeType
 import by.mlastovsky.kosht.util.Dates
+import java.time.LocalDate
 import org.junit.Assert.assertEquals
 import org.junit.Test
-import java.time.LocalDate
 
 class ChallengeEvaluatorTest {
 
@@ -141,7 +141,7 @@ class ChallengeEvaluatorTest {
 
     @Test
     fun `a savings target compares currencies through byn`() {
-        // Target 100.00 USD = 320.00 BYN; 200.00 BYN + 50.00 USD = 360.00 BYN.
+
         val result = ChallengeEvaluator.evaluate(
             challenge = challenge(ChallengeType.SAVE_TARGET, 100_00),
             spend = emptyList(),

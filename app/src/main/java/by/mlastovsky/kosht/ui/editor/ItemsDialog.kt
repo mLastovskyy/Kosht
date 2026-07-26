@@ -43,25 +43,13 @@ import by.mlastovsky.kosht.data.ItemSuggestions
 import by.mlastovsky.kosht.ui.components.TextInput
 import by.mlastovsky.kosht.util.Money
 
-/**
- * What the record was for, line by line — the optional list behind an amount.
- *
- * The lines are not always products: groceries break down into coffee and milk,
- * a housing payment into rent and utilities. Which is why the chips offer what
- * has been written in this category before, and, for the built-in categories,
- * the handful of things such a payment usually consists of.
- *
- * Nothing here is required, so the dialog stays out of the way until asked for
- * and insists on nothing but a name. Tapping a suggestion keeps the spelling
- * identical, which is what makes the per-category statistics add up.
- */
 @Composable
 fun ItemsDialog(
     items: List<ItemDraft>,
     suggestions: List<String>,
     categoryKey: String?,
     currencyCode: String,
-    /** The record's own amount, to say how much of it the lines account for. */
+
     recordAmountMinor: Long,
     onAdd: (name: String, priceMinor: Long, quantity: Double?) -> Unit,
     onUpdate: (index: Int, name: String, priceMinor: Long, quantity: Double?) -> Unit,
@@ -71,7 +59,7 @@ fun ItemsDialog(
     var name by remember { mutableStateOf("") }
     var priceText by remember { mutableStateOf("") }
     var quantityText by remember { mutableStateOf("") }
-    // -1 means the form is adding rather than correcting a line.
+
     var editing by remember { mutableIntStateOf(-1) }
 
     fun reset() {
@@ -200,11 +188,6 @@ fun ItemsDialog(
     )
 }
 
-/**
- * How much of the record the lines account for. Saying it plainly is what makes
- * a half-read receipt obvious: the app never invents a line to make the
- * arithmetic work, and it never quietly overwrites the record's own amount.
- */
 @Composable
 private fun ListedSummary(
     count: Int,
@@ -262,7 +245,7 @@ private fun ItemRow(
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis
             )
-            // "2 × 1,75" — the way a receipt spells out a line.
+
             val quantity = item.quantity
             if (quantity != null && item.amountMinor > 0) {
                 Text(
@@ -292,24 +275,20 @@ private fun ItemRow(
     }
 }
 
-/** What one of them cost: the line total divided by how many there were. */
 fun unitPrice(item: ItemDraft): Long {
     val quantity = item.quantity ?: return item.amountMinor
     if (quantity <= 0) return item.amountMinor
     return Math.round(item.amountMinor / quantity)
 }
 
-/** The unit price as the price field should show it for editing. */
 private fun unitPriceInput(item: ItemDraft, currencyCode: String): String {
     if (item.amountMinor <= 0) return ""
     return Money.editableText(unitPrice(item), currencyCode)
 }
 
-/** "2" rather than "2.0", and "0,756" for what was weighed. */
 fun formatQuantity(quantity: Double): String {
     if (quantity == quantity.toLong().toDouble()) return quantity.toLong().toString()
-    // Formatted in a fixed locale and then localized by hand: trimming the
-    // zeros has to know which character the fraction starts with.
+
     return String.format(java.util.Locale.US, "%.3f", quantity)
         .trimEnd('0')
         .trimEnd('.')

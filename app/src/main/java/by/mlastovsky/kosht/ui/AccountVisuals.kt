@@ -7,7 +7,6 @@ import by.mlastovsky.kosht.data.db.AccountEntity
 
 object AccountVisuals {
 
-    /** Icon choices offered when creating an account. */
     val pickableIconKeys = listOf("card", "wallet", "bank", "savings", "phone")
 
     @Composable

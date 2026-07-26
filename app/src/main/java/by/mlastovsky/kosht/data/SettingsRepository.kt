@@ -2,6 +2,7 @@ package by.mlastovsky.kosht.data
 
 import android.content.Context
 import androidx.datastore.core.DataStore
+import androidx.datastore.preferences.core.MutablePreferences
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
@@ -10,7 +11,9 @@ import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.core.stringSetPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
 import by.mlastovsky.kosht.model.AppLanguage
+import by.mlastovsky.kosht.model.ReportField
 import by.mlastovsky.kosht.model.ThemeMode
+import by.mlastovsky.kosht.ui.components.EMOJI_AVATAR_PREFIX
 import by.mlastovsky.kosht.util.LocaleHelper
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -28,45 +31,36 @@ data class AppSettings(
     val notifyDailyReminder: Boolean,
     val notifyRecurringDue: Boolean,
     val notifyWeeklySummary: Boolean,
-    /** Tell the user in the shade when an award is earned. */
+
     val notifyAwards: Boolean,
-    /** Daily spending budget for the streak; 0 = auto from last month. */
+
     val dailyBudgetMinor: Long,
     val showGreeting: Boolean,
     val showStreak: Boolean,
     val showRates: Boolean,
-    /** Recalculate stored amounts by the NBRB rate when switching currency. */
+
     val convertOnCurrencyChange: Boolean,
-    /** Master switch for multiple money sources (cards/cash). */
+
     val multiAccount: Boolean,
-    /**
-     * Offer a fee field when transferring between accounts. Off unless asked
-     * for: most transfers are free, and an always-visible field would be one
-     * more thing to skip past every time.
-     */
+
     val transferFee: Boolean,
-    /** Names of [by.mlastovsky.kosht.model.ReportField] rows shown in the report. */
+
     val reportFields: Set<String>,
-    /** Name of the [by.mlastovsky.kosht.ui.stats.ReportPeriod] the report covers. */
+
     val reportPeriod: String,
-    /** Open the calculator automatically when adding a new record. */
+
     val autoCalculator: Boolean,
-    /**
-     * Upload receipt photos to the account as well as the figures. Off unless
-     * asked for: the images are the most revealing thing the app holds, and
-     * the privacy policy treats switching this on as a consent of its own.
-     */
+
     val syncPhotos: Boolean
 )
 
-/** The settings and profile as they travel between a person's devices. */
 data class SyncedSettings(
-    /** Epoch millis of the last change on the device it came from. */
+
     val updatedAt: Long,
     val settings: AppSettings,
     val profileName: String,
     val profileNickname: String,
-    /** Built-in avatar, e.g. "emoji:🦊"; null when a photo or nothing is set. */
+
     val profileEmoji: String?
 )
 
@@ -75,18 +69,13 @@ data class UserProfile(
     val nickname: String,
     val photoPath: String?
 ) {
-    /** Nickname wins, then name, then the localized default. */
+
     fun displayName(fallback: String): String =
         nickname.ifBlank { name.ifBlank { fallback } }
 }
 
 class SettingsRepository(private val context: Context) {
 
-    /**
-     * Whether Android has already been asked to allow notifications. One of
-     * the reminders is on out of the box, so without asking once at the start
-     * it would be switched on and silently never arrive.
-     */
     val notificationsAsked: Flow<Boolean> = context.dataStore.data
         .map { it[Keys.notificationsAsked] ?: false }
 
@@ -94,12 +83,6 @@ class SettingsRepository(private val context: Context) {
         context.dataStore.edit { it[Keys.notificationsAsked] = true }
     }
 
-    /**
-     * The version of the Terms and the data policy this person has been shown,
-     * or null on a device that has never recorded one. It stays out of
-     * [syncSnapshot] on purpose: reading the documents happens on a device, and
-     * a second phone should say so itself rather than assume.
-     */
     val policyVersionSeen: Flow<String?> = context.dataStore.data
         .map { it[Keys.policyVersionSeen]?.takeIf { version -> version.isNotBlank() } }
 
@@ -133,19 +116,10 @@ class SettingsRepository(private val context: Context) {
         val autoCalculator = booleanPreferencesKey("auto_calculator")
         val syncPhotos = booleanPreferencesKey("sync_photos")
 
-        /**
-         * When any of the settings above last changed, epoch millis. Room's
-         * tables get this from triggers; DataStore has no such thing, so every
-         * setter goes through [bumped] and stamps it here.
-         */
         val updatedAt = longPreferencesKey("settings_updated_at")
     }
 
-    /**
-     * Writes preferences and records when it happened, which is what lets the
-     * newer side win when two devices have both been fiddling with settings.
-     */
-    private suspend fun bumped(block: (androidx.datastore.preferences.core.MutablePreferences) -> Unit) {
+    private suspend fun bumped(block: (MutablePreferences) -> Unit) {
         context.dataStore.edit { prefs ->
             block(prefs)
             prefs[Keys.updatedAt] = System.currentTimeMillis()
@@ -215,12 +189,6 @@ class SettingsRepository(private val context: Context) {
         bumped { it[Keys.profilePhotoPath] = path.orEmpty() }
     }
 
-    /**
-     * Deals out one of the built-in avatars on the very first launch, so the app
-     * wears a face everywhere instead of two grey letters. Done exactly once:
-     * someone who then clears their avatar meant to clear it, and a new random
-     * face on the next launch would be the app arguing back.
-     */
     suspend fun seedAvatarOnce(pick: () -> String) {
         context.dataStore.edit { prefs ->
             if (prefs[Keys.avatarSeeded] == true) return@edit
@@ -250,9 +218,9 @@ class SettingsRepository(private val context: Context) {
             convertOnCurrencyChange = prefs[Keys.convertOnCurrencyChange] ?: true,
             multiAccount = prefs[Keys.multiAccount] ?: false,
             transferFee = prefs[Keys.transferFee] ?: false,
-            // Absent preference = all rows; an explicit empty set is honored.
+
             reportFields = prefs[Keys.reportFields]
-                ?: by.mlastovsky.kosht.model.ReportField.entries.map { it.name }.toSet(),
+                ?: ReportField.entries.map { it.name }.toSet(),
             reportPeriod = prefs[Keys.reportPeriod] ?: DEFAULT_REPORT_PERIOD,
             autoCalculator = prefs[Keys.autoCalculator] ?: true,
             syncPhotos = prefs[Keys.syncPhotos] ?: false
@@ -289,7 +257,6 @@ class SettingsRepository(private val context: Context) {
 
     private val _language = MutableStateFlow(LocaleHelper.getLanguage(context))
 
-    /** In-app language override; SYSTEM follows the device locale. */
     val language: StateFlow<AppLanguage> = _language.asStateFlow()
 
     fun setLanguage(language: AppLanguage) {
@@ -297,17 +264,6 @@ class SettingsRepository(private val context: Context) {
         _language.value = language
     }
 
-
-    /**
-     * Everything about the app that belongs to the person rather than to the
-     * phone, as one value the sync engine can carry.
-     *
-     * The language is deliberately absent: it follows the device, and having a
-     * second phone silently switch its interface language would be a surprise
-     * rather than a convenience. A profile photo is absent for the same reason
-     * receipt photos are — a file path means nothing elsewhere — but a
-     * built-in emoji avatar is just text, so it travels.
-     */
     suspend fun syncSnapshot(): SyncedSettings {
         val prefs = context.dataStore.data.first()
         val current = settings.first()
@@ -318,15 +274,11 @@ class SettingsRepository(private val context: Context) {
             profileName = user.name,
             profileNickname = user.nickname,
             profileEmoji = user.photoPath?.takeIf {
-                it.startsWith(by.mlastovsky.kosht.ui.components.EMOJI_AVATAR_PREFIX)
+                it.startsWith(EMOJI_AVATAR_PREFIX)
             }
         )
     }
 
-    /**
-     * Applies settings that arrived from another device, keeping the remote
-     * stamp so this device does not immediately claim the change as its own.
-     */
     suspend fun applySynced(remote: SyncedSettings) {
         val incoming = remote.settings
         context.dataStore.edit { prefs ->
@@ -350,12 +302,10 @@ class SettingsRepository(private val context: Context) {
             prefs[Keys.syncPhotos] = incoming.syncPhotos
             prefs[Keys.profileName] = remote.profileName
             prefs[Keys.profileNickname] = remote.profileNickname
-            // A photo on the other phone is not a photo on this one, so only
-            // an emoji avatar is taken -- and only over another emoji, never
-            // over a picture this device actually has.
+
             val localPhoto = prefs[Keys.profilePhotoPath].orEmpty()
             val localIsPicture = localPhoto.isNotBlank() &&
-                !localPhoto.startsWith(by.mlastovsky.kosht.ui.components.EMOJI_AVATAR_PREFIX)
+                !localPhoto.startsWith(EMOJI_AVATAR_PREFIX)
             if (remote.profileEmoji != null && !localIsPicture) {
                 prefs[Keys.profilePhotoPath] = remote.profileEmoji
             }

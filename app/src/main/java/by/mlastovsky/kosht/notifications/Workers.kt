@@ -9,15 +9,11 @@ import by.mlastovsky.kosht.model.TransactionType
 import by.mlastovsky.kosht.ui.CategoryVisuals
 import by.mlastovsky.kosht.util.Dates
 import by.mlastovsky.kosht.util.Money
-import kotlinx.coroutines.flow.first
 import java.time.LocalDate
+import kotlinx.coroutines.flow.first
 
 private val Context.app get() = applicationContext as KoshtApp
 
-/**
- * Evening nudge to log today's spending — only fires when nothing was
- * recorded today.
- */
 class DailyReminderWorker(
     context: Context,
     params: WorkerParameters
@@ -47,7 +43,6 @@ class DailyReminderWorker(
     }
 }
 
-/** Reminds about recurring charges awaiting confirmation. */
 class RecurringDueWorker(
     context: Context,
     params: WorkerParameters
@@ -79,7 +74,6 @@ class RecurringDueWorker(
     }
 }
 
-/** Weekly spending digest: total and the top category of the last 7 days. */
 class WeeklySummaryWorker(
     context: Context,
     params: WorkerParameters

@@ -25,14 +25,6 @@ import androidx.compose.ui.unit.dp
 import by.mlastovsky.kosht.R
 import by.mlastovsky.kosht.util.Pin
 
-/**
- * Setting, changing or switching off the code — the same bottom sheet the
- * calculator uses, so the keypad turns up where the app always puts a keypad.
- *
- * Proving the current code has no button: its length is known, so it submits
- * itself. A new one does have a button, because only its owner knows when it
- * is long enough.
- */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun PinSetupSheet(
@@ -79,8 +71,7 @@ fun PinSetupSheet(
             )
             PinDots(
                 filled = setup.entered.length,
-                // While a new code is being made up the dots grow with it; the
-                // minimum is drawn from the start so the length is no secret.
+
                 total = if (proving) {
                     storedLength
                 } else {

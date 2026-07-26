@@ -14,23 +14,15 @@ import kotlinx.coroutines.flow.map
 
 private val Context.accountStore: DataStore<Preferences> by preferencesDataStore(name = "account")
 
-/** What the UI needs to know about the cloud account. */
 data class AccountState(
     val email: String?,
     val autoSync: Boolean,
-    /** False until the user has answered the first-launch account question. */
+
     val onboarded: Boolean
 ) {
     val signedIn: Boolean get() = !email.isNullOrBlank()
 }
 
-/**
- * Session storage and the two account preferences that go with it.
- *
- * Tokens live in the app's private DataStore. That is the same protection the
- * finance database itself gets: readable only by this app on a non-rooted
- * device, and excluded from backups alongside it.
- */
 class SyncAccountRepository(
     private val context: Context,
     private val api: SupabaseApi
@@ -62,10 +54,6 @@ class SyncAccountRepository(
 
     suspend fun sendResetCode(email: String): AuthOutcome = api.sendResetCode(email)
 
-    /**
-     * The session that comes back is kept, but the account is only usable
-     * once a password is set — that is the next step of both flows.
-     */
     suspend fun verifyCode(email: String, code: String, purpose: CodePurpose): AuthOutcome =
         api.verifyCode(email, code, purpose).also { store(it) }
 
@@ -77,11 +65,6 @@ class SyncAccountRepository(
     suspend fun signIn(email: String, password: String): AuthOutcome =
         api.signIn(email, password).also { store(it) }
 
-    /**
-     * Access tokens live an hour; this hands back a usable one, refreshing
-     * through the long-lived refresh token when needed. Null means the device
-     * is either signed out or offline with an expired token.
-     */
     suspend fun validAccessToken(): SupabaseSession? {
         val prefs = context.accountStore.data.first()
         val refreshToken = prefs[Keys.refreshToken] ?: return null
@@ -95,7 +78,7 @@ class SyncAccountRepository(
         if (!session.isExpired(System.currentTimeMillis())) return session
         return when (val refreshed = api.refresh(refreshToken)) {
             is AuthOutcome.Success -> refreshed.session.also { store(refreshed) }
-            // A rejected refresh token means the session is gone for good.
+
             is AuthOutcome.Rejected -> {
                 clear()
                 null
@@ -105,9 +88,6 @@ class SyncAccountRepository(
         }
     }
 
-    // ---- Consent and data-subject rights ----------------------------------
-
-    /** Records agreement to the terms and, separately, to being emailed. */
     suspend fun recordSignUpConsents(marketing: Boolean) {
         val session = validAccessToken() ?: return
         api.recordConsent(
@@ -126,12 +106,6 @@ class SyncAccountRepository(
         )
     }
 
-    /**
-     * The person has been told the documents changed and said so. It joins the
-     * same append-only ledger as the original agreement, under the version they
-     * were shown, so what was accepted and when stays provable. Signed out
-     * there is nobody to record it against, and the local mark is enough.
-     */
     suspend fun recordPolicyAcceptance(): Boolean {
         val session = validAccessToken() ?: return false
         return api.recordConsent(
@@ -159,11 +133,6 @@ class SyncAccountRepository(
         return api.currentConsent(session, CONSENT_MARKETING)
     }
 
-    /**
-     * Uploading receipt photos is a separate consent, recorded in the same
-     * append-only ledger: the images say far more about a person than the sums
-     * do, and switching it on has to be as provable as accepting the terms.
-     */
     suspend fun setPhotoConsent(granted: Boolean): Boolean {
         val session = validAccessToken() ?: return false
         return api.recordConsent(
@@ -175,7 +144,6 @@ class SyncAccountRepository(
         )
     }
 
-    /** Erases the cloud copy and forgets the session on this device. */
     suspend fun deleteAccount(): Boolean {
         val session = validAccessToken() ?: return false
         if (!api.deleteAccount(session)) return false
@@ -213,11 +181,6 @@ class SyncAccountRepository(
         const val CONSENT_MARKETING = "marketing_email"
         const val CONSENT_PHOTOS = "receipt_photos"
 
-        /**
-         * Bump together with the documents, so old agreements stay dated — and
-         * so the app tells everyone who has seen an earlier edition that there
-         * is a new one (see MainViewModel.policyUpdated).
-         */
         const val POLICY_VERSION = "1.2"
     }
 

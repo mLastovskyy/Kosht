@@ -47,15 +47,6 @@ import by.mlastovsky.kosht.util.Notes
 import java.time.Instant
 import java.time.ZoneOffset
 
-/**
- * Moving money between two of the user's own accounts: where from, where to,
- * how much, and — when the fee field is switched on in Settings — what the
- * transfer cost. Nothing here is spending, so the record it writes stays out
- * of the statistics and only moves the two balances.
- *
- * The same dialog opens on an existing transfer, which is then corrected or
- * deleted; [initial] is what tells the two apart.
- */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun TransferDialog(
@@ -125,7 +116,7 @@ fun TransferDialog(
                     selectedId = fromId,
                     onSelect = { id ->
                         fromId = id
-                        // Both ends being the same account would move nothing.
+
                         if (toId == id) toId = accounts.firstOrNull { it.id != id }?.id
                     }
                 )
@@ -171,8 +162,7 @@ fun TransferDialog(
                     keyboardOptions = TextInput.Sentence,
                     modifier = Modifier.fillMaxWidth()
                 )
-                // What the transfer actually costs the source account, spelled
-                // out — the fee is the part that is easy to forget.
+
                 if (amountMinor > 0 && feeMinor > 0) {
                     Text(
                         text = stringResource(
@@ -276,7 +266,6 @@ private fun AccountChips(
     }
 }
 
-/** "Card → Cash", the one line that says what a transfer did. */
 @Composable
 fun transferRoute(
     transfer: TransactionEntity,
@@ -289,7 +278,6 @@ fun transferRoute(
     return AccountVisuals.displayName(from) + " → " + AccountVisuals.displayName(to)
 }
 
-/** The date, plus what the transfer cost when it cost anything. */
 @Composable
 fun transferDetails(
     transfer: TransactionEntity,

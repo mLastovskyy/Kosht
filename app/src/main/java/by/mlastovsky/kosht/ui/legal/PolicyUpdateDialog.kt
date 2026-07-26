@@ -24,21 +24,12 @@ import by.mlastovsky.kosht.R
 import by.mlastovsky.kosht.ui.components.LegalDocs
 import by.mlastovsky.kosht.ui.components.rememberDocumentOpener
 
-/**
- * Says that the Terms and the data policy have changed since the version this
- * person was last shown, and offers both documents right there.
- *
- * A person who agreed to one text should not silently end up bound by another,
- * so this is asked once per version rather than left to be discovered in
- * Settings — and it cannot be dismissed by tapping outside: acknowledging it is
- * the point. [onAcknowledge] is what records that it happened.
- */
 @Composable
 fun PolicyUpdateDialog(onAcknowledge: () -> Unit) {
     val openDocument = rememberDocumentOpener()
 
     AlertDialog(
-        // Only the button closes it; a stray tap is not an acknowledgement.
+
         onDismissRequest = { },
         title = { Text(stringResource(R.string.policy_updated_title)) },
         text = {

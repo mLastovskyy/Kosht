@@ -77,7 +77,7 @@ class TransactionDaoTest {
         db.transactionDao().insert(tx(1_000, TransactionType.EXPENSE, foodId, timestamp = 100))
         db.transactionDao().insert(tx(2_000, TransactionType.EXPENSE, foodId, timestamp = 200))
         db.transactionDao().insert(tx(9_000, TransactionType.INCOME, salaryId, timestamp = 150))
-        // Outside of range:
+
         db.transactionDao().insert(tx(5_000, TransactionType.EXPENSE, foodId, timestamp = 500))
 
         val expenses = db.transactionDao()

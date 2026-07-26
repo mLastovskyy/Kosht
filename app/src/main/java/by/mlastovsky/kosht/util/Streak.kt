@@ -5,24 +5,17 @@ import by.mlastovsky.kosht.model.TransactionType
 import java.time.LocalDate
 import java.time.YearMonth
 
-/**
- * "Days under budget" streak: a day counts when its expenses stay within the
- * daily budget. Encourages spending less, not logging for its own sake.
- */
 object Streak {
 
-    /** Fallback budget when there is no history at all: 50.00 in minor units. */
     const val DEFAULT_BUDGET_MINOR = 50_00L
 
     fun spendByDay(transactions: List<TransactionWithCategory>): Map<LocalDate, Long> =
         transactions
-            // Money moved between one's own accounts was not spent, so it can
-            // neither break a streak nor set the budget it is measured against.
+
             .filter { it.transaction.type == TransactionType.EXPENSE && !it.transaction.isTransfer }
             .groupBy { Dates.toLocalDate(it.transaction.timestamp) }
             .mapValues { (_, items) -> items.sumOf { it.transaction.amountMinor } }
 
-    /** Average daily spending of the previous month (or a sensible fallback). */
     fun autoDailyBudget(
         spendByDay: Map<LocalDate, Long>,
         today: LocalDate = LocalDate.now()
@@ -43,10 +36,6 @@ object Streak {
         return DEFAULT_BUDGET_MINOR
     }
 
-    /**
-     * Consecutive days (ending today) with spending within [budgetMinor].
-     * Bounded by [firstRecordDay] so empty pre-history does not count.
-     */
     fun budgetStreak(
         spendByDay: Map<LocalDate, Long>,
         budgetMinor: Long,

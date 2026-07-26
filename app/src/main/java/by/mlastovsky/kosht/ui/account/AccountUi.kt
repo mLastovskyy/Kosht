@@ -45,35 +45,32 @@ import androidx.compose.ui.text.LinkAnnotation
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.TextLinkStyles
 import androidx.compose.ui.text.buildAnnotatedString
-import androidx.compose.ui.text.style.TextDecoration
-import androidx.compose.ui.text.withLink
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.text.withLink
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import by.mlastovsky.kosht.R
 import by.mlastovsky.kosht.data.sync.CodePurpose
 import by.mlastovsky.kosht.ui.AppViewModelProvider
+import by.mlastovsky.kosht.ui.components.LegalDocs
+import by.mlastovsky.kosht.ui.components.rememberDocumentOpener
 import by.mlastovsky.kosht.util.PdfDocs
-import kotlinx.coroutines.delay
 import java.text.DateFormat
 import java.util.Date
 import java.util.Locale
+import kotlinx.coroutines.delay
 
 private const val MIN_PASSWORD = 6
 private const val CODE_LENGTH = 6
 
-/**
- * First-launch question: cloud account or not. Kept as a plain full-screen
- * choice rather than a wizard — the app is fully usable either way, and the
- * answer can be changed later in Settings.
- */
 @Composable
 fun AccountOnboardingScreen(
     viewModel: AccountViewModel = viewModel(factory = AppViewModelProvider.Factory)
@@ -125,12 +122,6 @@ fun AccountOnboardingScreen(
     AuthDialog(viewModel)
 }
 
-/**
- * The whole sign-in / sign-up / password-reset conversation in one dialog,
- * one step at a time. Signing up never asks for a password before the
- * address is proven, and every dead end offers the way out of it: a taken
- * address offers signing in, a wrong password offers a reset.
- */
 @Composable
 fun AuthDialog(viewModel: AccountViewModel) {
     val state by viewModel.auth.collectAsStateWithLifecycle()
@@ -192,14 +183,13 @@ private fun EmailStep(
         busy = state.busy,
         message = state.message,
         confirmLabel = stringResource(R.string.auth_continue),
-        // Nothing is sent before the terms are accepted, and the acceptance
-        // is recorded once the account behind it actually exists.
+
         confirmEnabled = email.isValidEmail() && !state.busy &&
             (!signUp || state.acceptedTerms),
         onConfirm = { viewModel.submitEmail(email) },
         onDismiss = viewModel::closeAuth,
         extraAction = {
-            // Every dead end offers the door that actually fits.
+
             when (state.message) {
                 AuthMessage.EmailTaken -> {
                     TextButton(onClick = { viewModel.startSignIn(email) }) {
@@ -234,16 +224,10 @@ private fun EmailStep(
     }
 }
 
-/**
- * Accepting the terms is required; being emailed about new features is a
- * separate question that starts unticked and never blocks the account —
- * advertising consent has to be given freely and in advance to count.
- */
 @Composable
 private fun ConsentCheckboxes(state: AuthUiState, viewModel: AccountViewModel) {
-    // Opens the document and, where Android allows it, leaves a copy in
-    // Downloads — what someone is asked to agree to should be theirs to keep.
-    val openPdf = by.mlastovsky.kosht.ui.components.rememberDocumentOpener()
+
+    val openPdf = rememberDocumentOpener()
 
     CheckRow(
         checked = state.acceptedTerms,
@@ -251,14 +235,14 @@ private fun ConsentCheckboxes(state: AuthUiState, viewModel: AccountViewModel) {
         text = consentSentence(
             onTerms = {
                 openPdf(
-                    by.mlastovsky.kosht.ui.components.LegalDocs.TERMS_ASSET,
-                    by.mlastovsky.kosht.ui.components.LegalDocs.TERMS_FILE
+                    LegalDocs.TERMS_ASSET,
+                    LegalDocs.TERMS_FILE
                 )
             },
             onPrivacy = {
                 openPdf(
-                    by.mlastovsky.kosht.ui.components.LegalDocs.PRIVACY_ASSET,
-                    by.mlastovsky.kosht.ui.components.LegalDocs.PRIVACY_FILE
+                    LegalDocs.PRIVACY_ASSET,
+                    LegalDocs.PRIVACY_FILE
                 )
             }
         ),
@@ -272,15 +256,6 @@ private fun ConsentCheckboxes(state: AuthUiState, viewModel: AccountViewModel) {
     )
 }
 
-/**
- * "I accept the Terms of use and the Personal data policy" with the two names
- * as links inside the sentence — the documents belong in the line that agrees
- * to them, not in two buttons underneath pretending to be something else.
- *
- * Square brackets in the string mark the links: the first is the terms, the
- * second the policy. That keeps each language's grammar in one piece — Russian
- * declines both names — which a sentence stitched from fragments would not.
- */
 @Composable
 private fun consentSentence(
     onTerms: () -> Unit,
@@ -302,7 +277,7 @@ private fun consentSentence(
                 val open = sentence.indexOf('[', rest)
                 val close = if (open < 0) -1 else sentence.indexOf(']', open + 1)
                 if (close < 0) {
-                    // No markers left (or a broken translation): plain text.
+
                     append(sentence.substring(rest))
                     break
                 }
@@ -337,8 +312,7 @@ private fun CheckRow(
         verticalAlignment = Alignment.CenterVertically,
         modifier = Modifier
             .fillMaxWidth()
-            // The links inside the sentence take their own taps; anywhere else
-            // on the row still ticks the box.
+
             .clickable(enabled = enabled) { onCheckedChange(!checked) }
     ) {
         Checkbox(checked = checked, enabled = enabled, onCheckedChange = onCheckedChange)
@@ -462,8 +436,6 @@ private fun PasswordStep(state: AuthUiState, viewModel: AccountViewModel) {
     }
 }
 
-// ---- Shared pieces --------------------------------------------------------
-
 @Composable
 private fun AuthScaffold(
     title: String,
@@ -522,7 +494,7 @@ private fun EmailField(value: String, busy: Boolean, onValueChange: (String) -> 
         enabled = !busy,
         label = { Text(stringResource(R.string.account_email)) },
         keyboardOptions = KeyboardOptions(
-            // An address is never capitalized, whatever the app does elsewhere.
+
             capitalization = KeyboardCapitalization.None,
             keyboardType = KeyboardType.Email,
             imeAction = ImeAction.Next
@@ -531,7 +503,6 @@ private fun EmailField(value: String, busy: Boolean, onValueChange: (String) -> 
     )
 }
 
-/** Password entry with the eye that reveals what was typed. */
 @Composable
 private fun PasswordField(
     value: String,
@@ -587,7 +558,6 @@ private fun AuthMessage.text(): String = when (this) {
     is AuthMessage.Other -> detail.ifBlank { stringResource(R.string.account_offline) }
 }
 
-/** Ticks once a second, so the countdown on screen keeps up with the clock. */
 @Composable
 private fun rememberTicker(): Long {
     var now by remember { mutableLongStateOf(System.currentTimeMillis()) }
@@ -608,7 +578,6 @@ private fun Long.asClock(): String {
 private fun String.isValidEmail(): Boolean =
     android.util.Patterns.EMAIL_ADDRESS.matcher(trim()).matches()
 
-/** "Last sync: 24.07.2026, 19:40", or a plain "not yet". */
 @Composable
 fun lastSyncLabel(lastSyncAt: Long): String = if (lastSyncAt <= 0L) {
     stringResource(R.string.account_last_sync_never)
@@ -616,7 +585,6 @@ fun lastSyncLabel(lastSyncAt: Long): String = if (lastSyncAt <= 0L) {
     stringResource(R.string.account_last_sync, fullSyncTime(lastSyncAt))
 }
 
-/** The moment itself, spelled out in full — for the details dialog. */
 @Composable
 fun fullSyncTime(lastSyncAt: Long): String = if (lastSyncAt <= 0L) {
     stringResource(R.string.account_last_sync_never)

@@ -1,30 +1,20 @@
 package by.mlastovsky.kosht.data.receipt
 
 import android.content.Context
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.withContext
 import java.io.File
 import java.net.HttpURLConnection
 import java.net.URL
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 
-/** An electronic receipt reached through the QR printed on a paper slip. */
 data class EReceipt(
     val parsed: ParsedReceipt,
-    /** Where it came from, so it can be opened again later. */
+
     val sourceUrl: String?,
-    /** App-private copy of the page, readable with no connection. */
+
     val documentPath: String?
 )
 
-/**
- * Turns the QR from a receipt into the receipt itself.
- *
- * No Belarusian chain documents a public receipt API, so nothing here is
- * tied to one shop: the code is followed like a link, the page is kept for
- * later, and the same parser that reads OCR text reads the page. A code that
- * leads nowhere useful is reported as "not a receipt" and the caller falls
- * back to reading the photo.
- */
 class EReceiptFetcher(private val context: Context) {
 
     suspend fun resolve(rawQr: String): EReceipt? = withContext(Dispatchers.IO) {
@@ -42,8 +32,7 @@ class EReceiptFetcher(private val context: Context) {
         val document = download(url) ?: return null
         val lines = when {
             document.looksBinary -> emptyList()
-            // Headings and bold runs survive the flattening, so the shop name
-            // is read off the page's own emphasis rather than guessed at.
+
             document.contentType.contains("html", ignoreCase = true) ->
                 ReceiptQr.linesFromHtml(document.text)
 
@@ -51,8 +40,7 @@ class EReceiptFetcher(private val context: Context) {
         }
         val parsed = ReceiptParser.parse(lines)
         if (parsed.amountMinor == null) {
-            // The link went somewhere, but not to anything resembling a
-            // receipt — leave no orphan file behind and let OCR try.
+
             document.savedPath?.let { File(it).delete() }
             return null
         }
@@ -70,14 +58,14 @@ class EReceiptFetcher(private val context: Context) {
         val connection = (URL(url).openConnection() as HttpURLConnection).apply {
             connectTimeout = 12_000
             readTimeout = 20_000
-            // Retail receipt pages tend to refuse unfamiliar clients.
+
             setRequestProperty("User-Agent", BROWSER_AGENT)
             setRequestProperty("Accept", "text/html,application/xhtml+xml,application/json;q=0.9")
             instanceFollowRedirects = true
         }
         try {
             val code = connection.responseCode
-            // http -> https is not followed automatically; one hop is enough.
+
             if (code in 300..399 && hop < 2) {
                 val next = connection.getHeaderField("Location") ?: return null
                 return download(URL(URL(url), next).toString(), hop + 1)

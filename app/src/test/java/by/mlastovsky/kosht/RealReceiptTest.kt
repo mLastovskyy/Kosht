@@ -6,20 +6,8 @@ import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
-/**
- * Real Belarusian slips, transcribed line for line from photographs — the
- * layouts the parser actually meets, rather than the ones it would like to.
- *
- * The pre-denomination one is here on purpose: it is a genuine receipt that
- * cannot be read, and the reason is worth pinning down in a test rather than
- * rediscovering from a screenshot.
- */
 class RealReceiptTest {
 
-    /**
-     * ЗАО ПРОДМАГ-37, Minsk, 21.03.2016 — before the 2016 denomination, so
-     * every figure is whole roubles with no kopecks anywhere: `17300`, `278100`.
-     */
     private val beforeDenomination = """
         ЗАО ПРОДМАГ-37
         ул.Долгобродская, 10/1
@@ -42,7 +30,6 @@ class RealReceiptTest {
         СПАСИБО ЗА ПОКУПКУ!
     """.trimIndent()
 
-    /** The same shopping as a modern BYN slip prints it: roubles and kopecks. */
     private val afterDenomination = """
         ЗАО ПРОДМАГ-37
         ул.Долгобродская, 10/1
@@ -65,9 +52,7 @@ class RealReceiptTest {
 
     @Test
     fun `a pre-denomination slip has no amount to find`() {
-        // Nothing on it is written as roubles and kopecks, and treating bare
-        // integers as money would turn every article code and quantity on a
-        // modern receipt into a price. So this one is honestly unreadable.
+
         assertNull(ReceiptParser.parse(beforeDenomination).amountMinor)
     }
 

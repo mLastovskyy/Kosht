@@ -2,6 +2,7 @@ package by.mlastovsky.kosht.ui.account
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import by.mlastovsky.kosht.data.SettingsRepository
 import by.mlastovsky.kosht.data.sync.AccountState
 import by.mlastovsky.kosht.data.sync.AuthError
 import by.mlastovsky.kosht.data.sync.AuthOutcome
@@ -16,36 +17,26 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
-/** Where the user currently is in the sign-in / sign-up conversation. */
 sealed interface AuthStep {
 
-    /** Email and password at once — the everyday way back in. */
     data object SignIn : AuthStep
 
-    /** Ask for the address; [purpose] decides which code is sent next. */
     data class Email(val purpose: CodePurpose) : AuthStep
 
     data class Code(
         val email: String,
         val purpose: CodePurpose,
-        /** Epoch millis the code was sent, for the countdown. */
+
         val sentAt: Long
     ) : AuthStep
 
-    /** Address is confirmed; all that is left is a password. */
     data class NewPassword(val email: String, val purpose: CodePurpose) : AuthStep
 }
 
-/**
- * Something the user has to be told, with the way out implied. Server text is
- * English and phrased for developers, so everything recognisable becomes a
- * proper message and only genuinely unknown failures show the raw detail.
- */
 sealed interface AuthMessage {
-    /** Signing up with an address that already has an account. */
+
     data object EmailTaken : AuthMessage
 
-    /** Resetting the password of an address nobody signed up with. */
     data object EmailUnknown : AuthMessage
 
     data object WrongCode : AuthMessage
@@ -68,13 +59,12 @@ data class AuthUiState(
     val email: String = "",
     val busy: Boolean = false,
     val message: AuthMessage? = null,
-    /** Ticked on the sign-up form; nothing is sent until it is. */
+
     val acceptedTerms: Boolean = false,
-    /** Separate and optional, as advertising consent has to be. */
+
     val marketingOptIn: Boolean = false
 )
 
-/** Result of the last manual "sync now", shown once and then cleared. */
 sealed interface SyncReport {
     data class Done(val received: Int) : SyncReport
 
@@ -86,7 +76,7 @@ sealed interface SyncReport {
 class AccountViewModel(
     private val accounts: SyncAccountRepository,
     private val syncEngine: SyncEngine,
-    private val settings: by.mlastovsky.kosht.data.SettingsRepository
+    private val settings: SettingsRepository
 ) : ViewModel() {
 
     val account: StateFlow<AccountState?> = accounts.state
@@ -95,7 +85,6 @@ class AccountViewModel(
     val lastSyncAt: StateFlow<Long> = syncEngine.lastSyncAt
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), 0)
 
-    /** Null while no sign-in or sign-up is in progress. */
     private val _auth = MutableStateFlow<AuthUiState?>(null)
     val auth: StateFlow<AuthUiState?> = _auth.asStateFlow()
 
@@ -106,8 +95,6 @@ class AccountViewModel(
     val report: StateFlow<SyncReport?> = _report.asStateFlow()
 
     val isConfigured: Boolean get() = accounts.isConfigured
-
-    // ---- Entering and leaving the flow ------------------------------------
 
     fun startSignIn(email: String = "") {
         _auth.value = AuthUiState(AuthStep.SignIn, email = email)
@@ -121,7 +108,6 @@ class AccountViewModel(
         _auth.value = AuthUiState(AuthStep.Email(CodePurpose.Reset), email = email)
     }
 
-    /** Back from the code screen to fix a mistyped address. */
     fun changeEmail() {
         val current = _auth.value ?: return
         val purpose = (current.step as? AuthStep.Code)?.purpose ?: CodePurpose.SignUp
@@ -144,14 +130,6 @@ class AccountViewModel(
         _auth.value = _auth.value?.copy(marketingOptIn = optIn)
     }
 
-    // ---- Steps ------------------------------------------------------------
-
-    /**
-     * Checks whether the address is free before sending anything. Without it
-     * signing up with an existing address would quietly turn into a sign-in
-     * code, and resetting an unknown one would appear to work and never
-     * deliver.
-     */
     fun submitEmail(email: String) {
         val current = _auth.value ?: return
         val step = current.step as? AuthStep.Email ?: return
@@ -212,8 +190,7 @@ class AccountViewModel(
         val current = _auth.value ?: return
         val step = current.step as? AuthStep.Code ?: return
         if (current.busy) return
-        // The server decides too, but a code this device knows is stale is
-        // not worth a round trip -- or a confusing error.
+
         if (System.currentTimeMillis() - step.sentAt >= CODE_LIFETIME_MS) {
             _auth.value = current.copy(message = AuthMessage.CodeExpired)
             return
@@ -243,8 +220,7 @@ class AccountViewModel(
                     _auth.value = current.copy(busy = false, message = outcome.toMessage())
 
                 else -> {
-                    // Recorded once the account exists, so the ledger never
-                    // holds consent for an account that was never created.
+
                     if (step.purpose == CodePurpose.SignUp) {
                         accounts.recordSignUpConsents(current.marketingOptIn)
                     }
@@ -267,7 +243,6 @@ class AccountViewModel(
         }
     }
 
-    /** Signed in for real: pull everything this device has not seen yet. */
     private suspend fun finish() {
         syncEngine.resetCursor()
         _auth.value = null
@@ -288,12 +263,10 @@ class AccountViewModel(
         else -> AuthMessage.Other("")
     }
 
-    // ---- Account and sync -------------------------------------------------
-
     fun signOut() {
         viewModelScope.launch {
             accounts.signOut()
-            // Local data stays; only the link to the cloud copy is dropped.
+
             syncEngine.resetCursor()
         }
     }
@@ -302,7 +275,6 @@ class AccountViewModel(
         viewModelScope.launch { accounts.setAutoSync(enabled) }
     }
 
-    /** "Continue without an account" — the app stays fully usable offline. */
     fun skipAccount() {
         viewModelScope.launch { accounts.markOnboarded() }
     }
@@ -325,11 +297,8 @@ class AccountViewModel(
         _report.value = null
     }
 
-    // ---- Consent and data-subject rights ----------------------------------
-
     private val _marketing = MutableStateFlow<Boolean?>(null)
 
-    /** Null until the answer is known, so the switch never guesses. */
     val marketingConsent: StateFlow<Boolean?> = _marketing.asStateFlow()
 
     fun loadMarketingConsent() {
@@ -338,8 +307,7 @@ class AccountViewModel(
 
     fun setMarketingConsent(granted: Boolean) {
         viewModelScope.launch {
-            // Optimistic, then corrected: refusing advertising has to feel
-            // instant, and a failed write must not leave it looking accepted.
+
             _marketing.value = granted
             if (!accounts.setMarketingConsent(granted)) {
                 _marketing.value = accounts.marketingConsent() ?: false
@@ -347,11 +315,6 @@ class AccountViewModel(
         }
     }
 
-    /**
-     * Switching photo sync on records the consent behind it; switching it off
-     * deletes the uploaded copies before the switch is even reported as done,
-     * because a withdrawn consent that leaves the files behind is not one.
-     */
     fun setPhotoSync(enabled: Boolean, onPurged: (Boolean) -> Unit = {}) {
         viewModelScope.launch {
             if (enabled) {
@@ -368,9 +331,7 @@ class AccountViewModel(
 
     fun deleteAccount(onDone: (Boolean) -> Unit) {
         viewModelScope.launch {
-            // Deleting the account cascades through the database, but objects
-            // in storage are not rows: they have to be asked to go, and this
-            // is the last moment there is a session to ask with.
+
             syncEngine.purgePhotos()
             val deleted = accounts.deleteAccount()
             if (deleted) syncEngine.resetCursor()
@@ -379,10 +340,9 @@ class AccountViewModel(
     }
 
     companion object {
-        /** Codes are good for five minutes; the server is told the same. */
+
         const val CODE_LIFETIME_MS = 5 * 60 * 1000L
 
-        /** Supabase refuses a second code sooner than this. */
         const val RESEND_COOLDOWN_MS = 60 * 1000L
     }
 }

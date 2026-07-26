@@ -3,10 +3,10 @@ package by.mlastovsky.kosht
 import by.mlastovsky.kosht.data.receipt.ReceiptLine
 import by.mlastovsky.kosht.data.receipt.ReceiptParser
 import by.mlastovsky.kosht.data.receipt.ReceiptQr
+import java.time.LocalDate
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Test
-import java.time.LocalDate
 
 class ReceiptParserTest {
 
@@ -79,7 +79,7 @@ class ReceiptParserTest {
 
     @Test
     fun `a date is not an amount`() {
-        // 26.07.2026 must not be read as 26 rubles 07 kopecks.
+
         val text = """
             Магазин
             26.07.2026 19:30
@@ -141,7 +141,7 @@ class ReceiptParserTest {
 
     @Test
     fun `the largest print wins over the lines above it`() {
-        // The name is rarely the first thing printed, but it is the biggest.
+
         val lines = listOf(
             ReceiptLine("Торговый центр Замок"),
             ReceiptLine("Хмельная лавка", emphasis = 2.2f),
@@ -211,9 +211,7 @@ class ReceiptParserTest {
 
     @Test
     fun `a line too long to be a name leaves the note empty`() {
-        // It reads like a name and nothing rejects it — except that no shop
-        // prints its name across sixty characters, and a note cut in half is
-        // worse than no note at all.
+
         val text = """
             Общество с ограниченной ответственностью Первая Столичная Торговая Компания Плюс
             ИТОГО 8,40
@@ -284,10 +282,7 @@ class ReceiptParserTest {
 
     @Test
     fun `lines adding up to far more than the total are not believed`() {
-        // Something that is not a purchase was read as one. A wrong list is
-        // worse than none, so the whole list goes rather than the total.
-        // A misread digit turns 0,40 into 940,00 — the sort of thing OCR does
-        // on a crumpled slip, and the sort of thing no filter can name.
+
         val text = """
             Хлеб 1,85
             Молоко 2,90
@@ -301,8 +296,7 @@ class ReceiptParserTest {
 
     @Test
     fun `lines adding up to less than the total are kept as they are`() {
-        // One line the scan could not read is simply missing; no product is
-        // invented to make the arithmetic come out even.
+
         val text = """
             Хлеб 1,85
             Молоко 2,90

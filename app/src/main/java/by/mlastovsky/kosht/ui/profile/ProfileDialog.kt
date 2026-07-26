@@ -30,20 +30,9 @@ import by.mlastovsky.kosht.R
 import by.mlastovsky.kosht.ui.AppViewModelProvider
 import by.mlastovsky.kosht.ui.components.Avatar
 import by.mlastovsky.kosht.ui.components.EMOJI_AVATAR_PREFIX
+import by.mlastovsky.kosht.ui.components.PRESET_AVATARS
 import by.mlastovsky.kosht.ui.components.TextInput
 
-/** Built-in avatars, for anyone who would rather not use a photo. */
-private val PRESET_AVATARS = by.mlastovsky.kosht.ui.components.PRESET_AVATARS
-
-/**
- * Name, nickname and avatar in one dialog — the same one wherever the avatar is
- * tapped. It used to live inside the settings screen, which meant the avatar on
- * Home was decoration; now that avatar opens this, and Settings opens the very
- * same thing.
- *
- * The dialog brings its own view model, so opening it costs the caller a single
- * line and no dependencies of its own.
- */
 @Composable
 fun ProfileDialog(
     onDismiss: () -> Unit,
@@ -94,8 +83,7 @@ fun ProfileDialog(
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
-                // No explicit delete button: press and hold removes the
-                // photo, the hint below spells that out.
+
                 Avatar(
                     photoPath = current.photoPath,
                     fallbackText = nickname.ifBlank { name.ifBlank { defaultName } },

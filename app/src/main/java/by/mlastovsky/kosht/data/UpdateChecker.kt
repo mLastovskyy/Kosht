@@ -1,12 +1,11 @@
 package by.mlastovsky.kosht.data
 
+import java.net.HttpURLConnection
+import java.net.URL
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import org.json.JSONObject
-import java.net.HttpURLConnection
-import java.net.URL
 
-/** Outcome of a manual "is there a newer build?" check. */
 sealed interface UpdateStatus {
 
     data object UpToDate : UpdateStatus
@@ -16,16 +15,9 @@ sealed interface UpdateStatus {
         val downloadUrl: String
     ) : UpdateStatus
 
-    /** No network, GitHub unreachable or a release without an APK. */
     data object Failed : UpdateStatus
 }
 
-/**
- * Compares the installed build with the latest GitHub release. Releases
- * are tagged by CI run number, so the actual version comes from the APK
- * asset name (kosht-2.47-release.apk) — its build part is the commit
- * count, which is exactly this app's versionCode.
- */
 class UpdateChecker {
 
     suspend fun check(currentVersionCode: Long): UpdateStatus = withContext(Dispatchers.IO) {
@@ -54,7 +46,7 @@ class UpdateChecker {
         return try {
             connection.connectTimeout = 10_000
             connection.readTimeout = 10_000
-            // GitHub rejects requests without a User-Agent.
+
             connection.setRequestProperty("User-Agent", "Kosht")
             connection.setRequestProperty("Accept", "application/vnd.github+json")
             connection.inputStream.bufferedReader().use { it.readText() }
@@ -69,11 +61,9 @@ class UpdateChecker {
 
         private val ASSET_NAME = Regex("""kosht-(\d+)\.(\d+)-release\.apk""")
 
-        /** "kosht-2.47-release.apk" -> "2.47" */
         fun parseVersionName(assetName: String): String? =
             ASSET_NAME.find(assetName)?.let { "${it.groupValues[1]}.${it.groupValues[2]}" }
 
-        /** "kosht-2.47-release.apk" -> 47, the commit count behind versionCode. */
         fun parseBuildNumber(assetName: String): Long? =
             ASSET_NAME.find(assetName)?.groupValues?.get(2)?.toLongOrNull()
     }

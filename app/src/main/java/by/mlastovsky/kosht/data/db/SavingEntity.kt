@@ -5,10 +5,6 @@ import androidx.room.Entity
 import androidx.room.Index
 import androidx.room.PrimaryKey
 
-/**
- * One "set aside" moment. Positive [amountMinor] is a deposit into savings,
- * negative is a withdrawal.
- */
 @Entity(tableName = "savings", indices = [Index("uid")])
 data class SavingEntity(
     @PrimaryKey(autoGenerate = true)
@@ -17,7 +13,7 @@ data class SavingEntity(
     val currencyCode: String,
     val note: String = "",
     val timestamp: Long,
-    /** Optional link to a savings goal. */
+
     val goalId: Long? = null,
     @Embedded
     val sync: SyncMeta = SyncMeta()

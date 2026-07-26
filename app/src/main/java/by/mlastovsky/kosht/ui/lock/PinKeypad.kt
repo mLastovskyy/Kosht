@@ -1,11 +1,11 @@
 package by.mlastovsky.kosht.ui.lock
 
 import android.view.HapticFeedbackConstants
+import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.keyframes
 import androidx.compose.animation.core.tween
-import androidx.compose.animation.animateColorAsState
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -31,19 +31,14 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.layout
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.layout.layout
 import by.mlastovsky.kosht.R
 
-/**
- * The code as dots, never as digits — a code typed in a room with other people
- * in it stays a code. The dots also do the complaining: a wrong one shakes them
- * instead of pushing a message onto the screen.
- */
 @Composable
 fun PinDots(
     filled: Int,
@@ -103,12 +98,6 @@ fun PinDots(
     }
 }
 
-/**
- * The keypad the code is typed on: the app's own, not the system keyboard, so
- * nothing else sees the digits and the screen never jumps. [onBiometric] puts
- * the fingerprint where a phone keeps it — in the keypad itself, bottom left,
- * one thumb away — and leaves the slot empty when the phone has no sensor.
- */
 @Composable
 fun PinKeypad(
     onDigit: (Char) -> Unit,
@@ -149,8 +138,7 @@ fun PinKeypad(
             if (onBiometric != null) {
                 PinKey(
                     modifier = Modifier.weight(1f),
-                    // Always live: a growing wait is for guessed codes, and a
-                    // finger is not a guess.
+
                     enabled = true,
                     background = MaterialTheme.colorScheme.primaryContainer,
                     onClick = onBiometric

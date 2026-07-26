@@ -6,11 +6,6 @@ import androidx.core.content.edit
 import by.mlastovsky.kosht.model.AppLanguage
 import java.util.Locale
 
-/**
- * Applies the in-app language choice. The value is stored in SharedPreferences
- * (not DataStore) because it must be read synchronously in attachBaseContext,
- * before any coroutine machinery is available.
- */
 object LocaleHelper {
 
     private const val PREFS = "kosht_locale"
@@ -28,12 +23,11 @@ object LocaleHelper {
         }
     }
 
-    /** Wraps the base context with the chosen locale; no-op for SYSTEM. */
     fun wrap(context: Context): Context {
         val language = getLanguage(context)
         val tag = language.tag ?: return context
         val locale = Locale.forLanguageTag(tag)
-        // Keep java.util formatters (currency, month names) in sync with the UI.
+
         Locale.setDefault(locale)
         val config = Configuration(context.resources.configuration)
         config.setLocale(locale)

@@ -7,6 +7,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -16,8 +17,8 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ReceiptLong
@@ -43,18 +44,25 @@ import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import by.mlastovsky.kosht.R
+import by.mlastovsky.kosht.data.db.TransactionEntity
+import by.mlastovsky.kosht.ui.AccountVisuals
 import by.mlastovsky.kosht.ui.AppViewModelProvider
+import by.mlastovsky.kosht.ui.CategoryVisuals
 import by.mlastovsky.kosht.ui.components.AnimatedAmountText
 import by.mlastovsky.kosht.ui.components.Avatar
 import by.mlastovsky.kosht.ui.components.EmptyState
 import by.mlastovsky.kosht.ui.components.TransactionRow
+import by.mlastovsky.kosht.ui.profile.ProfileDialog
 import by.mlastovsky.kosht.ui.relativeDate
 import by.mlastovsky.kosht.ui.theme.KoshtTheme
+import by.mlastovsky.kosht.ui.transfer.TransferDialog
 import by.mlastovsky.kosht.util.Dates
 import by.mlastovsky.kosht.util.Money
 
@@ -71,20 +79,18 @@ fun HomeScreen(
         animationSpec = tween(durationMillis = 300),
         label = "contentAlpha"
     )
-    // A transfer is not a record the editor knows how to show, so it opens the
-    // dialog it was made in.
+
     var transferInAction by remember {
-        mutableStateOf<by.mlastovsky.kosht.data.db.TransactionEntity?>(null)
+        mutableStateOf<TransactionEntity?>(null)
     }
-    // The avatar is not decoration: it opens the profile, the same dialog
-    // Settings opens, wherever it is tapped.
+
     var showProfile by remember { mutableStateOf(false) }
 
     LazyColumn(
         modifier = Modifier
             .fillMaxSize()
             .alpha(contentAlpha),
-        contentPadding = androidx.compose.foundation.layout.PaddingValues(bottom = 96.dp)
+        contentPadding = PaddingValues(bottom = 96.dp)
     ) {
         item(key = "greeting") {
             val profile = state.profile
@@ -105,15 +111,12 @@ fun HomeScreen(
                             else -> stringResource(R.string.home_greeting, displayName)
                         },
                         style = MaterialTheme.typography.titleLarge,
-                        // A long name wraps rather than ending in dots: the
-                        // greeting is the one place the app says your name.
+
                         maxLines = 2,
-                        overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
+                        overflow = TextOverflow.Ellipsis,
                         modifier = Modifier.weight(1f)
                     )
-                    // The flame and the cup lead to the same screen, so only
-                    // one of them is ever on it — and the flame, which also
-                    // carries the count, wins whenever there is a streak.
+
                     if (streakShown) {
                         Row(
                             verticalAlignment = Alignment.CenterVertically,
@@ -163,8 +166,8 @@ fun HomeScreen(
         }
         if (state.accountBalances.isNotEmpty()) {
             item(key = "accounts") {
-                androidx.compose.foundation.lazy.LazyRow(
-                    contentPadding = androidx.compose.foundation.layout.PaddingValues(
+                LazyRow(
+                    contentPadding = PaddingValues(
                         horizontal = 16.dp
                     ),
                     horizontalArrangement = Arrangement.spacedBy(8.dp)
@@ -183,7 +186,7 @@ fun HomeScreen(
                                 .padding(horizontal = 12.dp, vertical = 8.dp)
                         ) {
                             Icon(
-                                imageVector = by.mlastovsky.kosht.ui.CategoryVisuals
+                                imageVector = CategoryVisuals
                                     .icon(account.iconKey),
                                 contentDescription = null,
                                 tint = Color(account.colorArgb),
@@ -191,7 +194,7 @@ fun HomeScreen(
                             )
                             Column {
                                 Text(
-                                    text = by.mlastovsky.kosht.ui.AccountVisuals
+                                    text = AccountVisuals
                                         .displayName(account),
                                     style = MaterialTheme.typography.labelSmall,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant
@@ -256,14 +259,14 @@ fun HomeScreen(
     }
 
     transferInAction?.let { transfer ->
-        by.mlastovsky.kosht.ui.transfer.TransferDialog(
+        TransferDialog(
             initial = transfer,
             onDismiss = { transferInAction = null }
         )
     }
 
     if (showProfile) {
-        by.mlastovsky.kosht.ui.profile.ProfileDialog(
+        ProfileDialog(
             onDismiss = { showProfile = false }
         )
     }
@@ -339,7 +342,7 @@ private fun BalanceCard(
 private fun MonthStat(
     label: String,
     amountText: String,
-    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    icon: ImageVector,
     iconTint: Color,
     modifier: Modifier = Modifier
 ) {
@@ -379,4 +382,3 @@ private fun MonthStat(
         }
     }
 }
-

@@ -5,11 +5,6 @@ import android.content.Intent
 import androidx.core.content.FileProvider
 import java.io.File
 
-/**
- * Opens a PDF bundled in assets. The viewer needs a real file, so the asset
- * is copied to the cache directory the file provider is allowed to share
- * from; overwriting each time keeps the copy in step with the app.
- */
 object AssetPdf {
 
     fun open(context: Context, assetName: String, fileName: String): Boolean = runCatching {

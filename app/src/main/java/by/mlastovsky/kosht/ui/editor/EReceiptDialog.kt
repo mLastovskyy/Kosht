@@ -16,14 +16,6 @@ import androidx.compose.ui.viewinterop.AndroidView
 import by.mlastovsky.kosht.R
 import java.io.File
 
-/**
- * Shows the electronic receipt a QR led to, without leaving the app.
- *
- * The copy downloaded at scan time is preferred, so an old receipt still
- * opens with no connection; the original link is the fallback. JavaScript
- * stays off — this only has to render a receipt, and the page comes from
- * whatever site the QR pointed at.
- */
 @Composable
 fun EReceiptDialog(
     url: String?,

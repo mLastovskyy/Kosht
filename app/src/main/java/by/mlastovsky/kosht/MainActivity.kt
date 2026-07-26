@@ -22,11 +22,6 @@ import by.mlastovsky.kosht.ui.theme.KoshtAppTheme
 import by.mlastovsky.kosht.ui.theme.isAppInDarkTheme
 import by.mlastovsky.kosht.util.LocaleHelper
 
-/**
- * A [FragmentActivity] rather than a plain one: the system biometric prompt is
- * a fragment, and borrowing the phone's own fingerprint dialog is worth the
- * base class.
- */
 class MainActivity : FragmentActivity() {
 
     private val viewModel: MainViewModel by viewModels { AppViewModelProvider.Factory }
@@ -40,8 +35,7 @@ class MainActivity : FragmentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         val splashScreen = installSplashScreen()
         super.onCreate(savedInstanceState)
-        // The splash also waits for the lock: Home must not flash up for a
-        // moment before the code screen replaces it.
+
         splashScreen.setKeepOnScreenCondition {
             viewModel.settings.value == null || appLock.state.value == LockState.Unknown
         }
@@ -66,9 +60,6 @@ class MainActivity : FragmentActivity() {
                 )
             }
 
-            // With a lock on, the task switcher should not hold a readable
-            // picture of the balance — the point of the lock is that the
-            // figures need the code, and a thumbnail does not ask for one.
             LaunchedEffect(lockState) {
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
                     setRecentsScreenshotEnabled(lockState == LockState.Off)
@@ -81,8 +72,7 @@ class MainActivity : FragmentActivity() {
             ) {
                 Surface {
                     when (lockState) {
-                        // Standing in place of the app, not over it: nothing
-                        // can be left showing behind the code screen that way.
+
                         LockState.Locked -> LockScreen()
                         LockState.Unknown -> Unit
                         else -> KoshtRoot()
@@ -102,11 +92,6 @@ class MainActivity : FragmentActivity() {
         appLock.onBackground()
     }
 
-    /**
-     * Every camera, gallery and settings screen the app opens comes through
-     * here, whichever launcher asked for it. Telling the lock about it is what
-     * keeps photographing a receipt from looking like leaving the app.
-     */
     @Deprecated("Kept to notice the app's own trips out; launchers still go through it")
     override fun startActivityForResult(intent: Intent, requestCode: Int, options: Bundle?) {
         appLock.expectExternalResult()

@@ -2,11 +2,11 @@ package by.mlastovsky.kosht
 
 import by.mlastovsky.kosht.data.receipt.QrPayload
 import by.mlastovsky.kosht.data.receipt.ReceiptQr
+import java.time.LocalDate
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
-import java.time.LocalDate
 
 class ReceiptQrTest {
 
@@ -38,12 +38,12 @@ class ReceiptQrTest {
 
     @Test
     fun `codes that are not receipts are left alone`() {
-        // A slip may carry a loyalty code, a Wi-Fi password or an advert.
+
         assertNull(ReceiptQr.classify("WIFI:S=ShopGuest;T=WPA;P=secret;;"))
         assertNull(ReceiptQr.classify("mailto:shop@example.by"))
         assertNull(ReceiptQr.classify("1234567890128"))
         assertNull(ReceiptQr.classify("  "))
-        // Key=value pairs alone are not enough without a sum and a time.
+
         assertNull(ReceiptQr.classify("card=771231&bonus=40"))
     }
 
@@ -60,7 +60,7 @@ class ReceiptQrTest {
 
         assertTrue(text.contains("ООО \"Евроопт\""))
         assertTrue(text.contains("ИТОГО"))
-        // Script and style content must not leak in as fake receipt lines.
+
         assertTrue(!text.contains("track()"))
         assertTrue(!text.contains("color:red"))
     }

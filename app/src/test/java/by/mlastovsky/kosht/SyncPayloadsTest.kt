@@ -16,10 +16,6 @@ import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
-/**
- * The point of these: local row ids are per-device and must never travel, and
- * a device's own files must never be overwritten by what came off the wire.
- */
 class SyncPayloadsTest {
 
     private val here = UidIndex(
@@ -29,7 +25,6 @@ class SyncPayloadsTest {
         transactions = listOf(UidRef(id = 5, uid = "tx-uid"))
     )
 
-    /** Same account, second phone: same uids, entirely different local ids. */
     private val there = UidIndex(
         categories = listOf(UidRef(id = 41, uid = "seed:food")),
         accounts = listOf(UidRef(id = 92, uid = "acc-uid"), UidRef(id = 93, uid = "cash-uid")),
@@ -91,7 +86,7 @@ class SyncPayloadsTest {
         // Paths point at files on this phone; the other phone's are useless.
         assertEquals("/data/user/0/kosht/files/receipts/mine.jpg", merged.photoPath)
         assertEquals("/data/user/0/kosht/files/receipts/mine.html", merged.receiptDocPath)
-        // The link itself is portable and does travel.
+
         assertEquals("https://echeck.example.by/r/8812ab", merged.receiptUrl)
         assertEquals(5L, merged.id)
         assertEquals(222L, merged.sync.updatedAt)

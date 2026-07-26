@@ -2,24 +2,28 @@ package by.mlastovsky.kosht.ui.home
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import by.mlastovsky.kosht.data.AccountRepository
+import by.mlastovsky.kosht.data.AppSettings
 import by.mlastovsky.kosht.data.RatesRepository
 import by.mlastovsky.kosht.data.SettingsRepository
 import by.mlastovsky.kosht.data.TransactionRepository
 import by.mlastovsky.kosht.data.UserProfile
+import by.mlastovsky.kosht.data.db.AccountEntity
+import by.mlastovsky.kosht.data.db.RateEntity
 import by.mlastovsky.kosht.data.db.TransactionWithCategory
 import by.mlastovsky.kosht.model.TransactionType
 import by.mlastovsky.kosht.util.Dates
 import by.mlastovsky.kosht.util.Streak
+import java.time.YearMonth
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
-import java.time.YearMonth
 
 data class HomeUiState(
     val loaded: Boolean = false,
     val balanceMinor: Long = 0,
-    /** Balance converted to BYN when the app currency differs; null otherwise. */
+
     val balanceBynMinor: Long? = null,
     val monthIncomeMinor: Long = 0,
     val monthExpenseMinor: Long = 0,
@@ -29,20 +33,17 @@ data class HomeUiState(
     val streakDays: Int = 0,
     val showGreeting: Boolean = true,
     val showStreak: Boolean = true,
-    /** Per-account balances; shown only when there is more than one account. */
-    val accountBalances: List<Pair<by.mlastovsky.kosht.data.db.AccountEntity, Long>> = emptyList(),
-    /**
-     * Every account, whatever the multi-account switch says: a transfer names
-     * both of its ends even if the user has since folded the balances away.
-     */
-    val accounts: List<by.mlastovsky.kosht.data.db.AccountEntity> = emptyList()
+
+    val accountBalances: List<Pair<AccountEntity, Long>> = emptyList(),
+
+    val accounts: List<AccountEntity> = emptyList()
 )
 
 class HomeViewModel(
     repository: TransactionRepository,
     settingsRepository: SettingsRepository,
     ratesRepository: RatesRepository,
-    accountRepository: by.mlastovsky.kosht.data.AccountRepository
+    accountRepository: AccountRepository
 ) : ViewModel() {
 
     private val monthRange = Dates.monthRange(YearMonth.now())
@@ -78,10 +79,10 @@ class HomeViewModel(
 
     private data class HomeContext(
         val recent: List<TransactionWithCategory>,
-        val settings: by.mlastovsky.kosht.data.AppSettings,
-        val rates: Map<String, by.mlastovsky.kosht.data.db.RateEntity>,
+        val settings: AppSettings,
+        val rates: Map<String, RateEntity>,
         val profile: UserProfile,
-        val accountBalances: List<Pair<by.mlastovsky.kosht.data.db.AccountEntity, Long>>
+        val accountBalances: List<Pair<AccountEntity, Long>>
     )
 
     private val accountBalances = combine(
@@ -91,7 +92,7 @@ class HomeViewModel(
         val primaryId = accounts.firstOrNull()?.id
         accounts.map { account ->
             val own = balances.firstOrNull { it.accountId == account.id }?.balance ?: 0L
-            // Legacy records without an account belong to the primary one.
+
             val legacy = if (account.id == primaryId) {
                 balances.firstOrNull { it.accountId == null }?.balance ?: 0L
             } else {
@@ -112,7 +113,7 @@ class HomeViewModel(
 
     val uiState: StateFlow<HomeUiState> = combine(totals, context) { t, ctx ->
         val settings = ctx.settings
-        // Manual balance corrections are part of the total.
+
         val totalBalance = t.balance +
             ctx.accountBalances.sumOf { it.first.adjustmentMinor }
         val bynEquivalent = if (settings.currencyCode != "BYN") {

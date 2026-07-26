@@ -10,26 +10,21 @@ import by.mlastovsky.kosht.data.TransactionRepository
 import by.mlastovsky.kosht.data.db.AccountEntity
 import by.mlastovsky.kosht.data.db.TransactionEntity
 import by.mlastovsky.kosht.util.Dates
+import java.time.LocalDate
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
-import java.time.LocalDate
 
 data class TransferUiState(
     val accounts: List<AccountEntity> = emptyList(),
     val currencyCode: String = SettingsRepository.DEFAULT_CURRENCY,
-    /** Whether the dialog offers a fee field; a setting in Display. */
+
     val feeEnabled: Boolean = false
 )
 
-/**
- * Moving money between the user's own accounts. Small enough to serve the
- * dialog wherever it is opened from — the Wallet, where transfers are made,
- * and the lists, where an existing one is corrected or deleted.
- */
 class TransferViewModel(
     private val transactions: TransactionRepository,
     accountRepository: AccountRepository,
@@ -48,10 +43,6 @@ class TransferViewModel(
         )
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), TransferUiState())
 
-    /**
-     * Writes a new transfer or the corrections to an existing one. [onDone]
-     * runs only when something was actually saved.
-     */
     fun save(
         original: TransactionEntity?,
         fromAccountId: Long,
@@ -81,16 +72,12 @@ class TransferViewModel(
     fun delete(transfer: TransactionEntity, onDone: () -> Unit) {
         viewModelScope.launch {
             transactions.deleteTransaction(transfer)
-            // Same offer to undo as everywhere else in the app.
+
             DeletionEvents.report(transfer)
             onDone()
         }
     }
 
-    /**
-     * The BYN value frozen at the moment of the transfer, like every other
-     * record; an untouched amount keeps the figure it was first saved with.
-     */
     private suspend fun bynEquivalent(amountMinor: Long, original: TransactionEntity?): Long? {
         val currency = uiState.value.currencyCode
         if (currency == "BYN") return amountMinor

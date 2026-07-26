@@ -5,11 +5,6 @@ import by.mlastovsky.kosht.data.receipt.ReceiptParser
 import org.junit.Assert.assertEquals
 import org.junit.Test
 
-/**
- * The letters a thermal slip comes back with instead of digits. The point of
- * these is the other half too: a name must keep its letters, and nothing that
- * was never a price may turn into one.
- */
 class OcrDigitsTest {
 
     @Test
@@ -28,7 +23,7 @@ class OcrDigitsTest {
 
     @Test
     fun `a comma is what the app writes back`() {
-        // Whatever separator the slip used, the repaired token is uniform.
+
         assertEquals("7,30", OcrDigits.repair("7.3О"))
     }
 
@@ -40,7 +35,7 @@ class OcrDigitsTest {
 
     @Test
     fun `a token that is only letters is never turned into a price`() {
-        // "ОО,ОО" has no digit to anchor it: it was never an amount.
+
         assertEquals("ОО,ОО", OcrDigits.repair("ОО,ОО"))
     }
 
@@ -52,8 +47,7 @@ class OcrDigitsTest {
 
     @Test
     fun `a receipt that was unreadable now parses`() {
-        // Exactly the failure this exists for: every figure on the slip came
-        // back with a letter in it, so nothing could be read at all.
+
         val text = """
             ЕВРООПТ
             Хлеб l,85

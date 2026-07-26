@@ -21,13 +21,13 @@ class RatesTest {
 
     @Test
     fun `usd converts using official rate`() {
-        // 10.00 USD * 3.2 = 32.00 BYN
+
         assertEquals(32_00L, RatesRepository.toBynMinor(10_00L, "USD", rates))
     }
 
     @Test
     fun `scaled currency divides by scale`() {
-        // 100.00 RUB = 3.70 BYN (rate is per 100 units)
+
         assertEquals(3_70L, RatesRepository.toBynMinor(100_00L, "RUB", rates))
     }
 
@@ -38,13 +38,13 @@ class RatesTest {
 
     @Test
     fun `byn converts into a foreign currency`() {
-        // 32.00 BYN / 3.2 = 10.00 USD
+
         assertEquals(10_00L, RatesRepository.convertMinor(32_00L, "BYN", "USD", rates))
     }
 
     @Test
     fun `two foreign currencies cross through byn`() {
-        // 1.00 USD = 3.20 BYN = 86.49 RUB (3.7 BYN per 100 RUB)
+
         assertEquals(86_49L, RatesRepository.convertMinor(1_00L, "USD", "RUB", rates))
     }
 
@@ -61,7 +61,7 @@ class RatesTest {
 
     @Test
     fun `the factor is what one unit is worth in the other currency`() {
-        // Switching the app from USD to BYN multiplies every amount by 3.2.
+
         assertEquals(3.2, RatesRepository.factor("USD", "BYN", rates)!!, 1e-9)
         assertEquals(1.0, RatesRepository.factor("USD", "USD", rates)!!, 1e-9)
         assertNull(RatesRepository.factor("USD", "JPY", rates))

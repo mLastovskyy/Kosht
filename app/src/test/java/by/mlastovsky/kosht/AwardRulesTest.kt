@@ -7,13 +7,13 @@ import by.mlastovsky.kosht.data.awards.ChallengeProgress
 import by.mlastovsky.kosht.data.awards.ChallengeStatus
 import by.mlastovsky.kosht.data.db.ChallengeEntity
 import by.mlastovsky.kosht.model.ChallengeType
+import java.time.LocalDate
+import java.time.YearMonth
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
-import java.time.LocalDate
-import java.time.YearMonth
 
 class AwardRulesTest {
 
@@ -46,7 +46,7 @@ class AwardRulesTest {
     @Test
     fun `every key is unique and the ladder is a whole number of pages`() {
         assertEquals(AwardRules.keys.size, AwardRules.keys.toSet().size)
-        // Six awards to a page on screen: a stray one would sit alone.
+
         assertEquals(0, AwardRules.keys.size % 6)
     }
 

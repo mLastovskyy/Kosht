@@ -64,14 +64,14 @@ class PinTest {
     fun `a typed timeout is minutes, within reason`() {
         assertEquals(0L, LockTimeout.millis(LockTimeout.AT_ONCE))
         assertEquals(7 * 60_000L, LockTimeout.millis(7))
-        // A stray digit must not quietly turn the lock off for a week.
+
         assertEquals(LockTimeout.MAX_MINUTES, LockTimeout.sanitize(99_999))
         assertEquals(0, LockTimeout.sanitize(-5))
     }
 
     @Test
     fun `a cold start always asks`() {
-        // No known time away is how a fresh process reports itself.
+
         listOf(LockTimeout.AT_ONCE, 1, 5, LockTimeout.MAX_MINUTES).forEach { minutes ->
             val timeout = LockTimeout.millis(minutes)
             assertTrue(Pin.shouldLock(Long.MAX_VALUE, timeout, expectingResult = false))
@@ -81,7 +81,7 @@ class PinTest {
 
     @Test
     fun `recreating the activity is not leaving the app`() {
-        // A language change stops and starts the activity within a moment.
+
         assertFalse(Pin.shouldLock(300L, LockTimeout.millis(0), expectingResult = false))
     }
 
@@ -106,8 +106,7 @@ class PinTest {
 
     @Test
     fun `photographing a receipt does not cost a code`() {
-        // The camera is a screen Kosht opened itself, and a careful shot takes
-        // longer than the strictest setting allows.
+
         assertFalse(Pin.shouldLock(4 * 60_000L, LockTimeout.millis(0), expectingResult = true))
     }
 

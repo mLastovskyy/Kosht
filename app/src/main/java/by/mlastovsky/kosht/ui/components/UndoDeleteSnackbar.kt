@@ -17,13 +17,6 @@ import by.mlastovsky.kosht.data.TransactionRepository
 import by.mlastovsky.kosht.ui.AppViewModelProvider
 import kotlinx.coroutines.launch
 
-/**
- * "Transaction deleted — Undo", wherever the delete came from.
- *
- * Lives at the root, so the snackbar is the Scaffold's own: that is what keeps
- * the floating add button from sitting on top of the Undo action, which is the
- * one part of a snackbar that has to be reachable.
- */
 @Composable
 fun UndoDeleteSnackbar(
     hostState: SnackbarHostState,
@@ -34,8 +27,7 @@ fun UndoDeleteSnackbar(
 
     LaunchedEffect(hostState) {
         DeletionEvents.deleted.collect { deleted ->
-            // A second delete replaces the first offer; the first one's files
-            // are cleaned up as its snackbar is dismissed.
+
             val result = hostState.showSnackbar(
                 message = message,
                 actionLabel = undo,
@@ -55,15 +47,10 @@ class UndoDeleteViewModel(
     private val photoStore: PhotoStore
 ) : ViewModel() {
 
-    /**
-     * Puts the record back with its id, its photo, its receipt and the product
-     * lines that were cascaded away with it.
-     */
     fun restore(record: DeletedRecord) {
         viewModelScope.launch { repository.restore(record) }
     }
 
-    /** The offer expired: now the attachments can go. */
     fun forget(record: DeletedRecord) {
         viewModelScope.launch {
             photoStore.delete(record.transaction.photoPath)

@@ -7,12 +7,6 @@ import androidx.compose.ui.res.stringResource
 import by.mlastovsky.kosht.R
 import by.mlastovsky.kosht.util.PdfDocs
 
-/**
- * Hands back the one gesture the bundled documents are opened with: a tap saves
- * the PDF into Downloads where Android allows it, opens it, and says so. What
- * someone is asked to agree to should be theirs to keep, which is why the same
- * behaviour belongs everywhere a document is offered.
- */
 @Composable
 fun rememberDocumentOpener(): (asset: String, fileName: String) -> Unit {
     val context = LocalContext.current
@@ -28,7 +22,6 @@ fun rememberDocumentOpener(): (asset: String, fileName: String) -> Unit {
     }
 }
 
-/** The bundled legal documents, as asset name and the file a tap leaves behind. */
 object LegalDocs {
     const val TERMS_ASSET = "legal/terms.pdf"
     const val TERMS_FILE = "kosht-terms.pdf"

@@ -14,11 +14,10 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
-/** What the code is being asked for: setting one, changing it, or switching off. */
 enum class PinGoal { CREATE, CHANGE, DISABLE }
 
 enum class PinStep {
-    /** Prove the code that already exists before touching it. */
+
     CURRENT,
 
     NEW,
@@ -28,23 +27,21 @@ enum class PinStep {
 
 enum class PinError { WRONG_CODE, MISMATCH, TOO_SHORT }
 
-/** The code sheet in Settings: one step of a two- or three-step flow. */
 data class PinSetup(
     val goal: PinGoal,
     val step: PinStep,
     val entered: String = "",
-    /** The new code waiting to be repeated. */
+
     val first: String = "",
     val error: PinError? = null,
     val busy: Boolean = false
 )
 
-/** The lock screen's own state: dots typed, and why the last try failed. */
 data class LockEntry(
     val entered: String = "",
-    /** A wrong code — the dots shake and empty themselves. */
+
     val wrong: Boolean = false,
-    /** The system's wording for a biometric refusal, when there was one. */
+
     val message: String? = null,
     val busy: Boolean = false
 )
@@ -65,8 +62,6 @@ class AppLockViewModel(
     private val _setup = MutableStateFlow<PinSetup?>(null)
 
     val setup: StateFlow<PinSetup?> = _setup.asStateFlow()
-
-    // ---------------------------------------------------------------- unlocking
 
     fun typeDigit(digit: Char) {
         val current = _entry.value
@@ -93,7 +88,6 @@ class AppLockViewModel(
         }
     }
 
-    /** The finger was recognised; the code was not needed this time. */
     fun biometricAccepted() {
         _entry.value = LockEntry()
         appLock.open()
@@ -106,8 +100,6 @@ class AppLockViewModel(
     fun clearMessage() {
         _entry.value = _entry.value.copy(message = null, wrong = false)
     }
-
-    // ------------------------------------------------------- setting a new code
 
     fun startCreate() {
         _setup.value = PinSetup(goal = PinGoal.CREATE, step = PinStep.NEW)
@@ -130,7 +122,7 @@ class AppLockViewModel(
         if (current.busy || current.entered.length >= Pin.MAX_LENGTH) return
         val entered = current.entered + digit
         _setup.value = current.copy(entered = entered, error = null)
-        // Confirming the existing code needs no button: its length is known.
+
         val length = settings.value?.pinLength ?: Pin.MIN_LENGTH
         if (current.step == PinStep.CURRENT && entered.length == length) confirmSetup()
     }
@@ -141,7 +133,6 @@ class AppLockViewModel(
         _setup.value = current.copy(entered = current.entered.dropLast(1), error = null)
     }
 
-    /** The button under the dots: verifies, remembers, repeats or saves. */
     fun confirmSetup() {
         val current = _setup.value ?: return
         if (current.busy) return
@@ -175,11 +166,6 @@ class AppLockViewModel(
         }
     }
 
-    /**
-     * The code that is already set. No failure is counted here: the app is
-     * open, so whoever is typing has already been let in — locking them out of
-     * their own app for a fumbled digit would punish the wrong thing.
-     */
     private fun verifyCurrent(current: PinSetup) {
         val stored = settings.value ?: return
         val salt = stored.pinSalt
@@ -215,9 +201,7 @@ class AppLockViewModel(
         viewModelScope.launch {
             val salt = Pin.newSalt()
             val hash = withContext(Dispatchers.Default) { Pin.hash(pin, salt) }
-            // Opened before the code is stored, not after: whoever just chose
-            // it is plainly present, and the other order flashes the lock
-            // screen for the frame between the two.
+
             appLock.open()
             repository.setPin(hash = hash, salt = Pin.encode(salt), length = pin.length)
             _setup.value = null

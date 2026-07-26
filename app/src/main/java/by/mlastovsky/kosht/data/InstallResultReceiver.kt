@@ -12,21 +12,15 @@ import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.asSharedFlow
 
-/**
- * Outcome of a commit, as the UI cares about it.
- */
 enum class InstallOutcome {
-    /** The user dismissed the system installer — not an error worth a dialog. */
+
     Cancelled,
 
-    /** The release carries another signing key; Android will never accept it. */
     SignatureMismatch,
 
-    /** Rejected by the package manager (no space, corrupt archive, ...). */
     Failed
 }
 
-/** Carries [InstallResultReceiver] results back to whoever started the install. */
 object InstallEvents {
 
     private val _outcomes = MutableSharedFlow<InstallOutcome>(extraBufferCapacity = 4)
@@ -38,10 +32,6 @@ object InstallEvents {
     }
 }
 
-/**
- * Receives package installer status broadcasts. A successful install replaces
- * the running app, so only the pending-confirmation and failure paths matter.
- */
 class InstallResultReceiver : BroadcastReceiver() {
 
     override fun onReceive(context: Context, intent: Intent) {
@@ -65,8 +55,6 @@ class InstallResultReceiver : BroadcastReceiver() {
             PackageInstaller.STATUS_FAILURE_ABORTED ->
                 InstallEvents.report(InstallOutcome.Cancelled)
 
-            // A conflict on a self-update means one thing in practice: the
-            // release was signed with a different key than the running build.
             PackageInstaller.STATUS_FAILURE_CONFLICT ->
                 InstallEvents.report(InstallOutcome.SignatureMismatch)
 
@@ -76,11 +64,10 @@ class InstallResultReceiver : BroadcastReceiver() {
 
     companion object {
 
-        /** Status callback target for [PackageInstaller.Session.commit]. */
         fun statusSender(context: Context, sessionId: Int): IntentSender {
             val intent = Intent(context, InstallResultReceiver::class.java)
                 .setPackage(context.packageName)
-            // Mutable: the system fills the status extras in on delivery.
+
             val flags = PendingIntent.FLAG_UPDATE_CURRENT or
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
                     PendingIntent.FLAG_MUTABLE

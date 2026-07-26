@@ -10,6 +10,8 @@ import by.mlastovsky.kosht.data.db.SavingEntity
 import by.mlastovsky.kosht.data.db.SavingTotal
 import by.mlastovsky.kosht.util.Dates
 import by.mlastovsky.kosht.util.Streak
+import java.time.LocalDate
+import java.time.YearMonth
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableSharedFlow
@@ -21,24 +23,7 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
-import java.time.LocalDate
-import java.time.YearMonth
 
-/**
- * Watches the awards for the whole app, not just for the screen that shows
- * them.
- *
- * Two reasons it lives here rather than in a ViewModel. An award has to be
- * earned the moment its condition is met — waiting until the achievements
- * screen is next opened would date it wrongly and rob the moment of any
- * meaning. And the app can then say so straight away: whoever is listening
- * gets the key of every award as it unlocks, which becomes the popup on screen
- * and the notification in the shade.
- *
- * The heavy lifting is left to SQLite: day-and-category sums instead of every
- * record, so watching the whole history costs about as much as watching a week
- * of it.
- */
 class AwardTracker(
     private val transactions: TransactionRepository,
     private val wallet: WalletRepository,
@@ -105,8 +90,7 @@ class AwardTracker(
 
     private val walletData = combine(
         wallet.observeChallenges(),
-        // Every saving, not a window of them: a challenge may have started
-        // before any window would begin.
+
         wallet.observeSavingsSince(0),
         wallet.observeSavingTotals(),
         wallet.observeGoals(),
@@ -126,7 +110,6 @@ class AwardTracker(
         Env(loaded, appSettings.currencyCode, appSettings.dailyBudgetMinor)
     }
 
-    /** Null until the first reading; nothing is judged before then. */
     val stats: StateFlow<AwardStats?> =
         combine(counts, history, walletData, env) { tally, past, purse, loaded ->
             build(tally, past, purse, loaded)
@@ -134,10 +117,8 @@ class AwardTracker(
 
     private val _unlocked = MutableSharedFlow<String>(extraBufferCapacity = EVENT_BUFFER)
 
-    /** Keys of awards as they are earned, for the popup and the notification. */
     val unlocked: SharedFlow<String> = _unlocked.asSharedFlow()
 
-    /** Earned awards: key → the moment it was earned. */
     val earned: Flow<Map<String, Long>> = wallet.observeAwardsByKey()
 
     init {
@@ -156,14 +137,6 @@ class AwardTracker(
             }
     }
 
-    /**
-     * A device that signs in to an account with years of history behind it
-     * meets a dozen conditions at once. That is a catch-up, not a celebration,
-     * so it is recorded quietly; from then on every award gets its moment.
-     *
-     * A handful at once is not a catch-up though — one record can be both the
-     * first ever and the first income — so only a flood is kept silent.
-     */
     private suspend fun announce(fresh: List<String>, firstEverReading: Boolean) {
         if (firstEverReading && fresh.size > MAX_ANNOUNCED) return
         fresh.take(MAX_ANNOUNCED).forEach { _unlocked.emit(it) }
@@ -217,7 +190,6 @@ class AwardTracker(
     private companion object {
         const val EVENT_BUFFER = 16
 
-        /** Enough for one honest batch; a flood of dialogs is not a reward. */
         const val MAX_ANNOUNCED = 3
     }
 }

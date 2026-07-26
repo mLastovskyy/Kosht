@@ -6,10 +6,6 @@ import androidx.room.Index
 import androidx.room.PrimaryKey
 import by.mlastovsky.kosht.model.DebtDirection
 
-/**
- * A debt being tracked. [amountMinor] is the remaining amount; the debt is
- * closed when [closedAt] is set.
- */
 @Entity(tableName = "debts", indices = [Index("uid")])
 data class DebtEntity(
     @PrimaryKey(autoGenerate = true)

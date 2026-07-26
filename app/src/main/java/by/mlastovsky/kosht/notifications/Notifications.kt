@@ -15,13 +15,10 @@ import androidx.core.app.NotificationManagerCompat
 import androidx.core.content.ContextCompat
 import by.mlastovsky.kosht.MainActivity
 import by.mlastovsky.kosht.R
+import by.mlastovsky.kosht.ui.awards.AwardVisuals
 
 object Notifications {
 
-    // Every channel carries a "_v3" (or later) id for one reason: a channel's
-    // importance and sound are fixed once Android has created it, so making a
-    // previously silent reminder audible takes a new channel rather than an
-    // edit. The old ids are deleted below so the settings screen stays tidy.
     const val CHANNEL_REMINDERS = "reminders_v3"
     const val CHANNEL_RECURRING = "recurring_v3"
     const val CHANNEL_SUMMARY = "summary_v3"
@@ -49,13 +46,6 @@ object Notifications {
         }
     }
 
-    /**
-     * A notification nobody hears is a notification nobody acts on, so every
-     * channel rings with the phone's own notification sound and vibrates.
-     * IMPORTANCE_DEFAULT, not HIGH: it makes a sound and waits in the shade
-     * rather than jumping over whatever is on screen. Anyone who wants one of
-     * them quiet can still say so in Android's own channel settings.
-     */
     private fun audibleChannel(context: Context, id: String, nameRes: Int) =
         NotificationChannel(
             id,
@@ -73,10 +63,6 @@ object Notifications {
             enableLights(true)
         }
 
-    /**
-     * "Award earned: Iron month". The award's own wording is reused, so the
-     * shade says exactly what the achievements screen says.
-     */
     fun showAward(context: Context, key: String) {
         show(
             context = context,
@@ -84,9 +70,9 @@ object Notifications {
             channel = CHANNEL_AWARDS,
             title = context.getString(R.string.award_unlocked_title),
             text = context.getString(
-                by.mlastovsky.kosht.ui.awards.AwardVisuals.titleRes(key)
+                AwardVisuals.titleRes(key)
             ) + " · " + context.getString(
-                by.mlastovsky.kosht.ui.awards.AwardVisuals.descRes(key)
+                AwardVisuals.descRes(key)
             )
         )
     }
@@ -117,9 +103,7 @@ object Notifications {
             .setStyle(NotificationCompat.BigTextStyle().bigText(text))
             .setContentIntent(pending)
             .setAutoCancel(true)
-            // Heard, but not intrusive: no full-screen intent, and never louder
-            // than the channel allows. Each fresh notification alerts — one that
-            // replaces an unread predecessor is new news, not an update to it.
+
             .setPriority(NotificationCompat.PRIORITY_DEFAULT)
             .setDefaults(NotificationCompat.DEFAULT_SOUND or NotificationCompat.DEFAULT_VIBRATE)
             .setCategory(NotificationCompat.CATEGORY_REMINDER)

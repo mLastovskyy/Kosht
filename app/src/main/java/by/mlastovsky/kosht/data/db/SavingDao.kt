@@ -34,18 +34,12 @@ interface SavingDao {
     @Query("SELECT DISTINCT currencyCode FROM savings")
     suspend fun currencies(): List<String>
 
-    /**
-     * Restates what was set aside toward one goal in the goal's new currency.
-     * A goal sums its deposits, so changing its currency has to take them with
-     * it — otherwise the progress bar would be adding dollars to roubles.
-     */
     @Query(
         "UPDATE savings SET amountMinor = CAST(ROUND(amountMinor * :factor) AS INTEGER), " +
             "currencyCode = :to WHERE goalId = :goalId"
     )
     suspend fun convertForGoal(goalId: Long, to: String, factor: Double)
 
-    /** Restates everything set aside in [from] as [to]; see CurrencyChanger. */
     @Query(
         "UPDATE savings SET amountMinor = CAST(ROUND(amountMinor * :factor) AS INTEGER), " +
             "currencyCode = :to WHERE currencyCode = :from"

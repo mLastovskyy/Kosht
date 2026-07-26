@@ -5,17 +5,16 @@ import by.mlastovsky.kosht.data.db.ChallengeEntity
 import by.mlastovsky.kosht.data.db.RateEntity
 import by.mlastovsky.kosht.data.db.SavingEntity
 import by.mlastovsky.kosht.model.ChallengeType
+import by.mlastovsky.kosht.util.Dates
 import java.time.LocalDate
 
 enum class ChallengeStatus { ACTIVE, DONE, FAILED }
 
-/** What one day of spending in one category came to. */
 data class DaySpend(val day: LocalDate, val categoryId: Long, val minor: Long)
 
-/** A challenge as it stands right now. Never stored — always recomputed. */
 data class ChallengeProgress(
     val entity: ChallengeEntity,
-    /** Spent/saved against the limit or target; elapsed days for NO_SPEND. */
+
     val progress: Float,
     val progressLabelMinor: Long,
     val daysPassed: Int,
@@ -23,13 +22,6 @@ data class ChallengeProgress(
     val status: ChallengeStatus
 )
 
-/**
- * Turns a challenge and the spending behind it into progress and a verdict.
- *
- * Pure on purpose: the achievements screen shows this, the award tracker
- * counts the finished ones, and a unit test can check the arithmetic without
- * a database or a clock.
- */
 object ChallengeEvaluator {
 
     fun evaluate(
@@ -89,11 +81,10 @@ object ChallengeEvaluator {
             }
 
             ChallengeType.SAVE_TARGET -> {
-                // Savings keep their own currency, so both sides are compared
-                // in BYN — the one currency every rate is published against.
+
                 val savedByn = savings
                     .filter { it.amountMinor > 0 }
-                    .filter { inPeriod(by.mlastovsky.kosht.util.Dates.toLocalDate(it.timestamp)) }
+                    .filter { inPeriod(Dates.toLocalDate(it.timestamp)) }
                     .sumOf {
                         RatesRepository.toBynMinor(it.amountMinor, it.currencyCode, rates) ?: 0L
                     }

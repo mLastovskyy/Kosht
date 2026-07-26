@@ -2,6 +2,7 @@ package by.mlastovsky.kosht.notifications
 
 import android.content.Context
 import androidx.work.ExistingPeriodicWorkPolicy
+import androidx.work.ListenableWorker
 import androidx.work.PeriodicWorkRequest
 import androidx.work.PeriodicWorkRequestBuilder
 import androidx.work.WorkManager
@@ -13,10 +14,6 @@ import java.time.LocalTime
 import java.time.temporal.TemporalAdjusters
 import java.util.concurrent.TimeUnit
 
-/**
- * Keeps WorkManager jobs in sync with the notification settings. Periodic
- * work is not exact-time, which is fine for reminders.
- */
 object NotificationScheduler {
 
     private const val WORK_DAILY = "daily_reminder"
@@ -43,7 +40,7 @@ object NotificationScheduler {
         )
     }
 
-    private inline fun <reified W : androidx.work.ListenableWorker> syncPeriodic(
+    private inline fun <reified W : ListenableWorker> syncPeriodic(
         manager: WorkManager,
         name: String,
         enabled: Boolean,
@@ -58,7 +55,7 @@ object NotificationScheduler {
             PeriodicWorkRequestBuilder<W>(repeatDays, TimeUnit.DAYS)
                 .setInitialDelay(initialDelay.toMillis(), TimeUnit.MILLISECONDS)
                 .build()
-        // KEEP: re-enqueueing on every app start must not reset the schedule.
+
         manager.enqueueUniquePeriodicWork(name, ExistingPeriodicWorkPolicy.KEEP, request)
     }
 

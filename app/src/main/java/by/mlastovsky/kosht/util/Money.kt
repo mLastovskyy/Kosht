@@ -6,9 +6,6 @@ import java.text.NumberFormat
 import java.util.Currency
 import java.util.Locale
 
-/**
- * Formatting helpers for amounts stored in minor currency units (kopecks/cents).
- */
 object Money {
 
     fun format(amountMinor: Long, currencyCode: String, withSign: Boolean = false): String {
@@ -28,14 +25,6 @@ object Money {
         return "$sign${format.format(value)} $symbol"
     }
 
-    /**
-     * The same amount as text someone can carry on typing: no grouping, no
-     * currency, and the decimal separator this locale actually writes with.
-     *
-     * Stripping the symbols out of [format] is not the same thing and quietly
-     * lies about big sums — in English "1,000.00" loses its point on the way
-     * through and comes back as a hundred times itself.
-     */
     fun editableText(amountMinor: Long, currencyCode: String): String {
         val digits = fractionDigits(currencyCode)
         val format = NumberFormat.getNumberInstance(Locale.getDefault()).apply {
@@ -46,7 +35,6 @@ object Money {
         return format.format(BigDecimal(amountMinor).movePointLeft(digits))
     }
 
-    /** Parses user keypad input like "12.50" into minor units. */
     fun parseToMinor(input: String, currencyCode: String): Long? {
         if (input.isBlank()) return null
         val normalized = input.replace(',', '.').trim()

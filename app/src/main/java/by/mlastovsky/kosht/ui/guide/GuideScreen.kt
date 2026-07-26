@@ -29,6 +29,7 @@ import androidx.compose.material.icons.rounded.Savings
 import androidx.compose.material.icons.rounded.Settings
 import androidx.compose.material.icons.rounded.ShoppingBasket
 import androidx.compose.material.icons.rounded.SwapHoriz
+import androidx.compose.material3.Button
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -41,9 +42,11 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import by.mlastovsky.kosht.R
+import by.mlastovsky.kosht.util.PdfDocs
 
 private data class GuideSection(
     val icon: ImageVector,
@@ -113,10 +116,9 @@ private val sections = listOf(
     )
 )
 
-/** Writes the bundled manual into the phone's Downloads and opens it. */
 @Composable
 private fun PdfManualCard() {
-    val context = androidx.compose.ui.platform.LocalContext.current
+    val context = LocalContext.current
     val errorText = stringResource(R.string.guide_pdf_error)
     val savedTemplate = stringResource(R.string.doc_saved)
     Row(
@@ -140,17 +142,17 @@ private fun PdfManualCard() {
                 color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.85f)
             )
         }
-        androidx.compose.material3.Button(
+        Button(
             onClick = {
                 val message = when (
-                    val outcome = by.mlastovsky.kosht.util.PdfDocs
+                    val outcome = PdfDocs
                         .download(context, "manual.pdf", "kosht-manual.pdf")
                 ) {
-                    is by.mlastovsky.kosht.util.PdfDocs.Outcome.Saved ->
+                    is PdfDocs.Outcome.Saved ->
                         String.format(savedTemplate, outcome.fileName)
 
-                    by.mlastovsky.kosht.util.PdfDocs.Outcome.Opened -> null
-                    by.mlastovsky.kosht.util.PdfDocs.Outcome.Failed -> errorText
+                    PdfDocs.Outcome.Opened -> null
+                    PdfDocs.Outcome.Failed -> errorText
                 }
                 message?.let {
                     android.widget.Toast

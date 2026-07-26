@@ -33,12 +33,6 @@ import androidx.compose.material.icons.rounded.WorkspacePremium
 import androidx.compose.ui.graphics.vector.ImageVector
 import by.mlastovsky.kosht.R
 
-/**
- * How each award looks and reads. Deliberately not a Composable and not tied
- * to a screen: the achievements grid, the unlock popup and the notification in
- * the shade all name an award the same way, and there is only one place to
- * change when an award is added.
- */
 object AwardVisuals {
 
     fun icon(key: String): ImageVector = when (key) {

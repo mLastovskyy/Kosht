@@ -16,7 +16,7 @@ class CategorySeedTest {
 
     @Test
     fun `fallback categories exist for both types`() {
-        // TransactionRepository.deleteCategory relies on these keys.
+
         assertTrue(CategorySeed.all.any {
             it.key == "other_expense" && it.type == TransactionType.EXPENSE
         })

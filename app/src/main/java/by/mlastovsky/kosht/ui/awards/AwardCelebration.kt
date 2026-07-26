@@ -31,13 +31,6 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import by.mlastovsky.kosht.R
 import by.mlastovsky.kosht.ui.AppViewModelProvider
 
-/**
- * Says so, there and then, when an award is earned.
- *
- * Sits above the whole app rather than on the achievements screen: awards are
- * earned while adding a record or confirming a payment, and being told a week
- * later — the next time that screen happens to be opened — is not being told.
- */
 @Composable
 fun AwardCelebration(
     viewModel: AwardsViewModel = viewModel(factory = AppViewModelProvider.Factory)
@@ -82,7 +75,6 @@ fun AwardCelebration(
     )
 }
 
-/** The award's own icon, breathing gently so the eye goes to it. */
 @Composable
 private fun PulsingBadge(key: String) {
     val pulse by rememberInfiniteTransition(label = "award").animateFloat(

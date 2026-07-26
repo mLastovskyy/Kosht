@@ -4,10 +4,6 @@ import java.math.BigDecimal
 import java.math.MathContext
 import java.math.RoundingMode
 
-/**
- * Tiny calculator for the amount keypad: digits, one decimal separator per
- * number and the operators + − × ÷ with the usual precedence.
- */
 object Expr {
 
     private val operators = setOf('+', '−', '×', '÷', '-', '*', '/')
@@ -15,7 +11,6 @@ object Expr {
     fun hasPendingOperation(input: String): Boolean =
         input.drop(1).any { it in operators }
 
-    /** Evaluates the expression; a trailing operator is ignored. */
     fun evaluate(input: String): BigDecimal? {
         val normalized = input
             .replace(',', '.')
@@ -29,7 +24,6 @@ object Expr {
         return runCatching { evalTokens(tokens) }.getOrNull()
     }
 
-    /** Minor units of the evaluated expression, honoring currency digits. */
     fun evaluateToMinor(input: String, currencyCode: String): Long? {
         val value = evaluate(input) ?: return null
         val digits = Money.fractionDigits(currencyCode)
@@ -58,7 +52,7 @@ object Expr {
     }
 
     private fun evalTokens(tokens: List<String>): BigDecimal {
-        // First pass: * and /
+
         val flat = mutableListOf<String>()
         var i = 0
         while (i < tokens.size) {
@@ -78,7 +72,7 @@ object Expr {
                 i++
             }
         }
-        // Second pass: + and -
+
         var acc = BigDecimal(flat[0])
         var j = 1
         while (j < flat.size) {

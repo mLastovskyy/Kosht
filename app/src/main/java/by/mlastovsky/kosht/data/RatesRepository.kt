@@ -2,22 +2,17 @@ package by.mlastovsky.kosht.data
 
 import by.mlastovsky.kosht.data.db.RateDao
 import by.mlastovsky.kosht.data.db.RateEntity
+import java.net.HttpURLConnection
+import java.net.URL
+import kotlin.math.roundToLong
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.withContext
 import org.json.JSONArray
-import java.net.HttpURLConnection
-import java.net.URL
-import kotlin.math.roundToLong
 
-/**
- * Official daily exchange rates of the National Bank of Belarus.
- * Everything converts through BYN, the app's anchor currency.
- */
 class RatesRepository(private val rateDao: RateDao) {
 
-    /** code -> rate, refreshed reactively from the DB. */
     val rates: Flow<Map<String, RateEntity>> = rateDao.observeAll()
         .map { list -> list.associateBy { it.code } }
 
@@ -60,11 +55,6 @@ class RatesRepository(private val rateDao: RateDao) {
         private const val NBRB_DAILY_RATES = "https://api.nbrb.by/exrates/rates?periodicity=0"
         private const val DEFAULT_MAX_AGE = 6 * 60 * 60 * 1000L
 
-        /**
-         * Converts an amount in minor units of [code] to minor units of BYN.
-         * Returns null when the rate is unknown. Both currencies use 2 fraction
-         * digits, so minor units convert 1:1 through the decimal rate.
-         */
         fun toBynMinor(amountMinor: Long, code: String, rates: Map<String, RateEntity>): Long? {
             if (code == "BYN") return amountMinor
             val rate = rates[code] ?: return null
@@ -72,11 +62,6 @@ class RatesRepository(private val rateDao: RateDao) {
             return (amountMinor.toDouble() * rate.rate / rate.scale).roundToLong()
         }
 
-        /**
-         * Converts between any two currencies through BYN, which is the only
-         * pair the National Bank publishes. Null when either side is unknown,
-         * so a missing rate leaves the amount alone rather than zeroing it.
-         */
         fun convertMinor(
             amountMinor: Long,
             from: String,
@@ -91,10 +76,6 @@ class RatesRepository(private val rateDao: RateDao) {
             return (byn.toDouble() * target.scale / target.rate).roundToLong()
         }
 
-        /**
-         * How much one unit of [from] is worth in [to] — the multiplier the
-         * bulk SQL rescales use. Null when the pair cannot be priced.
-         */
         fun factor(from: String, to: String, rates: Map<String, RateEntity>): Double? {
             if (from == to) return 1.0
             val source = rates[from] ?: return null

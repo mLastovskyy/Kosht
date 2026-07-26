@@ -1,31 +1,28 @@
 package by.mlastovsky.kosht.data.sync
 
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.withContext
-import org.json.JSONArray
-import org.json.JSONObject
 import java.io.IOException
 import java.net.HttpURLConnection
 import java.net.URL
 import java.net.URLEncoder
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
+import org.json.JSONArray
+import org.json.JSONObject
 
-/** A signed-in session as the app needs to remember it. */
 data class SupabaseSession(
     val accessToken: String,
     val refreshToken: String,
     val userId: String,
     val email: String,
-    /** Epoch millis; refreshed a minute early to survive slow requests. */
+
     val expiresAt: Long
 ) {
     fun isExpired(now: Long): Boolean = now >= expiresAt - 60_000
 }
 
-/** Why an auth call did not produce a session. */
 sealed interface AuthOutcome {
     data class Success(val session: SupabaseSession) : AuthOutcome
 
-    /** The six-digit code is on its way to the address. */
     data object CodeSent : AuthOutcome
 
     data class Rejected(val reason: AuthError, val detail: String) : AuthOutcome
@@ -33,11 +30,6 @@ sealed interface AuthOutcome {
     data object Offline : AuthOutcome
 }
 
-/**
- * Auth failures worth their own wording. The server answers in English and
- * phrases things its own way, so the few cases a user actually hits are
- * recognised here and shown as proper localized text.
- */
 enum class AuthError {
     WrongCode,
     TooManyRequests,
@@ -66,26 +58,15 @@ enum class AuthError {
     }
 }
 
-/** Which code the server should be checking against. */
 enum class CodePurpose(val type: String) {
-    /** Confirms a new address and creates the account. */
+
     SignUp("email"),
 
-    /** Lets someone who forgot their password set a new one. */
     Reset("recovery")
 }
 
 private class HttpFailure(val code: Int, val body: String) : IOException("HTTP $code")
 
-/**
- * Thin Supabase client over [HttpURLConnection], matching how the rest of the
- * app talks to the network. Only two surfaces are needed: GoTrue for accounts
- * and PostgREST for the single `sync_rows` table.
- *
- * The anon key shipped here is public by design — it identifies the project,
- * not the user. Row level security on `sync_rows` is what keeps one account's
- * data away from another's.
- */
 class SupabaseApi(
     private val baseUrl: String,
     private val anonKey: String
@@ -93,13 +74,6 @@ class SupabaseApi(
 
     val isConfigured: Boolean = baseUrl.isNotBlank() && anonKey.isNotBlank()
 
-    // ---- Accounts ---------------------------------------------------------
-
-    /**
-     * Whether the address already has an account. Null when the question
-     * could not be asked at all, in which case the caller carries on rather
-     * than blocking someone over a failed lookup.
-     */
     suspend fun emailRegistered(email: String): Boolean? = withContext(Dispatchers.IO) {
         runCatching {
             val body = JSONObject().put("check_email", email.trim())
@@ -109,23 +83,16 @@ class SupabaseApi(
         }.getOrNull()
     }
 
-    /** Emails a six-digit code and creates the account behind it. */
     suspend fun sendSignUpCode(email: String): AuthOutcome = authCall(
         url = "$baseUrl/auth/v1/otp",
         body = JSONObject().put("email", email.trim()).put("create_user", true)
     ) { AuthOutcome.CodeSent }
 
-    /** Emails a six-digit code for setting a forgotten password. */
     suspend fun sendResetCode(email: String): AuthOutcome = authCall(
         url = "$baseUrl/auth/v1/recover",
         body = JSONObject().put("email", email.trim())
     ) { AuthOutcome.CodeSent }
 
-    /**
-     * Exchanges the code for a session. [purpose] tells the server which code
-     * it was: the one confirming a new address, or the one recovering a
-     * password. They are not interchangeable.
-     */
     suspend fun verifyCode(email: String, code: String, purpose: CodePurpose): AuthOutcome =
         authCall(
             url = "$baseUrl/auth/v1/verify",
@@ -135,7 +102,6 @@ class SupabaseApi(
                 .put("type", purpose.type)
         ) { AuthOutcome.Success(it.toSession()) }
 
-    /** Sets the password of the signed-in account. */
     suspend fun setPassword(accessToken: String, password: String): AuthOutcome =
         authCall(
             url = "$baseUrl/auth/v1/user",
@@ -169,12 +135,6 @@ class SupabaseApi(
         }
     }
 
-    // ---- Consent and data-subject rights ----------------------------------
-
-    /**
-     * Appends to the consent ledger. Consents are never updated in place:
-     * what has to be provable is when someone agreed and to which wording.
-     */
     suspend fun recordConsent(
         session: SupabaseSession,
         kind: String,
@@ -200,7 +160,6 @@ class SupabaseApi(
         }.getOrDefault(false)
     }
 
-    /** Latest word on one kind of consent; null when it was never given. */
     suspend fun currentConsent(session: SupabaseSession, kind: String): Boolean? =
         withContext(Dispatchers.IO) {
             runCatching {
@@ -212,13 +171,6 @@ class SupabaseApi(
             }.getOrNull()
         }
 
-    /**
-     * Erases the account and, by cascade, everything attached to it.
-     *
-     * Its counterpart `export_my_data` is not called from here: a copy of the
-     * data is served on request to the address in the privacy policy, which is
-     * what the policy promises and what the law requires.
-     */
     suspend fun deleteAccount(session: SupabaseSession): Boolean = withContext(Dispatchers.IO) {
         runCatching {
             send("$baseUrl/rest/v1/rpc/delete_my_account", "POST", session.accessToken, "{}")
@@ -226,19 +178,12 @@ class SupabaseApi(
         }.getOrDefault(false)
     }
 
-    // ---- Sync rows --------------------------------------------------------
-
-    /**
-     * Rows changed after [since], oldest first. [limit] caps one page; the
-     * engine keeps asking until a short page comes back.
-     */
     suspend fun pull(accessToken: String, since: Long, limit: Int): JSONArray =
         withContext(Dispatchers.IO) {
             val query = "select=*&updated_at=gt.$since&order=updated_at.asc&limit=$limit"
             JSONArray(send("$baseUrl/rest/v1/sync_rows?$query", "GET", accessToken, null))
         }
 
-    /** Upserts a batch, letting the newest write for a uid win server-side. */
     suspend fun push(accessToken: String, rows: JSONArray) {
         withContext(Dispatchers.IO) {
             send(
@@ -253,17 +198,6 @@ class SupabaseApi(
         }
     }
 
-    // ---- Receipt photos ---------------------------------------------------
-
-    /**
-     * Storage for receipt photos, used only when the user has switched photo
-     * sync on. Objects live under `<user id>/<record uid>.jpg`, and the bucket
-     * policies allow an account to touch nothing but its own folder — the same
-     * arrangement row level security gives the data.
-     *
-     * Every call answers with a plain boolean or null: a photo that fails to
-     * travel is a photo that stays where it is, never a failed sync.
-     */
     suspend fun uploadPhoto(
         session: SupabaseSession,
         path: String,
@@ -276,7 +210,7 @@ class SupabaseApi(
                 token = session.accessToken,
                 body = bytes,
                 contentType = "image/jpeg",
-                // Re-uploading the same record must replace, not fail.
+
                 extraHeaders = mapOf("x-upsert" to "true")
             )
             true
@@ -303,7 +237,6 @@ class SupabaseApi(
             }.getOrDefault(false)
         }
 
-    /** Object names in the account's own folder, for cleaning up after itself. */
     suspend fun listPhotos(session: SupabaseSession): List<String> = withContext(Dispatchers.IO) {
         runCatching {
             val body = JSONObject()
@@ -322,15 +255,12 @@ class SupabaseApi(
         }.getOrDefault(emptyList())
     }
 
-    /** Wipes the account's cloud copy; used when the user disconnects. */
     suspend fun deleteAll(accessToken: String, userId: String) {
         withContext(Dispatchers.IO) {
             val encoded = URLEncoder.encode(userId, "UTF-8")
             send("$baseUrl/rest/v1/sync_rows?user_id=eq.$encoded", "DELETE", accessToken, null)
         }
     }
-
-    // ---- Plumbing ---------------------------------------------------------
 
     private fun credentials(email: String, password: String) = JSONObject()
         .put("email", email.trim())
@@ -345,7 +275,7 @@ class SupabaseApi(
     ): AuthOutcome = withContext(Dispatchers.IO) {
         try {
             val response = send(url, method, token = token, body = body.toString())
-            // Sending a code answers with an empty body, not with JSON.
+
             onSuccess(if (response.isBlank()) JSONObject() else JSONObject(response))
         } catch (failure: HttpFailure) {
             val detail = failure.readableMessage()
@@ -357,7 +287,7 @@ class SupabaseApi(
 
     private fun HttpFailure.readableMessage(): String = runCatching {
         val json = JSONObject(body)
-        // GoTrue is inconsistent about which field carries the reason.
+
         listOf("error_description", "msg", "message", "error")
             .firstNotNullOfOrNull { json.optString(it).takeIf { text -> text.isNotBlank() } }
             .orEmpty()
@@ -382,7 +312,7 @@ class SupabaseApi(
         extraHeaders: Map<String, String> = emptyMap()
     ): String {
         val connection = (URL(url).openConnection() as HttpURLConnection).apply {
-            // HttpURLConnection refuses PATCH but is fine with PUT and DELETE.
+
             requestMethod = method
             connectTimeout = 15_000
             readTimeout = 30_000
@@ -407,7 +337,6 @@ class SupabaseApi(
         }
     }
 
-    /** Same plumbing as [send], for bodies that are bytes rather than text. */
     private fun sendBytes(
         url: String,
         method: String,
@@ -424,8 +353,7 @@ class SupabaseApi(
             setRequestProperty("apikey", anonKey)
             setRequestProperty("Authorization", "Bearer ${token ?: anonKey}")
             setRequestProperty("Content-Type", contentType)
-            // Photos are a few hundred kilobytes; streaming keeps them out of
-            // a second in-memory copy.
+
             setFixedLengthStreamingMode(body.size)
             extraHeaders.forEach(::setRequestProperty)
         }
@@ -463,14 +391,12 @@ class SupabaseApi(
     private fun java.io.InputStream.readText(): String =
         bufferedReader().use { it.readText() }
 
-    /** Signals a stale access token, which the engine answers with a refresh. */
     fun isUnauthorized(error: Throwable): Boolean =
         error is HttpFailure && (error.code == 401 || error.code == 403)
 
     private companion object {
         const val PHOTO_BUCKET = "receipts"
 
-        /** A personal archive of receipts does not run to five figures. */
         const val PHOTO_LIST_LIMIT = 5000
     }
 }

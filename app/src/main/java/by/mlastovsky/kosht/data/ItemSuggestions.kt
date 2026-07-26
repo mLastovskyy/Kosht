@@ -2,22 +2,8 @@ package by.mlastovsky.kosht.data
 
 import by.mlastovsky.kosht.R
 
-/**
- * What a record of a given category is usually made of — offered as chips when
- * listing the items behind an amount.
- *
- * The lines are not always products: rent and utilities are what a housing
- * payment is made of, fuel and parking what a car costs. Naming them turns a
- * category into the handful of things it actually consists of, which is what
- * makes the per-category statistics worth reading.
- *
- * These are a starting point, not a fixed list: anything the user types becomes
- * a suggestion of its own from then on, and the suggestions of a category are
- * whatever has been used there before, these included.
- */
 object ItemSuggestions {
 
-    /** Built-in category key → the lines it usually consists of. */
     private val byCategoryKey: Map<String, List<Int>> = mapOf(
         "groceries" to listOf(
             R.string.item_seed_bread,
@@ -65,6 +51,5 @@ object ItemSuggestions {
         )
     )
 
-    /** Suggested lines for a built-in category; none for a user's own. */
     fun forCategory(key: String?): List<Int> = key?.let { byCategoryKey[it] }.orEmpty()
 }

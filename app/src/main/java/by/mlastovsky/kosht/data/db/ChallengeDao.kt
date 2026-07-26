@@ -21,7 +21,6 @@ interface ChallengeDao {
     @Query("DELETE FROM challenges WHERE id = :id")
     suspend fun deleteById(id: Long)
 
-    /** Rescales limits/targets when the app currency changes. */
     @Query("UPDATE challenges SET amountMinor = CAST(ROUND(amountMinor * :factor) AS INTEGER)")
     suspend fun rescaleAmounts(factor: Double)
 }

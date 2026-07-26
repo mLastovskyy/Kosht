@@ -9,9 +9,7 @@ class MoneyTest {
 
     @Test
     fun `a big amount survives the trip into a text field and back`() {
-        // The old way of doing this — formatting for display and filtering the
-        // symbols out — turned "1,000.00" into 1,00000 in English, a hundred
-        // times the goal. Whatever the locale, the round trip must be exact.
+
         listOf(0L, 5L, 999L, 100_000L, 1_234_567_890L, -250L).forEach { minor ->
             val text = Money.editableText(minor, "EUR")
             assertEquals(minor, Money.parseToMinor(text, "EUR"))

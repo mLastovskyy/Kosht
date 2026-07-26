@@ -31,10 +31,6 @@ import java.time.YearMonth
 import java.time.format.TextStyle as JavaTextStyle
 import java.time.temporal.WeekFields
 
-/**
- * Month calendar where each day is tinted by how much was spent/earned that
- * day relative to the month's maximum. Tapping a day selects it.
- */
 @Composable
 fun CalendarHeatmap(
     month: YearMonth,

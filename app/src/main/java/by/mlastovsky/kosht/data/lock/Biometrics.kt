@@ -6,26 +6,14 @@ import androidx.biometric.BiometricPrompt
 import androidx.core.content.ContextCompat
 import androidx.fragment.app.FragmentActivity
 
-/**
- * The phone's own fingerprint or face, borrowed for one question: is this the
- * owner? The code stays the real secret — biometrics only save the typing, and
- * every failure falls back to the keypad — so a class 2 sensor is good enough
- * here, and refusing face unlock on half the phones would not buy anything.
- */
 object Biometrics {
 
     private const val ALLOWED = BiometricManager.Authenticators.BIOMETRIC_WEAK
 
-    /** True when this phone has a sensor and something enrolled on it. */
     fun enrolled(context: Context): Boolean =
         BiometricManager.from(context).canAuthenticate(ALLOWED) ==
             BiometricManager.BIOMETRIC_SUCCESS
 
-    /**
-     * Shows the system prompt. [onError] carries the system's own wording for
-     * what went wrong, or null when the person simply dismissed it — that needs
-     * no explaining, the keypad is right there.
-     */
     fun prompt(
         activity: FragmentActivity,
         title: String,

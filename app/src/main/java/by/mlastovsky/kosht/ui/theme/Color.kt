@@ -78,7 +78,6 @@ val DarkColorScheme = darkColorScheme(
     surfaceContainerHighest = Color(0xFF303632)
 )
 
-/** Semantic colors that Material 3 does not cover. */
 @Immutable
 data class KoshtColors(
     val income: Color,

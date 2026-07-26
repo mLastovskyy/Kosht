@@ -47,11 +47,6 @@ import by.mlastovsky.kosht.data.lock.Biometrics
 import by.mlastovsky.kosht.ui.AppViewModelProvider
 import kotlinx.coroutines.delay
 
-/**
- * The door. It stands in place of the whole app rather than over it, which is
- * the simplest way to be sure nothing shows through — no dialog left open on
- * another screen, no half-written record behind the dots.
- */
 @Composable
 fun LockScreen(
     viewModel: AppLockViewModel = viewModel(factory = AppViewModelProvider.Factory)
@@ -64,8 +59,6 @@ fun LockScreen(
     val view = LocalView.current
     var showForgotten by remember { mutableStateOf(false) }
 
-    // Asked of the system once per appearance: it can change while the app is
-    // away (a finger added, or every finger removed).
     val fingerReady = remember(current.biometrics) {
         current.biometrics && Biometrics.enrolled(context)
     }
@@ -86,8 +79,6 @@ fun LockScreen(
         }
     }
 
-    // Offered without being asked for, the way a phone does it, and only once:
-    // dismissing the prompt means the code is wanted instead.
     var offered by remember { mutableStateOf(false) }
     LaunchedEffect(fingerReady) {
         if (!fingerReady || offered) return@LaunchedEffect
@@ -95,7 +86,6 @@ fun LockScreen(
         askForFinger()
     }
 
-    // Back does not open anything, it just puts Kosht away — same as a phone.
     BackHandler { activity?.moveTaskToBack(true) }
 
     var now by remember { mutableLongStateOf(System.currentTimeMillis()) }
@@ -154,7 +144,7 @@ fun LockScreen(
             total = current.pinLength,
             error = entry.wrong
         )
-        // A fixed strip for whatever has to be said, so nothing below it moves.
+
         Box(
             modifier = Modifier
                 .fillMaxWidth()
@@ -177,8 +167,7 @@ fun LockScreen(
             }
         }
         Spacer(Modifier.weight(1f))
-        // Only once trying has clearly stopped working: the way out of a
-        // forgotten code is not something to advertise on every launch.
+
         if (current.failedAttempts >= 3) {
             TextButton(onClick = { showForgotten = true }) {
                 Text(stringResource(R.string.lock_forgot))
@@ -209,7 +198,6 @@ fun LockScreen(
     }
 }
 
-/** m:ss for the wait between tries — a countdown reads better than "later". */
 private fun waitLabel(millis: Long): String {
     val seconds = ((millis + 999) / 1000).toInt()
     return "${seconds / 60}:${(seconds % 60).toString().padStart(2, '0')}"
