@@ -350,56 +350,20 @@ fun EditorScreen(
                     )
                 }
 
-            }
-
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(start = 16.dp, end = 16.dp, bottom = 4.dp),
-                horizontalArrangement = Arrangement.spacedBy(12.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                FilledTonalIconButton(
-                    onClick = { showScanSource = true },
-                    enabled = !state.scanning
-                ) {
-                    Icon(
-                        Icons.Rounded.DocumentScanner,
-                        contentDescription = stringResource(R.string.editor_scan_receipt)
+                if (state.receiptUrl != null || state.receiptDocPath != null) {
+                    AssistChip(
+                        onClick = { showEReceipt = true },
+                        leadingIcon = {
+                            Icon(
+                                Icons.AutoMirrored.Rounded.ReceiptLong,
+                                contentDescription = null,
+                                Modifier.size(18.dp)
+                            )
+                        },
+                        label = { Text(stringResource(R.string.ereceipt_open), maxLines = 1) }
                     )
                 }
 
-                val thumbnail = rememberBitmapFromPath(state.photoPath, maxDimension = 128)
-                FilledTonalIconButton(
-                    onClick = {
-                        if (state.photoPath == null) showAttachSource = true else showPhotoView = true
-                    }
-                ) {
-                    if (thumbnail != null) {
-                        Image(
-                            bitmap = thumbnail,
-                            contentDescription = stringResource(R.string.photo_receipt),
-                            contentScale = ContentScale.Crop,
-                            modifier = Modifier
-                                .size(28.dp)
-                                .clip(MaterialTheme.shapes.small)
-                        )
-                    } else {
-                        Icon(
-                            Icons.Rounded.AddAPhoto,
-                            contentDescription = stringResource(R.string.attach_photo)
-                        )
-                    }
-                }
-
-                if (state.receiptUrl != null || state.receiptDocPath != null) {
-                    FilledTonalIconButton(onClick = { showEReceipt = true }) {
-                        Icon(
-                            Icons.AutoMirrored.Rounded.ReceiptLong,
-                            contentDescription = stringResource(R.string.ereceipt_open)
-                        )
-                    }
-                }
             }
 
             AnimatedVisibility(visible = state.debtCategory) {
@@ -417,18 +381,59 @@ fun EditorScreen(
                 )
             }
 
-            OutlinedTextField(
-                value = state.note,
-                onValueChange = viewModel::setNote,
-                placeholder = { Text(stringResource(R.string.editor_note_hint)) },
-                singleLine = true,
-                shape = MaterialTheme.shapes.medium,
-                textStyle = MaterialTheme.typography.bodyMedium,
-                keyboardOptions = TextInput.Sentence,
+            Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 16.dp, vertical = 6.dp)
-            )
+                    .padding(horizontal = 16.dp, vertical = 6.dp),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                OutlinedTextField(
+                    value = state.note,
+                    onValueChange = viewModel::setNote,
+                    placeholder = { Text(stringResource(R.string.editor_note_hint)) },
+                    singleLine = true,
+                    shape = MaterialTheme.shapes.medium,
+                    textStyle = MaterialTheme.typography.bodyMedium,
+                    keyboardOptions = TextInput.Sentence,
+                    modifier = Modifier.weight(1f)
+                )
+
+                FilledTonalIconButton(
+                    onClick = { showScanSource = true },
+                    enabled = !state.scanning,
+                    modifier = Modifier.size(ACTION_BUTTON)
+                ) {
+                    Icon(
+                        Icons.Rounded.DocumentScanner,
+                        contentDescription = stringResource(R.string.editor_scan_receipt)
+                    )
+                }
+
+                val thumbnail = rememberBitmapFromPath(state.photoPath, maxDimension = 128)
+                FilledTonalIconButton(
+                    onClick = {
+                        if (state.photoPath == null) showAttachSource = true else showPhotoView = true
+                    },
+                    modifier = Modifier.size(ACTION_BUTTON)
+                ) {
+                    if (thumbnail != null) {
+                        Image(
+                            bitmap = thumbnail,
+                            contentDescription = stringResource(R.string.photo_receipt),
+                            contentScale = ContentScale.Crop,
+                            modifier = Modifier
+                                .size(30.dp)
+                                .clip(MaterialTheme.shapes.small)
+                        )
+                    } else {
+                        Icon(
+                            Icons.Rounded.AddAPhoto,
+                            contentDescription = stringResource(R.string.attach_photo)
+                        )
+                    }
+                }
+            }
         }
 
         Button(
@@ -1090,6 +1095,9 @@ private fun Modifier.typeSwipe(
 private val SWIPE_THRESHOLD = 56.dp
 
 private val CHIP_LABEL_MAX_WIDTH = 120.dp
+
+// Square enough to sit level with the note field beside it.
+private val ACTION_BUTTON = 52.dp
 
 @Composable
 private fun Keypad(

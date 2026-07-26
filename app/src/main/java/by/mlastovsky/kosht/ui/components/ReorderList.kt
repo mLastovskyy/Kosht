@@ -124,10 +124,14 @@ class ReorderList internal constructor(
             .firstOrNull { idOf(it.key) == id } ?: return
         val centre = item.offset + item.size / 2f + offset
         val others = neighbours(id)
+        // A neighbour steps aside once the held one is a third of the way into
+        // it, not half: waiting for the middle looks like the two are stuck.
         val over = if (offset > 0f) {
-            others.lastOrNull { it.offset > item.offset && centre >= it.offset + it.size / 2f }
+            others.lastOrNull { it.offset > item.offset && centre >= it.offset + it.size * EARLY }
         } else {
-            others.firstOrNull { it.offset < item.offset && centre <= it.offset + it.size / 2f }
+            others.firstOrNull {
+                it.offset < item.offset && centre <= it.offset + it.size * (1f - EARLY)
+            }
         } ?: return
 
         val from = current.indexOf(id)
@@ -141,6 +145,7 @@ class ReorderList internal constructor(
     private companion object {
         const val MOVE_SLOP = 24f
         const val AUTO_SCROLL_STEP = 12f
+        const val EARLY = 0.32f
     }
 }
 
