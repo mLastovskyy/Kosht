@@ -23,27 +23,11 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
-import androidx.compose.material.icons.automirrored.rounded.TrendingUp
-import androidx.compose.material.icons.rounded.AccountBalance
 import androidx.compose.material.icons.rounded.Add
-import androidx.compose.material.icons.rounded.CameraAlt
-import androidx.compose.material.icons.rounded.CheckCircle
 import androidx.compose.material.icons.rounded.DeleteOutline
-import androidx.compose.material.icons.rounded.Diamond
-import androidx.compose.material.icons.rounded.EmojiEvents
-import androidx.compose.material.icons.rounded.EmojiFlags
 import androidx.compose.material.icons.rounded.Event
-import androidx.compose.material.icons.rounded.Flag
 import androidx.compose.material.icons.rounded.LocalFireDepartment
 import androidx.compose.material.icons.rounded.Lock
-import androidx.compose.material.icons.rounded.MilitaryTech
-import androidx.compose.material.icons.rounded.Payments
-import androidx.compose.material.icons.rounded.PhotoLibrary
-import androidx.compose.material.icons.rounded.Savings
-import androidx.compose.material.icons.rounded.Star
-import androidx.compose.material.icons.rounded.TaskAlt
-import androidx.compose.material.icons.rounded.WorkspacePremium
-import androidx.compose.material.icons.rounded.Whatshot
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.AssistChip
 import androidx.compose.material3.DatePicker
@@ -73,7 +57,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
@@ -82,10 +65,13 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import by.mlastovsky.kosht.R
+import by.mlastovsky.kosht.data.awards.ChallengeProgress
+import by.mlastovsky.kosht.data.awards.ChallengeStatus
 import by.mlastovsky.kosht.data.db.CategoryEntity
 import by.mlastovsky.kosht.model.ChallengeType
 import by.mlastovsky.kosht.ui.AppViewModelProvider
 import by.mlastovsky.kosht.ui.CategoryVisuals
+import by.mlastovsky.kosht.ui.awards.AwardVisuals
 import by.mlastovsky.kosht.ui.components.CategoryBadge
 import by.mlastovsky.kosht.ui.relativeDate
 import by.mlastovsky.kosht.ui.theme.KoshtTheme
@@ -107,7 +93,7 @@ fun AchievementsScreen(
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     var showAddChallenge by remember { mutableStateOf(false) }
-    var challengeToEdit by remember { mutableStateOf<ChallengeUi?>(null) }
+    var challengeToEdit by remember { mutableStateOf<ChallengeProgress?>(null) }
     var selectedAward by remember { mutableStateOf<BadgeUi?>(null) }
 
     Column(
@@ -264,7 +250,7 @@ private fun StreakCard(days: Int, budgetText: String) {
 
 @Composable
 private fun ChallengeCard(
-    challenge: ChallengeUi,
+    challenge: ChallengeProgress,
     currencyCode: String,
     onClick: () -> Unit,
     onDelete: () -> Unit,
@@ -342,7 +328,7 @@ private fun ChallengeCard(
 }
 
 @Composable
-private fun challengeSubtitle(challenge: ChallengeUi, currencyCode: String): String =
+private fun challengeSubtitle(challenge: ChallengeProgress, currencyCode: String): String =
     when (challenge.entity.type) {
         ChallengeType.SPEND_LIMIT -> stringResource(
             R.string.challenge_spent_of,
@@ -356,66 +342,6 @@ private fun challengeSubtitle(challenge: ChallengeUi, currencyCode: String): Str
             Money.format(challenge.entity.amountMinor, currencyCode)
         )
     }
-
-private data class BadgeVisual(val icon: ImageVector, val titleRes: Int, val descRes: Int)
-
-private fun badgeVisual(key: String): BadgeVisual = when (key) {
-    "first_steps" -> BadgeVisual(
-        Icons.Rounded.Star, R.string.badge_first_steps, R.string.badge_first_steps_desc
-    )
-    "income_first" -> BadgeVisual(
-        Icons.Rounded.Payments, R.string.badge_income_first, R.string.badge_income_first_desc
-    )
-    "ten" -> BadgeVisual(
-        Icons.Rounded.CheckCircle, R.string.badge_ten, R.string.badge_ten_desc
-    )
-    "scanner" -> BadgeVisual(
-        Icons.Rounded.CameraAlt, R.string.badge_scanner, R.string.badge_scanner_desc
-    )
-    "saver" -> BadgeVisual(
-        Icons.Rounded.Savings, R.string.badge_saver, R.string.badge_saver_desc
-    )
-    "first_goal" -> BadgeVisual(
-        Icons.Rounded.EmojiFlags, R.string.badge_first_goal, R.string.badge_first_goal_desc
-    )
-    "streak7" -> BadgeVisual(
-        Icons.Rounded.LocalFireDepartment, R.string.badge_streak7, R.string.badge_streak7_desc
-    )
-    "surplus" -> BadgeVisual(
-        Icons.AutoMirrored.Rounded.TrendingUp, R.string.badge_surplus, R.string.badge_surplus_desc
-    )
-    "goal_done" -> BadgeVisual(
-        Icons.Rounded.Flag, R.string.badge_goal_done, R.string.badge_goal_done_desc
-    )
-    "challenge_done" -> BadgeVisual(
-        Icons.Rounded.TaskAlt, R.string.badge_challenge_done, R.string.badge_challenge_done_desc
-    )
-    "photo10" -> BadgeVisual(
-        Icons.Rounded.PhotoLibrary, R.string.badge_photo10, R.string.badge_photo10_desc
-    )
-    "hundred" -> BadgeVisual(
-        Icons.Rounded.EmojiEvents, R.string.badge_hundred, R.string.badge_hundred_desc
-    )
-    "streak30" -> BadgeVisual(
-        Icons.Rounded.LocalFireDepartment, R.string.badge_streak30, R.string.badge_streak30_desc
-    )
-    "big_saver" -> BadgeVisual(
-        Icons.Rounded.AccountBalance, R.string.badge_big_saver, R.string.badge_big_saver_desc
-    )
-    "goal_three" -> BadgeVisual(
-        Icons.Rounded.WorkspacePremium, R.string.badge_goal_three, R.string.badge_goal_three_desc
-    )
-    "challenge_five" -> BadgeVisual(
-        Icons.Rounded.MilitaryTech, R.string.badge_challenge_five,
-        R.string.badge_challenge_five_desc
-    )
-    "five_hundred" -> BadgeVisual(
-        Icons.Rounded.Diamond, R.string.badge_five_hundred, R.string.badge_five_hundred_desc
-    )
-    else -> BadgeVisual(
-        Icons.Rounded.Whatshot, R.string.badge_streak100, R.string.badge_streak100_desc
-    )
-}
 
 /**
  * Awards laid out as swipeable pages (2 rows × 3) with dot indicators —
@@ -492,7 +418,6 @@ private fun BadgeCell(
     onClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    val visual = badgeVisual(badge.key)
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center,
@@ -517,7 +442,7 @@ private fun BadgeCell(
             contentAlignment = Alignment.Center
         ) {
             Icon(
-                imageVector = if (badge.unlocked) visual.icon else Icons.Rounded.Lock,
+                imageVector = if (badge.unlocked) AwardVisuals.icon(badge.key) else Icons.Rounded.Lock,
                 contentDescription = null,
                 tint = if (badge.unlocked) {
                     MaterialTheme.colorScheme.onPrimaryContainer
@@ -527,7 +452,7 @@ private fun BadgeCell(
             )
         }
         Text(
-            text = stringResource(visual.titleRes),
+            text = stringResource(AwardVisuals.titleRes(badge.key)),
             style = MaterialTheme.typography.labelSmall,
             textAlign = TextAlign.Center,
             maxLines = 2,
@@ -543,7 +468,6 @@ private fun BadgeCell(
  */
 @Composable
 private fun AwardDialog(badge: BadgeUi, onDismiss: () -> Unit) {
-    val visual = badgeVisual(badge.key)
     AlertDialog(
         onDismissRequest = onDismiss,
         icon = {
@@ -561,7 +485,7 @@ private fun AwardDialog(badge: BadgeUi, onDismiss: () -> Unit) {
                 contentAlignment = Alignment.Center
             ) {
                 Icon(
-                    imageVector = if (badge.unlocked) visual.icon else Icons.Rounded.Lock,
+                    imageVector = if (badge.unlocked) AwardVisuals.icon(badge.key) else Icons.Rounded.Lock,
                     contentDescription = null,
                     tint = if (badge.unlocked) {
                         MaterialTheme.colorScheme.onPrimaryContainer
@@ -571,14 +495,14 @@ private fun AwardDialog(badge: BadgeUi, onDismiss: () -> Unit) {
                 )
             }
         },
-        title = { Text(stringResource(visual.titleRes)) },
+        title = { Text(stringResource(AwardVisuals.titleRes(badge.key))) },
         text = {
             Column(
                 verticalArrangement = Arrangement.spacedBy(8.dp),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
                 Text(
-                    text = stringResource(visual.descRes),
+                    text = stringResource(AwardVisuals.descRes(badge.key)),
                     style = MaterialTheme.typography.bodyMedium,
                     textAlign = TextAlign.Center
                 )
@@ -614,7 +538,7 @@ private fun formatDate(epochMillis: Long): String =
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun EditChallengeDialog(
-    challenge: ChallengeUi,
+    challenge: ChallengeProgress,
     categories: List<CategoryEntity>,
     currencyCode: String,
     onConfirm: (title: String, amountMinor: Long, categoryId: Long?, end: LocalDate) -> Unit,

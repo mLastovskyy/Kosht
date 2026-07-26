@@ -23,12 +23,14 @@ object Notifications {
     // way to drop the heads-up popup for existing installs.
     const val CHANNEL_RECURRING = "recurring_v2"
     const val CHANNEL_SUMMARY = "summary"
+    const val CHANNEL_AWARDS = "awards"
 
     private const val CHANNEL_RECURRING_LEGACY = "recurring"
 
     const val ID_DAILY = 1
     const val ID_RECURRING = 2
     const val ID_WEEKLY = 3
+    const val ID_AWARD = 4
 
     fun ensureChannels(context: Context) {
         val manager = context.getSystemService(NotificationManager::class.java) ?: return
@@ -54,6 +56,33 @@ object Notifications {
                 CHANNEL_SUMMARY,
                 context.getString(R.string.channel_summary),
                 NotificationManager.IMPORTANCE_LOW
+            )
+        )
+        manager.createNotificationChannel(
+            NotificationChannel(
+                CHANNEL_AWARDS,
+                context.getString(R.string.channel_awards),
+                // Silent: earning an award is good news, not urgent news, and
+                // the app already says so on screen when it is open.
+                NotificationManager.IMPORTANCE_LOW
+            )
+        )
+    }
+
+    /**
+     * "Award earned: Iron month". The award's own wording is reused, so the
+     * shade says exactly what the achievements screen says.
+     */
+    fun showAward(context: Context, key: String) {
+        show(
+            context = context,
+            id = ID_AWARD,
+            channel = CHANNEL_AWARDS,
+            title = context.getString(R.string.award_unlocked_title),
+            text = context.getString(
+                by.mlastovsky.kosht.ui.awards.AwardVisuals.titleRes(key)
+            ) + " · " + context.getString(
+                by.mlastovsky.kosht.ui.awards.AwardVisuals.descRes(key)
             )
         )
     }

@@ -64,10 +64,13 @@ object AppViewModelProvider {
         initializer {
             AchievementsViewModel(
                 app().container.walletRepository,
+                app().container.awardTracker,
                 app().container.transactionRepository,
-                app().container.ratesRepository,
                 app().container.settingsRepository
             )
+        }
+        initializer {
+            by.mlastovsky.kosht.ui.awards.AwardsViewModel(app().container.awardTracker)
         }
         initializer {
             WalletViewModel(

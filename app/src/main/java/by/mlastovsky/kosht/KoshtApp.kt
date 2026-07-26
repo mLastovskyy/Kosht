@@ -4,10 +4,12 @@ import android.app.Application
 import by.mlastovsky.kosht.data.sync.SyncScheduler
 import by.mlastovsky.kosht.di.AppContainer
 import by.mlastovsky.kosht.notifications.NotificationScheduler
+import by.mlastovsky.kosht.notifications.Notifications
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 
 class KoshtApp : Application() {
@@ -19,9 +21,18 @@ class KoshtApp : Application() {
 
     override fun onCreate() {
         super.onCreate()
-        container = AppContainer(this)
+        container = AppContainer(this, applicationScope)
         applicationScope.launch {
             container.ratesRepository.refreshIfStale()
+        }
+        applicationScope.launch {
+            // Touching it starts the watching; from here on an award is earned
+            // the moment it is deserved, whichever screen happens to be open.
+            container.awardTracker.unlocked.collect { key ->
+                if (container.settingsRepository.settings.first().notifyAwards) {
+                    Notifications.showAward(this@KoshtApp, key)
+                }
+            }
         }
         applicationScope.launch {
             container.settingsRepository.settings.collectLatest { settings ->

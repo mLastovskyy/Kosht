@@ -181,6 +181,9 @@ fun KoshtRoot(
             }
         }
     }
+
+    // Above every screen, because an award is earned on whichever one is open.
+    by.mlastovsky.kosht.ui.awards.AwardCelebration()
 }
 
 /**
@@ -201,7 +204,8 @@ private fun AskForNotificationsOnce(
         ActivityResultContracts.RequestPermission()
     ) { }
     val wanted = settings?.let {
-        it.notifyDailyReminder || it.notifyRecurringDue || it.notifyWeeklySummary
+        it.notifyDailyReminder || it.notifyRecurringDue || it.notifyWeeklySummary ||
+            it.notifyAwards
     } == true
     LaunchedEffect(asked, wanted) {
         if (asked || !wanted) return@LaunchedEffect

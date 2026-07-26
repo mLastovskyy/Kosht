@@ -37,6 +37,20 @@ class TransactionRepository(
     fun observeCreatedSince(from: Long): Flow<List<Long>> =
         transactionDao.observeCreatedSince(from)
 
+    fun observeIncomeCount(): Flow<Int> = transactionDao.observeIncomeCount()
+
+    fun observeExpenseCategoryCount(): Flow<Int> = transactionDao.observeExpenseCategoryCount()
+
+    fun observeNightCount(): Flow<Int> = transactionDao.observeNightCount()
+
+    fun observeFirstTimestamp(): Flow<Long?> = transactionDao.observeFirstTimestamp()
+
+    fun observeDailyCategorySpend(): Flow<List<by.mlastovsky.kosht.data.db.DailyCategorySpend>> =
+        transactionDao.observeDailyCategorySpend()
+
+    fun observeMonthlyTotals(): Flow<List<by.mlastovsky.kosht.data.db.MonthlyTotals>> =
+        transactionDao.observeMonthlyTotals()
+
     suspend fun getTransaction(id: Long): TransactionWithCategory? = transactionDao.getById(id)
 
     suspend fun addTransaction(transaction: TransactionEntity): Long =

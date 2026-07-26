@@ -22,6 +22,7 @@ import by.mlastovsky.kosht.model.DebtDirection
 import by.mlastovsky.kosht.model.TransactionType
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.map
 import java.time.LocalDate
 
 /**
@@ -41,6 +42,8 @@ class WalletRepository(
     // --- Debts ---
 
     fun observeDebts(): Flow<List<DebtEntity>> = debtDao.observeActive()
+
+    fun observeClosedDebtCount(): Flow<Int> = debtDao.observeClosedCount()
 
     suspend fun addDebt(
         personName: String,
@@ -167,6 +170,10 @@ class WalletRepository(
     // --- Awards ---
 
     fun observeAwards(): Flow<List<AwardEntity>> = awardDao.observeAll()
+
+    /** Earned awards as key → the moment it was earned. */
+    fun observeAwardsByKey(): Flow<Map<String, Long>> = awardDao.observeAll()
+        .map { awards -> awards.associate { it.key to it.unlockedAt } }
 
     /** Marks freshly met awards as earned; already earned keep their date. */
     suspend fun unlockAwards(keys: List<String>) {

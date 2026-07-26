@@ -14,7 +14,11 @@ import by.mlastovsky.kosht.data.receipt.ReceiptScanner
 /**
  * Simple manual dependency container scoped to the application lifecycle.
  */
-class AppContainer(context: Context) {
+class AppContainer(
+    context: Context,
+    /** Lives as long as the process; what app-wide watchers run in. */
+    private val appScope: kotlinx.coroutines.CoroutineScope
+) {
 
     private val appContext = context.applicationContext
 
@@ -50,11 +54,29 @@ class AppContainer(context: Context) {
 
     val receiptScanner: ReceiptScanner by lazy { ReceiptScanner(appContext) }
 
+    /**
+     * Created eagerly: an award has to be earned the moment it is deserved,
+     * which cannot wait for a screen to ask for it.
+     */
+    val awardTracker: by.mlastovsky.kosht.data.awards.AwardTracker by lazy {
+        by.mlastovsky.kosht.data.awards.AwardTracker(
+            transactions = transactionRepository,
+            wallet = walletRepository,
+            rates = ratesRepository,
+            settings = settingsRepository,
+            scope = appScope
+        )
+    }
+
     val currencyChanger: CurrencyChanger by lazy {
         CurrencyChanger(
             database.transactionDao(),
             database.challengeDao(),
             database.accountDao(),
+            database.savingDao(),
+            database.goalDao(),
+            database.debtDao(),
+            database.recurringDao(),
             settingsRepository,
             ratesRepository
         )

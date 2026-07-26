@@ -14,6 +14,20 @@ data class CategoryTotal(
     val total: Long
 )
 
+/** Expenses of one category on one local day, as `yyyy-MM-dd`. */
+data class DailyCategorySpend(
+    val day: String,
+    val categoryId: Long,
+    val total: Long
+)
+
+/** Both sides of one local month, as `yyyy-MM`. */
+data class MonthlyTotals(
+    val month: String,
+    val income: Long,
+    val expense: Long
+)
+
 @Dao
 interface TransactionDao {
 
@@ -60,6 +74,45 @@ interface TransactionDao {
 
     @Query("SELECT COUNT(*) FROM transactions WHERE photoPath IS NOT NULL")
     fun observePhotoCount(): Flow<Int>
+
+    @Query("SELECT COUNT(*) FROM transactions WHERE type = 'INCOME'")
+    fun observeIncomeCount(): Flow<Int>
+
+    /** How many different expense categories have ever been used. */
+    @Query("SELECT COUNT(DISTINCT categoryId) FROM transactions WHERE type = 'EXPENSE'")
+    fun observeExpenseCategoryCount(): Flow<Int>
+
+    /** Records written between midnight and five in the morning, local time. */
+    @Query(
+        "SELECT COUNT(*) FROM transactions WHERE CAST(" +
+            "strftime('%H', createdAt / 1000, 'unixepoch', 'localtime') AS INTEGER) < 5"
+    )
+    fun observeNightCount(): Flow<Int>
+
+    @Query("SELECT MIN(timestamp) FROM transactions")
+    fun observeFirstTimestamp(): Flow<Long?>
+
+    /**
+     * Expenses summed per local day and category. Small enough to keep in
+     * memory for years of history, and enough to answer every question the
+     * streak, the challenges and the awards ask — without holding on to every
+     * single record.
+     */
+    @Query(
+        "SELECT strftime('%Y-%m-%d', timestamp / 1000, 'unixepoch', 'localtime') AS day, " +
+            "categoryId, COALESCE(SUM(amountMinor), 0) AS total FROM transactions " +
+            "WHERE type = 'EXPENSE' GROUP BY day, categoryId"
+    )
+    fun observeDailyCategorySpend(): Flow<List<DailyCategorySpend>>
+
+    /** Income and expenses per local month, oldest first. */
+    @Query(
+        "SELECT strftime('%Y-%m', timestamp / 1000, 'unixepoch', 'localtime') AS month, " +
+            "COALESCE(SUM(CASE WHEN type = 'INCOME' THEN amountMinor ELSE 0 END), 0) AS income, " +
+            "COALESCE(SUM(CASE WHEN type = 'EXPENSE' THEN amountMinor ELSE 0 END), 0) AS expense " +
+            "FROM transactions GROUP BY month ORDER BY month ASC"
+    )
+    fun observeMonthlyTotals(): Flow<List<MonthlyTotals>>
 
     /** Creation moments used for the logging-streak computation. */
     @Query("SELECT createdAt FROM transactions WHERE createdAt >= :from")
