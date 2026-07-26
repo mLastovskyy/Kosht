@@ -74,6 +74,35 @@ object ReceiptQr {
         runCatching { LocalDate.parse(raw.take(8), fiscalTime) }.getOrNull()
 
     /**
+     * The page as lines, with the headings and bold runs marked as prominent.
+     * A web receipt names the shop in a heading the same way a paper one names
+     * it in large print, so the parser gets to use the same cue for both.
+     */
+    fun linesFromHtml(html: String): List<ReceiptLine> {
+        val marked = html
+            .replace(Regex("(?is)<(script|style)[^>]*>.*?</\\1>"), " ")
+            .replace(Regex("(?i)<(h[1-3]|b|strong|em)(\\s[^>]*)?>"), EMPHASIS_MARK)
+            // The closing tag also ends the line: swallowing it would glue the
+            // heading to whatever text followed it.
+            .replace(Regex("(?i)</(h[1-3]|b|strong|em)>"), EMPHASIS_MARK + "\n")
+        return textFromHtml(marked)
+            .lines()
+            .map { line ->
+                ReceiptLine(
+                    text = line.replace(EMPHASIS_MARK, " ").replace(Regex(" {2,}"), " ").trim(),
+                    emphasis = if (EMPHASIS_MARK in line) EMPHASIZED else 1f
+                )
+            }
+            .filter { it.text.isNotEmpty() }
+    }
+
+    /** Stands in for a heading or bold tag while the rest are stripped. */
+    private const val EMPHASIS_MARK = "\u0001"
+
+    /** A heading says "printed larger" without saying how much larger. */
+    private const val EMPHASIZED = 1.5f
+
+    /**
      * Flattens a fetched receipt page into the kind of line-per-item text the
      * OCR parser already knows how to read, so both paths share one parser.
      */

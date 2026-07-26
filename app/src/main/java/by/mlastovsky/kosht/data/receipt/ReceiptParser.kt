@@ -84,7 +84,24 @@ object ReceiptParser {
         "кассовый чек", "касавы чэк", "чек", "чэк", "унп", "у н п", "инн",
         "скно", "номер", "смена", "кассир", "касір", "магазин №", "объект",
         "адрес", "адрас", "ул.", "пр-т", "просп", "г.минск", "тел", "фискальный",
-        "фіскальны", "платежный", "терминал", "копия", "приход", "продажа"
+        "фіскальны", "платежный", "терминал", "копия", "приход", "продажа",
+        // Everything below sits around the total or in the footer, and each
+        // one of them has been picked as a shop name at some point.
+        "оплат", "аплат", "итог", "усяго", "сдача", "рэшта", "наличн", "гатоўк",
+        "ндс", "пдв", "нсп", "скидк", "зніжк", "бонус", "кэшбэк", "кешбэк",
+        "белкарт", "visa", "mastercard", "maestro", "эквайер", "эквайринг",
+        "rrn", "код авториз", "карта", "картка", "банк", "режим работы",
+        "спасибо", "дзякуй", "приятн", "гарант", "обмен", "возврат",
+        "лиц.", "св-во", "www", "http", ".by", "@"
+    )
+
+    /**
+     * Words that name a kind of shop rather than a shop. As a note they say
+     * nothing the category does not already say.
+     */
+    private val genericNames = setOf(
+        "магазин", "крама", "гастроном", "супермаркет", "минимаркет",
+        "маркет", "товар", "товары", "тавары", "чек", "продавец"
     )
 
     private val legalForms = Regex(
@@ -92,12 +109,29 @@ object ReceiptParser {
         RegexOption.IGNORE_CASE
     )
 
-    fun parse(text: String): ParsedReceipt {
-        val lines = text.lines().map { it.trim() }.filter { it.isNotEmpty() }
+    /** The tax number a legal entity is always printed next to. */
+    private val unpRegex = Regex("""\b(УНП|УНН|ИНН)\b""", RegexOption.IGNORE_CASE)
+
+    private const val VOWELS = "аеёиоуыэюяіўaeiouy"
+
+    /** How far down a shop still counts as printing its own name. */
+    private const val HEADER_LINES = 12
+
+    fun parse(text: String): ParsedReceipt = parse(ReceiptLine.of(text))
+
+    /**
+     * Same reading, but told how big each line was printed — which is what
+     * decides the shop name when nothing else on the slip gives it away.
+     */
+    fun parse(lines: List<ReceiptLine>): ParsedReceipt {
+        val cleaned = lines
+            .map { it.copy(text = it.text.trim()) }
+            .filter { it.text.isNotEmpty() }
+        val texts = cleaned.map { it.text }
         return ParsedReceipt(
-            amountMinor = findTotal(lines),
-            date = findDate(text),
-            merchant = findMerchant(lines)
+            amountMinor = findTotal(texts),
+            date = findDate(texts.joinToString("\n")),
+            merchant = findMerchant(cleaned)
         )
     }
 
@@ -171,8 +205,8 @@ object ReceiptParser {
 
     // ---- Merchant ---------------------------------------------------------
 
-    private fun findMerchant(lines: List<String>): String? =
-        knownChain(lines) ?: headerLine(lines)
+    private fun findMerchant(lines: List<ReceiptLine>): String? =
+        knownChain(lines.map { it.text }) ?: bestNamedLine(lines)
 
     private fun knownChain(lines: List<String>): String? {
         // Only the top of the receipt: "Санта" further down is a product name.
@@ -184,22 +218,82 @@ object ReceiptParser {
             ?.value
     }
 
-    private fun headerLine(lines: List<String>): String? = lines.take(6)
-        .asSequence()
-        .map { quotedName(it) ?: it }
-        .map { it.replace(legalForms, "").trim(' ', '"', '«', '»', '\'', ',', '.', ':') }
-        .firstOrNull { candidate ->
-            val lower = candidate.lowercase()
-            val letters = candidate.count { it.isLetter() }
-            letters >= 3 &&
-                letters > candidate.count { it.isDigit() } &&
-                notAMerchant.none { lower.contains(it) } &&
-                !candidate.contains(dateRegex) &&
-                candidate.none { it in "‹›<>|" }
+    private data class Candidate(val name: String, val score: Int, val index: Int)
+
+    /**
+     * The shop is not on the known list, so the header is judged rather than
+     * trusted: taking the first line that merely looks like text is what used
+     * to put an address, a cashier's name or OCR noise into the note. Points
+     * go to the things that actually mark a name — the big print at the top,
+     * a trade name in quotes, a legal form, the line beside the tax number —
+     * and the best-scoring line wins, or none does.
+     */
+    private fun bestNamedLine(lines: List<ReceiptLine>): String? {
+        val header = lines.take(HEADER_LINES)
+        val unpAt = header.indexOfFirst { unpRegex.containsMatchIn(it.text) }
+        return header
+            .mapIndexedNotNull { index, line -> candidate(line, index, unpAt) }
+            .filter { it.score >= MIN_MERCHANT_SCORE }
+            // Equal scores: whichever was printed higher up.
+            .maxWithOrNull(compareBy({ it.score }, { -it.index }))
+            ?.name
+    }
+
+    private fun candidate(line: ReceiptLine, index: Int, unpAt: Int): Candidate? {
+        val raw = line.text
+        val lower = raw.lowercase()
+        if (notAMerchant.any { lower.contains(it) }) return null
+        if (raw.contains(dateRegex) || amountRegex.containsMatchIn(raw)) return null
+        if (raw.any { it in "‹›<>|" }) return null
+
+        val quoted = quotedName(raw)
+        val hasLegalForm = legalForms.containsMatchIn(raw)
+        val name = normalize(quoted ?: raw.replace(legalForms, "")) ?: return null
+
+        var score = when {
+            // `ООО "Евроторг"` — as explicit as a receipt ever gets.
+            quoted != null && hasLegalForm -> 6
+            quoted != null -> 4
+            hasLegalForm -> 3
+            else -> 0
         }
-        ?.take(40)
+        // Shops print their own name large and everything else small.
+        score += ((line.emphasis - 1f) * 8f).toInt().coerceIn(0, 8)
+        // The entity behind the counter is printed right by its tax number.
+        if (unpAt >= 0 && kotlin.math.abs(index - unpAt) == 1) score += 2
+        if (index < 3) score += 1
+        return Candidate(name, score, index)
+    }
+
+    /**
+     * Trims the decoration off a candidate and rejects what cannot be a name:
+     * too few letters, more digits than letters, punctuation soup left by OCR,
+     * no vowel at all, or a word that just means "shop".
+     */
+    private fun normalize(candidate: String): String? {
+        val trimmed = candidate
+            .trim(' ', '"', '«', '»', '\'', ',', '.', ':', ';', '-', '—', '*', '=')
+            .replace(Regex("""\s{2,}"""), " ")
+        val letters = trimmed.count { it.isLetter() }
+        if (letters < 3 || letters <= trimmed.count { it.isDigit() }) return null
+        if (letters * 2 < trimmed.length) return null
+        if (trimmed.none { it.lowercaseChar() in VOWELS }) return null
+        if (trimmed.lowercase() in genericNames) return null
+        return prettyCase(trimmed.take(40))
+    }
+
+    /** Receipts shout in capitals; a note reads better in ordinary case. */
+    private fun prettyCase(name: String): String {
+        if (name.any { it.isLowerCase() }) return name
+        return name.split(' ').joinToString(" ") { word ->
+            if (word.length <= 2) word else word.take(1) + word.drop(1).lowercase()
+        }
+    }
 
     /** `ООО "Евроопт"` — the trade name is what is inside the quotes. */
     private fun quotedName(line: String): String? =
         Regex("""["«]([^"»]{2,40})["»]""").find(line)?.groupValues?.get(1)?.trim()
+
+    /** Below this nothing on the line suggests a name, so none is reported. */
+    private const val MIN_MERCHANT_SCORE = 1
 }

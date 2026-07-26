@@ -40,14 +40,16 @@ class EReceiptFetcher(private val context: Context) {
 
     private fun fetchLink(url: String): EReceipt? {
         val document = download(url) ?: return null
-        val text = when {
-            document.looksBinary -> ""
+        val lines = when {
+            document.looksBinary -> emptyList()
+            // Headings and bold runs survive the flattening, so the shop name
+            // is read off the page's own emphasis rather than guessed at.
             document.contentType.contains("html", ignoreCase = true) ->
-                ReceiptQr.textFromHtml(document.text)
+                ReceiptQr.linesFromHtml(document.text)
 
-            else -> document.text
+            else -> ReceiptLine.of(document.text)
         }
-        val parsed = ReceiptParser.parse(text)
+        val parsed = ReceiptParser.parse(lines)
         if (parsed.amountMinor == null) {
             // The link went somewhere, but not to anything resembling a
             // receipt — leave no orphan file behind and let OCR try.

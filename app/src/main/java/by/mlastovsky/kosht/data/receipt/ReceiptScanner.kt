@@ -43,25 +43,58 @@ class ReceiptScanner(
                 )
             }
         }
-        val text = recognize(bitmap) ?: return@withContext null
-        ReceiptParser.parse(text)
+        val lines = recognize(bitmap)
+        if (lines.isEmpty()) return@withContext null
+        ReceiptParser.parse(lines)
             .takeIf { it.amountMinor != null }
             ?.let { ScannedReceipt(it) }
     }
 
-    private fun recognize(bitmap: Bitmap): String? {
-        val dataDir = ensureTrainedData() ?: return null
+    /**
+     * Recognized lines, each carrying how tall it was printed relative to the
+     * rest. The shop name is the one thing on a slip that is set in large type,
+     * so measuring the lines is what tells it apart from the address and the
+     * document headers around it.
+     */
+    private fun recognize(bitmap: Bitmap): List<ReceiptLine> {
+        val dataDir = ensureTrainedData() ?: return emptyList()
         val tess = TessBaseAPI()
         return try {
-            if (!tess.init(dataDir.absolutePath, LANGUAGE)) return null
+            if (!tess.init(dataDir.absolutePath, LANGUAGE)) return emptyList()
             tess.setImage(bitmap)
-            tess.utF8Text
+            // Asking for the text is what runs recognition; the iterator only
+            // reports on a page that has already been read.
+            val plain = tess.utF8Text.orEmpty()
+            measuredLines(tess).ifEmpty { ReceiptLine.of(plain) }
         } catch (e: Exception) {
-            null
+            emptyList()
         } finally {
             tess.recycle()
         }
     }
+
+    private fun measuredLines(tess: TessBaseAPI): List<ReceiptLine> = runCatching {
+        val level = TessBaseAPI.PageIteratorLevel.RIL_TEXTLINE
+        val iterator = tess.resultIterator ?: return emptyList()
+        val measured = mutableListOf<Pair<String, Int>>()
+        try {
+            iterator.begin()
+            do {
+                val text = iterator.getUTF8Text(level)?.trim().orEmpty()
+                val height = iterator.getBoundingRect(level)?.height() ?: 0
+                if (text.isNotEmpty() && height > 0) measured += text to height
+            } while (iterator.next(level))
+        } finally {
+            iterator.delete()
+        }
+        if (measured.isEmpty()) return emptyList()
+        // Against the median, not the largest: one oversized line would
+        // otherwise make every other line look like fine print.
+        val median = measured.map { it.second }.sorted()[measured.size / 2].coerceAtLeast(1)
+        measured.map { (text, height) ->
+            ReceiptLine(text, (height.toFloat() / median).coerceIn(0.5f, 4f))
+        }
+    }.getOrDefault(emptyList())
 
     /** Copies tessdata/rus.traineddata from assets to files dir on first use. */
     private fun ensureTrainedData(): File? = runCatching {
