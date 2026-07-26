@@ -127,8 +127,10 @@ fun StatsScreen(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(horizontal = 16.dp),
+            // With no type toggle in the report the view buttons keep
+            // their usual place at the right edge.
             horizontalArrangement = if (viewMode == 2) {
-                Arrangement.spacedBy(8.dp, Alignment.CenterHorizontally)
+                Arrangement.End
             } else {
                 Arrangement.Start
             },
