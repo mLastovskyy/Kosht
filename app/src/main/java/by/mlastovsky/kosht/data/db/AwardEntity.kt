@@ -1,5 +1,6 @@
 package by.mlastovsky.kosht.data.db
 
+import androidx.room.Embedded
 import androidx.room.Entity
 import androidx.room.PrimaryKey
 
@@ -12,5 +13,8 @@ import androidx.room.PrimaryKey
 data class AwardEntity(
     @PrimaryKey
     val key: String,
-    val unlockedAt: Long
+    val unlockedAt: Long,
+    /** [SyncMeta.uid] mirrors [key] so the same award never doubles up. */
+    @Embedded
+    val sync: SyncMeta = SyncMeta()
 )

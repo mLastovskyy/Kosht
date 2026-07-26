@@ -1,5 +1,6 @@
 package by.mlastovsky.kosht.data.db
 
+import androidx.room.Embedded
 import androidx.room.Entity
 import androidx.room.PrimaryKey
 import by.mlastovsky.kosht.model.DebtDirection
@@ -18,5 +19,7 @@ data class DebtEntity(
     val currencyCode: String,
     val note: String = "",
     val createdAt: Long,
-    val closedAt: Long? = null
+    val closedAt: Long? = null,
+    @Embedded
+    val sync: SyncMeta = SyncMeta()
 )

@@ -38,7 +38,9 @@ data class RecurringEntity(
     val nextDueEpochDay: Long,
     val frequency: RecurringFrequency = RecurringFrequency.MONTHLY,
     val enabled: Boolean = true,
-    val createdAt: Long
+    val createdAt: Long,
+    @Embedded
+    val sync: SyncMeta = SyncMeta()
 ) {
     val nextDueDate: LocalDate
         get() = LocalDate.ofEpochDay(nextDueEpochDay)

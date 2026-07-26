@@ -66,5 +66,24 @@ class AppContainer(context: Context) {
         by.mlastovsky.kosht.data.UpdateChecker()
     }
 
+    val updateInstaller: by.mlastovsky.kosht.data.UpdateInstaller by lazy {
+        by.mlastovsky.kosht.data.UpdateInstaller(appContext)
+    }
+
     val settingsRepository: SettingsRepository = SettingsRepository(context)
+
+    private val supabaseApi: by.mlastovsky.kosht.data.sync.SupabaseApi by lazy {
+        by.mlastovsky.kosht.data.sync.SupabaseApi(
+            baseUrl = by.mlastovsky.kosht.BuildConfig.SUPABASE_URL,
+            anonKey = by.mlastovsky.kosht.BuildConfig.SUPABASE_ANON_KEY
+        )
+    }
+
+    val syncAccountRepository: by.mlastovsky.kosht.data.sync.SyncAccountRepository by lazy {
+        by.mlastovsky.kosht.data.sync.SyncAccountRepository(appContext, supabaseApi)
+    }
+
+    val syncEngine: by.mlastovsky.kosht.data.sync.SyncEngine by lazy {
+        by.mlastovsky.kosht.data.sync.SyncEngine(database, supabaseApi, syncAccountRepository)
+    }
 }

@@ -1,5 +1,6 @@
 package by.mlastovsky.kosht.data.db
 
+import androidx.room.Embedded
 import androidx.room.Entity
 import androidx.room.PrimaryKey
 import by.mlastovsky.kosht.model.ChallengeType
@@ -21,5 +22,7 @@ data class ChallengeEntity(
     /** Inclusive period bounds as epoch days. */
     val startEpochDay: Long,
     val endEpochDay: Long,
-    val createdAt: Long
+    val createdAt: Long,
+    @Embedded
+    val sync: SyncMeta = SyncMeta()
 )

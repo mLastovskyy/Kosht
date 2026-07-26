@@ -1,5 +1,6 @@
 package by.mlastovsky.kosht.data.db
 
+import androidx.room.Embedded
 import androidx.room.Entity
 import androidx.room.PrimaryKey
 
@@ -16,5 +17,7 @@ data class SavingEntity(
     val note: String = "",
     val timestamp: Long,
     /** Optional link to a savings goal. */
-    val goalId: Long? = null
+    val goalId: Long? = null,
+    @Embedded
+    val sync: SyncMeta = SyncMeta()
 )

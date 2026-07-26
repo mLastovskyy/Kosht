@@ -51,7 +51,14 @@ object AppViewModelProvider {
                 app().container.settingsRepository,
                 app().container.photoStore,
                 app().container.currencyChanger,
-                app().container.updateChecker
+                app().container.updateChecker,
+                app().container.updateInstaller
+            )
+        }
+        initializer {
+            by.mlastovsky.kosht.ui.account.AccountViewModel(
+                app().container.syncAccountRepository,
+                app().container.syncEngine
             )
         }
         initializer {

@@ -1,5 +1,6 @@
 package by.mlastovsky.kosht.data.db
 
+import androidx.room.Embedded
 import androidx.room.Entity
 import androidx.room.PrimaryKey
 import by.mlastovsky.kosht.model.TransactionType
@@ -20,5 +21,7 @@ data class CategoryEntity(
     val iconKey: String,
     val colorArgb: Long,
     val type: TransactionType,
-    val position: Int
+    val position: Int,
+    @Embedded
+    val sync: SyncMeta = SyncMeta()
 )

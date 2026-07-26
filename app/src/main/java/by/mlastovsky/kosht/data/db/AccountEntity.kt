@@ -1,6 +1,7 @@
 package by.mlastovsky.kosht.data.db
 
 import androidx.room.ColumnInfo
+import androidx.room.Embedded
 import androidx.room.Entity
 import androidx.room.PrimaryKey
 
@@ -22,5 +23,7 @@ data class AccountEntity(
      * Lets the user set the real current balance without fake records.
      */
     @ColumnInfo(defaultValue = "0")
-    val adjustmentMinor: Long = 0
+    val adjustmentMinor: Long = 0,
+    @Embedded
+    val sync: SyncMeta = SyncMeta()
 )

@@ -19,9 +19,11 @@ import by.mlastovsky.kosht.data.CategorySeed
         SavingGoalEntity::class,
         ChallengeEntity::class,
         AccountEntity::class,
-        AwardEntity::class
+        AwardEntity::class,
+        SyncTombstoneEntity::class,
+        SyncCursorEntity::class
     ],
-    version = 10,
+    version = 12,
     exportSchema = false
 )
 abstract class KoshtDatabase : RoomDatabase() {
@@ -46,6 +48,8 @@ abstract class KoshtDatabase : RoomDatabase() {
 
     abstract fun awardDao(): AwardDao
 
+    abstract fun syncDao(): SyncDao
+
     companion object {
 
         fun build(context: Context): KoshtDatabase =
@@ -53,7 +57,8 @@ abstract class KoshtDatabase : RoomDatabase() {
                 .addCallback(SeedCallback)
                 .addMigrations(
                     MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6,
-                    MIGRATION_6_7, MIGRATION_7_8, MIGRATION_8_9, MIGRATION_9_10
+                    MIGRATION_6_7, MIGRATION_7_8, MIGRATION_8_9, MIGRATION_9_10,
+                    MIGRATION_10_11, MIGRATION_11_12
                 )
                 .build()
 
@@ -217,25 +222,158 @@ abstract class KoshtDatabase : RoomDatabase() {
             }
         }
 
-        private fun seedAccounts(db: SupportSQLiteDatabase) {
-            // A single primary account keeps the UI exactly as before;
-            // account pickers appear only after the user adds more.
-            db.execSQL(
-                "INSERT INTO accounts (key, name, iconKey, colorArgb, position) " +
-                    "VALUES ('card', '', 'card', ${0xFF1E88E5}, 0)"
-            )
+        /**
+         * Sync columns for every table that travels between devices, plus the
+         * bookkeeping tables. Existing rows are handed an identity here; the
+         * triggers installed in [installSyncTriggers] take it from there.
+         */
+        private val MIGRATION_10_11 = object : Migration(10, 11) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL(
+                    "CREATE TABLE IF NOT EXISTS `sync_tombstones` (" +
+                        "`entity` TEXT NOT NULL, `uid` TEXT NOT NULL, " +
+                        "`deletedAt` INTEGER NOT NULL, PRIMARY KEY(`entity`, `uid`))"
+                )
+                db.execSQL(
+                    "CREATE TABLE IF NOT EXISTS `sync_cursor` (" +
+                        "`id` INTEGER NOT NULL, `pulledThrough` INTEGER NOT NULL, " +
+                        "`pushedThrough` INTEGER NOT NULL, `lastSyncAt` INTEGER NOT NULL, " +
+                        "PRIMARY KEY(`id`))"
+                )
+                SyncEntity.entries.forEach { entity ->
+                    val table = entity.table
+                    db.execSQL("ALTER TABLE `$table` ADD COLUMN `uid` TEXT NOT NULL DEFAULT ''")
+                    db.execSQL(
+                        "ALTER TABLE `$table` ADD COLUMN `updatedAt` INTEGER NOT NULL DEFAULT 0"
+                    )
+                    // updatedAt stays 0: data that predates the account has
+                    // never been "edited", so a real edit from any device wins.
+                    db.execSQL("UPDATE `$table` SET `uid` = ${backfillUid(entity)}")
+                }
+            }
+        }
+
+        /** Where a scanned QR led, and the copy of the page it led to. */
+        private val MIGRATION_11_12 = object : Migration(11, 12) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("ALTER TABLE transactions ADD COLUMN receiptUrl TEXT")
+                db.execSQL("ALTER TABLE transactions ADD COLUMN receiptDocPath TEXT")
+            }
+        }
+
+        /**
+         * Built-in rows must land on the same identity on every device, or
+         * signing in on a second phone would duplicate every stock category.
+         */
+        private fun backfillUid(entity: SyncEntity): String = when (entity) {
+            SyncEntity.AWARDS -> "`key`"
+            SyncEntity.CATEGORIES, SyncEntity.ACCOUNTS ->
+                "CASE WHEN `key` IS NOT NULL AND `key` <> '' " +
+                    "THEN '$SEED_UID_PREFIX' || `key` ELSE $NEW_UID END"
+
+            else -> NEW_UID
+        }
+
+        /**
+         * Keeping this in triggers rather than in every repository means a
+         * write anywhere in the app — including plain UPDATE queries and
+         * cascades — stays sync-correct without anyone remembering to stamp it.
+         */
+        private fun installSyncTriggers(db: SupportSQLiteDatabase) {
+            SyncEntity.entries.forEach { entity ->
+                val table = entity.table
+                val uid = when (entity) {
+                    SyncEntity.AWARDS -> "NEW.`key`"
+                    SyncEntity.CATEGORIES, SyncEntity.ACCOUNTS ->
+                        "CASE WHEN NEW.`key` IS NOT NULL AND NEW.`key` <> '' " +
+                            "THEN '$SEED_UID_PREFIX' || NEW.`key` ELSE $NEW_UID END"
+
+                    else -> NEW_UID
+                }
+                // Rows the sync engine writes already carry uid and updatedAt,
+                // which is precisely what keeps these guards from firing.
+                db.execSQL(
+                    "CREATE TRIGGER IF NOT EXISTS `${table}_sync_insert` " +
+                        "AFTER INSERT ON `$table` FOR EACH ROW WHEN NEW.`uid` = '' BEGIN " +
+                        "UPDATE `$table` SET `uid` = $uid, `updatedAt` = $NOW_MILLIS " +
+                        "WHERE rowid = NEW.rowid; END"
+                )
+                db.execSQL(
+                    "CREATE TRIGGER IF NOT EXISTS `${table}_sync_update` " +
+                        "AFTER UPDATE ON `$table` FOR EACH ROW " +
+                        "WHEN NEW.`updatedAt` = OLD.`updatedAt` BEGIN " +
+                        "UPDATE `$table` SET `updatedAt` = $NOW_MILLIS " +
+                        "WHERE rowid = NEW.rowid; END"
+                )
+                db.execSQL(
+                    "CREATE TRIGGER IF NOT EXISTS `${table}_sync_delete` " +
+                        "AFTER DELETE ON `$table` FOR EACH ROW WHEN OLD.`uid` <> '' BEGIN " +
+                        "INSERT OR REPLACE INTO `sync_tombstones` " +
+                        "(`entity`, `uid`, `deletedAt`) " +
+                        "VALUES ('$table', OLD.`uid`, $NOW_MILLIS); END"
+                )
+            }
+        }
+
+        /** 128 random bits; plenty to never collide across a user's devices. */
+        private const val NEW_UID = "lower(hex(randomblob(16)))"
+
+        private const val SEED_UID_PREFIX = "seed:"
+
+        private const val NOW_MILLIS =
+            "(CAST(strftime('%s','now') AS INTEGER) * 1000 + " +
+                "CAST(strftime('%f','now') * 1000 AS INTEGER) % 1000)"
+
+        /**
+         * A single primary account keeps the UI exactly as before; account
+         * pickers appear only after the user adds more. [withSyncUid] is off
+         * for the pre-sync migration that predates the uid column.
+         */
+        private fun seedAccounts(db: SupportSQLiteDatabase, withSyncUid: Boolean = false) {
+            if (withSyncUid) {
+                db.execSQL(
+                    "INSERT INTO accounts (`key`, name, iconKey, colorArgb, position, uid) " +
+                        "VALUES ('card', '', 'card', ${0xFF1E88E5}, 0, '${SEED_UID_PREFIX}card')"
+                )
+            } else {
+                db.execSQL(
+                    "INSERT INTO accounts (key, name, iconKey, colorArgb, position) " +
+                        "VALUES ('card', '', 'card', ${0xFF1E88E5}, 0)"
+                )
+            }
         }
 
         private object SeedCallback : Callback() {
             override fun onCreate(db: SupportSQLiteDatabase) {
                 CategorySeed.all.forEachIndexed { index, seed ->
+                    // Seeded rows keep updatedAt at 0 on purpose: a second
+                    // device must not resurrect stock rows deleted elsewhere.
                     db.execSQL(
-                        "INSERT INTO categories (key, name, iconKey, colorArgb, type, position) " +
-                            "VALUES (?, '', ?, ?, ?, ?)",
-                        arrayOf<Any?>(seed.key, seed.iconKey, seed.colorArgb, seed.type.name, index)
+                        "INSERT INTO categories " +
+                            "(`key`, name, iconKey, colorArgb, type, position, uid) " +
+                            "VALUES (?, '', ?, ?, ?, ?, ?)",
+                        arrayOf<Any?>(
+                            seed.key,
+                            seed.iconKey,
+                            seed.colorArgb,
+                            seed.type.name,
+                            index,
+                            SEED_UID_PREFIX + seed.key
+                        )
                     )
                 }
-                seedAccounts(db)
+                seedAccounts(db, withSyncUid = true)
+            }
+
+            override fun onOpen(db: SupportSQLiteDatabase) {
+                // Idempotent, so the triggers survive any future migration
+                // that rebuilds a table and silently drops them with it.
+                installSyncTriggers(db)
+                db.execSQL(
+                    "INSERT OR IGNORE INTO `sync_cursor` " +
+                        "(`id`, `pulledThrough`, `pushedThrough`, `lastSyncAt`) " +
+                        "VALUES (0, 0, -1, 0)"
+                )
             }
         }
     }

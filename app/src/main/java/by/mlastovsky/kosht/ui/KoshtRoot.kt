@@ -30,7 +30,11 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.lifecycle.viewmodel.compose.viewModel
 import by.mlastovsky.kosht.R
+import by.mlastovsky.kosht.ui.account.AccountOnboardingScreen
+import by.mlastovsky.kosht.ui.account.AccountViewModel
 import by.mlastovsky.kosht.ui.achievements.AchievementsScreen
 import by.mlastovsky.kosht.ui.editor.EditorScreen
 import by.mlastovsky.kosht.ui.guide.GuideScreen
@@ -43,7 +47,18 @@ import by.mlastovsky.kosht.ui.navigation.MainTabs
 import by.mlastovsky.kosht.ui.navigation.Routes
 
 @Composable
-fun KoshtRoot() {
+fun KoshtRoot(
+    accountViewModel: AccountViewModel = viewModel(factory = AppViewModelProvider.Factory)
+) {
+    val account by accountViewModel.account.collectAsStateWithLifecycle()
+    // Nothing until the stored answer is known, so the main UI never flashes
+    // up only to be replaced by the first-launch question.
+    val state = account ?: return
+    if (!state.onboarded && accountViewModel.isConfigured) {
+        AccountOnboardingScreen(accountViewModel)
+        return
+    }
+
     val navController = rememberNavController()
     val backStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute = backStackEntry?.destination?.route

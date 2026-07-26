@@ -1,5 +1,6 @@
 package by.mlastovsky.kosht.data.db
 
+import androidx.room.Embedded
 import androidx.room.Entity
 import androidx.room.ForeignKey
 import androidx.room.Index
@@ -44,5 +45,11 @@ data class TransactionEntity(
      * BYN equivalent frozen at the moment the record was saved, so historical
      * values do not drift when exchange rates change.
      */
-    val bynMinor: Long? = null
+    val bynMinor: Long? = null,
+    /** Electronic receipt a scanned QR led to; travels between devices. */
+    val receiptUrl: String? = null,
+    /** Offline copy of that receipt. Like the photo, it stays on this device. */
+    val receiptDocPath: String? = null,
+    @Embedded
+    val sync: SyncMeta = SyncMeta()
 )

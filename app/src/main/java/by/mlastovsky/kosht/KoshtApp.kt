@@ -1,6 +1,7 @@
 package by.mlastovsky.kosht
 
 import android.app.Application
+import by.mlastovsky.kosht.data.sync.SyncScheduler
 import by.mlastovsky.kosht.di.AppContainer
 import by.mlastovsky.kosht.notifications.NotificationScheduler
 import kotlinx.coroutines.CoroutineScope
@@ -25,6 +26,18 @@ class KoshtApp : Application() {
         applicationScope.launch {
             container.settingsRepository.settings.collectLatest { settings ->
                 NotificationScheduler.sync(this@KoshtApp, settings)
+            }
+        }
+        applicationScope.launch {
+            // Queued rather than run: with no connection WorkManager holds it
+            // until there is one, so an offline launch still catches up later.
+            container.syncAccountRepository.state.collectLatest { account ->
+                if (account.signedIn && account.autoSync) {
+                    SyncScheduler.syncNow(this@KoshtApp)
+                    SyncScheduler.enablePeriodic(this@KoshtApp)
+                } else {
+                    SyncScheduler.disablePeriodic(this@KoshtApp)
+                }
             }
         }
     }
