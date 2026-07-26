@@ -49,7 +49,10 @@ Kosht is a beautifully crafted personal finance app for Android that turns money
 ## 🚀 Key Features
 
 ### ⚡ Lightning-fast expense tracking
-A clean editor, smart category carousel and haptic feedback make adding a transaction take literal seconds. Attach a photo of the receipt to any expense.
+A clean editor, smart category carousel and haptic feedback make adding a transaction take literal seconds. Expense and Income are a swipe apart — the same gesture that moves the app's own tabs. Attach a photo of the receipt to any expense.
+
+### 🎨 Categories that bend to you
+The carousel is the same wherever a category is chosen — the editor, a planned payment, a spending challenge — and everywhere it does the same three things. **Tap** picks one. **Press and hold, then drag** moves it: the handful you actually use end up under your thumb, and the order is kept everywhere at once. **Press and hold without moving** opens it — name, icon, color, or the trash, which moves its records to *Other* rather than losing them. An icon from the set is not the only option: pick a photo from the gallery — a payment app's logo, a shop's — and it fills the circle everywhere the category appears. A picture brings its own colors, so the palette steps aside while one is set. The **New** circle at the end creates one on the spot, so a missing category never sends you off to settings and back.
 
 ### 🧮 Calculator, zero taps away
 Adding a record drops you straight into a roomy bottom-sheet calculator — the editor itself stays uncluttered, and tapping the amount brings it back any time. Type `12,50+3,90+8`, hit the smart **=** to evaluate (with proper operator precedence), and **Apply** writes the sum into the amount field.
@@ -69,7 +72,8 @@ Any record can list its items — the products from a receipt, or the parts of a
 - **Quantity × price**, the way a receipt spells it: two at 1,75 is a line of 3,50.
 - **Read off the receipt by itself** where the slip prints its lines, quantities included — discounts, VAT and card details are not items and are left out.
 - **The figures have to agree.** Lines adding up to far more than the receipt total mean something was misread, so the list is dropped rather than trusted; adding up to less is said out loud ("5 items · 41,20 of 45,30 — the rest could not be read"). Nothing is ever invented to make the arithmetic work.
-- **Statistics → Charts:** a category whose records list items carries a basket with a count — tap it and the category opens up into what was actually bought, with each item's share of it.
+- **Statistics → Charts:** a category whose records list items carries a basket with a count — tap it and the category opens up into what was actually bought, with each item's share of it. Income counts too: a salary splits into the pay and the bonus as readily as a receipt splits into products.
+- **One product, one row.** Names are added up on their settled form — case, stray spaces and the ё/е that half the keyboards skip are ignored — so "молоко", "Молоко  " and "МОЛОКО" are one line with one total, including everything written down before any of this existed.
 
 ### 📸 Receipt scanning — QR first, OCR always
 Snap a receipt and Kosht reads the total, date and store for you.
@@ -109,10 +113,10 @@ Signing up is an email, a six-digit code that Kosht mails you (good for five min
 - Foreign-currency recurring payments let you set the **exact rate you were charged**
 
 ### 👛 The Wallet
-- **Debts** — who owes whom, in any currency, with partial repayments; tap one to repay, close or delete it, and the pencil corrects the debt itself — person, direction, sum, currency, note
-- **Savings** — a journal of every "set aside" moment, with per-currency totals. Set aside in **any** currency and Kosht converts it into the currency the savings are counted in at the National Bank rate — then leaves that figure editable, because the bank's arithmetic and the official rate rarely agree to the last kopeck and what actually left the account is what belongs in the record
+- **Debts** — who owes whom, in any currency, with partial repayments; tap one to repay, close or delete it, and the pencil corrects the debt itself — person, direction, sum, currency, note. Money that changes hands lands in the history too: an expense for what you owed, income for what was owed to you, marked as the debt closed or a part of it — with a tick to clear when the debt was settled outside the app, and, with several accounts, the account it moved on. It works from the other end as well: file income under **Debt**, say who it is owed to, and the debt opens itself on the Wallet tab carrying your note
+- **Savings** — a journal of every "set aside" moment, with per-currency totals. Set aside in **any** currency and Kosht converts it into the currency the savings are counted in at the National Bank rate — then leaves that figure editable, because the bank's arithmetic and the official rate rarely agree to the last kopeck and what actually left the account is what belongs in the record. Savings are counted apart from your accounts, so nothing else moves unless you say so: tick **Take it off an account** and the sum really leaves the account you pick, and comes back onto it when you withdraw
 - **Savings goals** — name a goal, set a target, watch the progress bar fill 🎉. Tap a goal to change any of it later: the name, the target, even the currency — and what is already set aside toward it moves across at the official rate, so the progress bar keeps meaning what it says
-- **Planned payments — outgoing or incoming** — a salary is as regular as a subscription. Pick expense or income, the date, the frequency, the category and the account it moves on; nothing happens silently, you always confirm. The confirmation says which way the money goes, starts from the account the plan names, and lets you set the exact rate for a foreign currency.
+- **Planned payments — outgoing or incoming** — a salary is as regular as a subscription, and the dialog reads that way: a bill has a title, an amount to charge and a charge date, a salary a source, a sum and the date it lands. Pick expense or income, the date, the frequency, the category and the account it moves on; nothing happens silently, you always confirm. The confirmation says which way the money goes, starts from the account the plan names, and lets you set the exact rate for a foreign currency.
 
 ### 🏆 Gamification that helps, not annoys
 - **Under-budget streak** — days in a row you stayed within your daily budget (auto-calculated or set your own)
