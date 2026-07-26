@@ -1,5 +1,7 @@
 package by.mlastovsky.kosht.data
 
+import by.mlastovsky.kosht.data.db.AwardDao
+import by.mlastovsky.kosht.data.db.AwardEntity
 import by.mlastovsky.kosht.data.db.ChallengeDao
 import by.mlastovsky.kosht.data.db.ChallengeEntity
 import by.mlastovsky.kosht.data.db.DebtDao
@@ -32,7 +34,8 @@ class WalletRepository(
     private val recurringDao: RecurringDao,
     private val transactionDao: TransactionDao,
     private val goalDao: GoalDao,
-    private val challengeDao: ChallengeDao
+    private val challengeDao: ChallengeDao,
+    private val awardDao: AwardDao
 ) {
 
     // --- Debts ---
@@ -157,7 +160,20 @@ class WalletRepository(
         )
     )
 
+    suspend fun updateChallenge(challenge: ChallengeEntity) = challengeDao.update(challenge)
+
     suspend fun deleteChallenge(id: Long) = challengeDao.deleteById(id)
+
+    // --- Awards ---
+
+    fun observeAwards(): Flow<List<AwardEntity>> = awardDao.observeAll()
+
+    /** Marks freshly met awards as earned; already earned keep their date. */
+    suspend fun unlockAwards(keys: List<String>) {
+        if (keys.isEmpty()) return
+        val now = System.currentTimeMillis()
+        awardDao.insertAll(keys.map { AwardEntity(key = it, unlockedAt = now) })
+    }
 
     // --- Recurring charges ---
 

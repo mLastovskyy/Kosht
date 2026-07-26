@@ -3,6 +3,7 @@ package by.mlastovsky.kosht.data.db
 import androidx.room.Dao
 import androidx.room.Insert
 import androidx.room.Query
+import androidx.room.Update
 import kotlinx.coroutines.flow.Flow
 
 @Dao
@@ -13,6 +14,9 @@ interface ChallengeDao {
 
     @Insert
     suspend fun insert(challenge: ChallengeEntity): Long
+
+    @Update
+    suspend fun update(challenge: ChallengeEntity)
 
     @Query("DELETE FROM challenges WHERE id = :id")
     suspend fun deleteById(id: Long)

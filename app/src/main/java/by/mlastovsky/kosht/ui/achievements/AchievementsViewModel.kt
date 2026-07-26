@@ -14,6 +14,7 @@ import by.mlastovsky.kosht.data.db.TransactionWithCategory
 import by.mlastovsky.kosht.model.ChallengeType
 import by.mlastovsky.kosht.model.TransactionType
 import by.mlastovsky.kosht.util.Dates
+import by.mlastovsky.kosht.util.Money
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
@@ -36,7 +37,11 @@ data class ChallengeUi(
 
 data class BadgeUi(
     val key: String,
-    val unlocked: Boolean
+    val unlocked: Boolean,
+    /** When the award was earned; null while still locked. */
+    val unlockedAt: Long? = null,
+    /** "3 / 10"-style progress toward a locked quantitative award. */
+    val progressText: String? = null
 )
 
 data class AchievementsUiState(
@@ -77,21 +82,27 @@ class AchievementsViewModel(
     private data class WalletData(
         val challenges: List<ChallengeEntity>,
         val savings: List<SavingEntity>,
-        val goalsAchieved: Boolean,
-        val hasSavings: Boolean
+        val goalsCount: Int,
+        val goalsAchievedCount: Int,
+        val savingTotals: List<by.mlastovsky.kosht.data.db.SavingTotal>,
+        /** Earned awards: key → unlock timestamp. */
+        val awards: Map<String, Long>
     )
 
     private val walletData = combine(
         walletRepository.observeChallenges(),
         walletRepository.observeSavingsSince(horizonMillis),
         walletRepository.observeGoals(),
-        walletRepository.observeSavingTotals()
-    ) { challenges, savings, goals, totals ->
+        walletRepository.observeSavingTotals(),
+        walletRepository.observeAwards()
+    ) { challenges, savings, goals, totals, awards ->
         WalletData(
             challenges = challenges,
             savings = savings,
-            goalsAchieved = goals.any { it.achievedAt != null },
-            hasSavings = totals.any { it.total > 0 }
+            goalsCount = goals.size,
+            goalsAchievedCount = goals.count { it.achievedAt != null },
+            savingTotals = totals,
+            awards = awards.associate { it.key to it.unlockedAt }
         )
     }
 
@@ -125,29 +136,117 @@ class AchievementsViewModel(
             .sumOf { it.transaction.amountMinor }
         val monthExpense = monthTx.filter { it.transaction.type == TransactionType.EXPENSE }
             .sumOf { it.transaction.amountMinor }
+        val challengeUis = wallet.challenges.map {
+            evaluate(it, act.transactions, wallet.savings, ctx.rates, ctx.settings.currencyCode)
+        }
+        val savedBynMinor = wallet.savingTotals.sumOf {
+            RatesRepository.toBynMinor(it.total, it.currencyCode, ctx.rates) ?: 0L
+        }
 
         AchievementsUiState(
             loaded = true,
             streakDays = streak,
             dailyBudgetMinor = budget,
-            challenges = wallet.challenges.map {
-                evaluate(it, act.transactions, wallet.savings, ctx.rates, ctx.settings.currencyCode)
-            },
-            badges = listOf(
-                BadgeUi("first_steps", act.txCount >= 1),
-                BadgeUi("ten", act.txCount >= 10),
-                BadgeUi("hundred", act.txCount >= 100),
-                BadgeUi("streak7", streak >= 7),
-                BadgeUi("streak30", streak >= 30),
-                BadgeUi("scanner", act.photoCount >= 1),
-                BadgeUi("saver", wallet.hasSavings),
-                BadgeUi("goal_done", wallet.goalsAchieved),
-                BadgeUi("surplus", monthIncome > monthExpense && monthExpense > 0)
+            challenges = challengeUis,
+            badges = buildAwards(
+                stored = wallet.awards,
+                txCount = act.txCount,
+                photoCount = act.photoCount,
+                streak = streak,
+                incomeAny = act.transactions.any {
+                    it.transaction.type == TransactionType.INCOME
+                },
+                hasSavings = wallet.savingTotals.any { it.total > 0 },
+                savedBynMinor = savedBynMinor,
+                goalsCount = wallet.goalsCount,
+                goalsAchieved = wallet.goalsAchievedCount,
+                challengesDone = challengeUis.count { it.status == ChallengeStatus.DONE },
+                surplus = monthIncome > monthExpense && monthExpense > 0
             ),
             expenseCategories = ctx.categories,
             currencyCode = ctx.settings.currencyCode
         )
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), AchievementsUiState())
+
+    init {
+        // Awards are earned forever: persist the first moment a condition
+        // is met so the date survives streak resets and month changes.
+        viewModelScope.launch {
+            uiState.collect { state ->
+                val fresh = state.badges.filter { it.unlocked && it.unlockedAt == null }
+                if (fresh.isNotEmpty()) {
+                    walletRepository.unlockAwards(fresh.map { it.key })
+                }
+            }
+        }
+    }
+
+    /**
+     * The full award list, easy to hard. A locked quantitative award also
+     * carries a "3 / 10" progress line for its detail dialog.
+     */
+    private fun buildAwards(
+        stored: Map<String, Long>,
+        txCount: Int,
+        photoCount: Int,
+        streak: Int,
+        incomeAny: Boolean,
+        hasSavings: Boolean,
+        savedBynMinor: Long,
+        goalsCount: Int,
+        goalsAchieved: Int,
+        challengesDone: Int,
+        surplus: Boolean
+    ): List<BadgeUi> {
+        fun award(
+            key: String,
+            met: Boolean,
+            current: Long? = null,
+            target: Long? = null,
+            money: Boolean = false
+        ): BadgeUi {
+            val storedAt = stored[key]
+            val unlocked = met || storedAt != null
+            val progressText = if (!unlocked && current != null && target != null) {
+                if (money) {
+                    Money.format(current.coerceAtMost(target), "BYN") +
+                        " / " + Money.format(target, "BYN")
+                } else {
+                    "${current.coerceAtMost(target)} / $target"
+                }
+            } else {
+                null
+            }
+            return BadgeUi(key, unlocked, storedAt, progressText)
+        }
+
+        return listOf(
+            award("first_steps", txCount >= 1),
+            award("income_first", incomeAny),
+            award("ten", txCount >= 10, txCount.toLong(), 10),
+            award("scanner", photoCount >= 1),
+            award("saver", hasSavings),
+            award("first_goal", goalsCount >= 1),
+            award("streak7", streak >= 7, streak.toLong(), 7),
+            award("surplus", surplus),
+            award("goal_done", goalsAchieved >= 1),
+            award("challenge_done", challengesDone >= 1),
+            award("photo10", photoCount >= 10, photoCount.toLong(), 10),
+            award("hundred", txCount >= 100, txCount.toLong(), 100),
+            award("streak30", streak >= 30, streak.toLong(), 30),
+            award(
+                "big_saver",
+                savedBynMinor >= BIG_SAVER_TARGET_MINOR,
+                savedBynMinor,
+                BIG_SAVER_TARGET_MINOR,
+                money = true
+            ),
+            award("goal_three", goalsAchieved >= 3, goalsAchieved.toLong(), 3),
+            award("challenge_five", challengesDone >= 5, challengesDone.toLong(), 5),
+            award("five_hundred", txCount >= 500, txCount.toLong(), 500),
+            award("streak100", streak >= 100, streak.toLong(), 100)
+        )
+    }
 
     private fun evaluate(
         challenge: ChallengeEntity,
@@ -261,11 +360,34 @@ class AchievementsViewModel(
         }
     }
 
+    fun updateChallenge(
+        challenge: ChallengeUi,
+        title: String,
+        amountMinor: Long,
+        categoryId: Long?,
+        end: LocalDate
+    ) {
+        if (title.isBlank()) return
+        viewModelScope.launch {
+            walletRepository.updateChallenge(
+                challenge.entity.copy(
+                    title = title.trim(),
+                    amountMinor = amountMinor,
+                    categoryId = categoryId,
+                    endEpochDay = end.toEpochDay()
+                )
+            )
+        }
+    }
+
     fun deleteChallenge(challenge: ChallengeUi) {
         viewModelScope.launch { walletRepository.deleteChallenge(challenge.entity.id) }
     }
 
     private companion object {
         const val HORIZON_DAYS = 180L
+
+        /** 1000 BYN in minor units — the "big saver" award target. */
+        const val BIG_SAVER_TARGET_MINOR = 100_000L
     }
 }

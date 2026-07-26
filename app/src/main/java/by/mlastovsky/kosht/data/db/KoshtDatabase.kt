@@ -18,9 +18,10 @@ import by.mlastovsky.kosht.data.CategorySeed
         RecurringEntity::class,
         SavingGoalEntity::class,
         ChallengeEntity::class,
-        AccountEntity::class
+        AccountEntity::class,
+        AwardEntity::class
     ],
-    version = 9,
+    version = 10,
     exportSchema = false
 )
 abstract class KoshtDatabase : RoomDatabase() {
@@ -43,6 +44,8 @@ abstract class KoshtDatabase : RoomDatabase() {
 
     abstract fun accountDao(): AccountDao
 
+    abstract fun awardDao(): AwardDao
+
     companion object {
 
         fun build(context: Context): KoshtDatabase =
@@ -50,7 +53,7 @@ abstract class KoshtDatabase : RoomDatabase() {
                 .addCallback(SeedCallback)
                 .addMigrations(
                     MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6,
-                    MIGRATION_6_7, MIGRATION_7_8, MIGRATION_8_9
+                    MIGRATION_6_7, MIGRATION_7_8, MIGRATION_8_9, MIGRATION_9_10
                 )
                 .build()
 
@@ -200,6 +203,16 @@ abstract class KoshtDatabase : RoomDatabase() {
             override fun migrate(db: SupportSQLiteDatabase) {
                 db.execSQL(
                     "ALTER TABLE accounts ADD COLUMN adjustmentMinor INTEGER NOT NULL DEFAULT 0"
+                )
+            }
+        }
+
+        private val MIGRATION_9_10 = object : Migration(9, 10) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL(
+                    "CREATE TABLE IF NOT EXISTS awards (" +
+                        "`key` TEXT NOT NULL PRIMARY KEY, " +
+                        "unlockedAt INTEGER NOT NULL)"
                 )
             }
         }

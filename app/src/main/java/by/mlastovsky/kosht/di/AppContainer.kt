@@ -43,7 +43,8 @@ class AppContainer(context: Context) {
             database.recurringDao(),
             database.transactionDao(),
             database.goalDao(),
-            database.challengeDao()
+            database.challengeDao(),
+            database.awardDao()
         )
     }
 
