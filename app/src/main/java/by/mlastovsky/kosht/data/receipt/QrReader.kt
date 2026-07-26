@@ -29,8 +29,9 @@ object QrReader {
         )
     )
 
-    fun decode(bitmap: Bitmap): String? =
+    fun decode(bitmap: Bitmap): String? = runCatching {
         regions(bitmap).firstNotNullOfOrNull { region -> read(region) }
+    }.getOrNull()
 
     private fun regions(bitmap: Bitmap): Sequence<Bitmap> = sequence {
         yield(bitmap)
@@ -65,8 +66,10 @@ object QrReader {
         val pixels = IntArray(bitmap.width * bitmap.height)
         bitmap.getPixels(pixels, 0, bitmap.width, 0, 0, bitmap.width, bitmap.height)
         val source = RGBLuminanceSource(bitmap.width, bitmap.height, pixels)
-        return listOf(source, source.invert(), source.rotateCounterClockwise())
-            .firstNotNullOfOrNull { attempt(it) }
+        // Every square format finds its own orientation; what a photographed
+        // slip needs is the light the other way round, printing being dark on
+        // white and screens the opposite.
+        return listOf(source, source.invert()).firstNotNullOfOrNull { attempt(it) }
     }
 
     private fun attempt(source: LuminanceSource): String? = listOf(

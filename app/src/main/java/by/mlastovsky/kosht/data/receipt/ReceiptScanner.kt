@@ -39,11 +39,25 @@ class ReceiptScanner(
             }
         }
 
-        val lines = bestReading(bitmap)
-        if (lines.isEmpty()) return@withContext null
-        ReceiptParser.parse(lines, model)
-            .takeIf { it.amountMinor != null }
-            ?.let { ScannedReceipt(it) }
+        val quick = ReceiptParser.parse(bestReading(bitmap, Engine.QUICK), model)
+        // A slip the quick model cannot settle gets a second reading from the
+        // slow and careful one — a few more seconds against giving up on it.
+        val parsed = if (quick.amountMinor != null) {
+            quick
+        } else {
+            ReceiptParser.parse(bestReading(bitmap, Engine.CAREFUL), model)
+        }
+        parsed.takeIf { it.amountMinor != null }?.let { ScannedReceipt(it) }
+    }
+
+    /**
+     * Two trained models ride along: the small one reads a decent photo in a
+     * couple of seconds, the large one takes far longer but gives a stubborn
+     * slip its best chance.
+     */
+    private enum class Engine(val asset: String, val home: String, val stamp: String) {
+        QUICK("tessdata", "", "rus-fast-1"),
+        CAREFUL("tessdata-best", "best", "rus-best-1")
     }
 
     private data class Reading(val lines: List<ReceiptLine>, val score: Int)
@@ -52,10 +66,10 @@ class ReceiptScanner(
      * Every attempt costs seconds, so they run cheapest first and stop as soon
      * as one comes back with figures it is sure about.
      */
-    private fun bestReading(bitmap: Bitmap): List<ReceiptLine> {
+    private fun bestReading(bitmap: Bitmap, engine: Engine): List<ReceiptLine> {
         var best = Reading(emptyList(), Int.MIN_VALUE)
-        attempts(bitmap).forEach { attempt ->
-            val reading = read(attempt.image, attempt.pageMode)
+        attempts(bitmap, engine).forEach { attempt ->
+            val reading = read(attempt.image, attempt.pageMode, engine)
             if (reading.score > best.score) best = reading
             if (reading.score >= GOOD_ENOUGH) return best.lines
         }
@@ -64,16 +78,20 @@ class ReceiptScanner(
 
     private data class Attempt(val image: Bitmap, val pageMode: Int)
 
-    private fun attempts(bitmap: Bitmap): Sequence<Attempt> = sequence {
+    private fun attempts(bitmap: Bitmap, engine: Engine): Sequence<Attempt> = sequence {
         val binarised = ImagePrep.binarised(bitmap)
         yield(Attempt(binarised, TessBaseAPI.PageSegMode.PSM_AUTO))
-        yield(Attempt(binarised, TessBaseAPI.PageSegMode.PSM_SINGLE_BLOCK))
-        yield(Attempt(ImagePrep.stretched(bitmap), TessBaseAPI.PageSegMode.PSM_AUTO))
-        yield(Attempt(bitmap, TessBaseAPI.PageSegMode.PSM_AUTO))
+        if (engine == Engine.QUICK) {
+            yield(Attempt(binarised, TessBaseAPI.PageSegMode.PSM_SINGLE_BLOCK))
+            yield(Attempt(ImagePrep.stretched(bitmap), TessBaseAPI.PageSegMode.PSM_AUTO))
+            yield(Attempt(bitmap, TessBaseAPI.PageSegMode.PSM_AUTO))
+        } else {
+            yield(Attempt(ImagePrep.stretched(bitmap), TessBaseAPI.PageSegMode.PSM_SINGLE_BLOCK))
+        }
     }
 
-    private fun read(bitmap: Bitmap, pageMode: Int): Reading {
-        val dataDir = ensureTrainedData() ?: return Reading(emptyList(), Int.MIN_VALUE)
+    private fun read(bitmap: Bitmap, pageMode: Int, engine: Engine): Reading {
+        val dataDir = ensureTrainedData(engine) ?: return Reading(emptyList(), Int.MIN_VALUE)
         val tess = TessBaseAPI()
         return try {
             if (!tess.init(dataDir.absolutePath, LANGUAGE)) {
@@ -124,16 +142,26 @@ class ReceiptScanner(
         }
     }.getOrDefault(emptyList())
 
-    private fun ensureTrainedData(): File? = runCatching {
-        val dir = File(context.filesDir, "tessdata")
-        dir.mkdirs()
+    private fun ensureTrainedData(engine: Engine): File? = runCatching {
+        // Tesseract wants the folder that holds "tessdata", not the file.
+        val home = if (engine.home.isEmpty()) {
+            context.filesDir
+        } else {
+            File(context.filesDir, engine.home).apply { mkdirs() }
+        }
+        val dir = File(home, "tessdata").apply { mkdirs() }
         val target = File(dir, "$LANGUAGE.traineddata")
-        if (!target.exists() || target.length() == 0L) {
-            context.assets.open("tessdata/$LANGUAGE.traineddata").use { input ->
+        // An app update can bring a different model, and the copy unpacked on
+        // disk has to follow it. The stamp beside it says which one is there.
+        val stamp = File(dir, "model")
+        val current = stamp.takeIf { it.exists() }?.readText()
+        if (target.length() == 0L || current != engine.stamp) {
+            context.assets.open("${engine.asset}/$LANGUAGE.traineddata").use { input ->
                 target.outputStream().use { output -> input.copyTo(output) }
             }
+            stamp.writeText(engine.stamp)
         }
-        context.filesDir
+        home
     }.getOrNull()
 
     private fun decodeDownscaled(uri: Uri, maxDimension: Int): Bitmap? = runCatching {
