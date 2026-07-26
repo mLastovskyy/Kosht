@@ -11,21 +11,22 @@ Kosht — Expense Tracker
 ## Short description (80 chars max)
 
 ```
-Offline personal finance: spending, accounts, live FX and receipt scanning.
+Spending, accounts, live FX and receipt scanning. Offline; sync if you want it.
 ```
 
 ## Full description (4000 chars max)
 
 ```
 Kosht is a personal finance tracker you will actually keep using. Everything works
-offline and stays on your phone: no accounts, no subscriptions, no cloud.
+offline and needs no sign-up. An account exists only if you want the same figures on
+a second phone. No subscriptions, no ads.
 
 ⚡ Log spending in seconds
 The calculator opens the moment you add a record: type "12.50+3.90", hit Apply, and
 the sum lands in the amount field. Categories sit in a carousel, the date is one tap,
 the note is optional.
 
-📸 Receipt scanning, fully offline
+📸 Receipt scanning, QR first
 Photograph a receipt and the app reads the total, date and store for you. Recognition
 runs on the device — photos never leave it.
 
@@ -66,7 +67,11 @@ a photo or emoji avatar, and toggles that hide anything you do not need.
 A dedicated screen explains every button, plus a full illustrated PDF manual inside the
 app.
 
-Privacy: your data never leaves the device. The app reaches the network only for the
+Privacy: without an account nothing leaves the phone. With one, only your own records
+go to the cloud -- no ads, no analytics, nothing shared with anyone. You can download a
+copy of everything held about you, or delete the account and all of it in one tap.
+
+The app reaches the network only for the
 National Bank rates and, when you tap it, for an update check.
 ```
 
@@ -76,7 +81,8 @@ National Bank rates and, when you tap it, for an update check.
 First public release of Kosht: spending with a built-in calculator, offline receipt
 scanning, multiple accounts, statistics with a configurable week/month/quarter/year
 report, National Bank rates, debts, goals and savings, recurring payments you confirm
-yourself, 18 awards and quiet notifications. All offline, no accounts.
+yourself, 18 awards and quiet notifications. Works offline; syncing between devices is
+optional.
 ```
 
 ## Category and tags

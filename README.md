@@ -67,7 +67,9 @@ Snap a receipt and Kosht reads the total, date and store for you.
 Either way a review dialog shows what was read, and every field stays editable before you save.
 
 ### ☁️ Your money on every device — only if you ask
-Sign in and records, categories, accounts, debts, goals, challenges and awards live in the cloud too, so a second phone shows the same figures the moment you sign in there.
+Sign up and records, categories, accounts, debts, goals, challenges and awards live in the cloud too, so a second phone shows the same figures the moment you sign in there.
+
+Signing up is an email, a six-digit code that Kosht mails you (good for five minutes, counted down on screen), and a password — set only once the address is proven. Forgot it? The same code sets a new one. Address already taken, address unknown, wrong password, expired code: each says what happened and offers the door that fits.
 
 - **Per-record merge.** Two phones edited offline both keep their work; "newest wins" only ever applies within one and the same record.
 - **Deletions travel too**, so something you removed on one device does not come back from the other.
@@ -103,6 +105,14 @@ An evening nudge only if nothing is logged, recurring payments awaiting confirma
 
 ### 🎨 Made for you
 Light & dark themes, Material You dynamic colors, English & Russian interface, a profile with photo or built-in avatars — and interface toggles to hide anything you don't need. Without an account nothing ever leaves the phone; with one, only you can read it.
+
+### 🔒 Consent you can actually withdraw
+Collecting an email address makes this an operator of personal data under the Belarusian law of 07.05.2021 No. 99-З, and the app is built to match rather than to look like it does.
+
+- **The Terms and the Personal data policy** are real documents, shipped as PDFs and readable from Settings — and from the sign-up form, before you agree to them.
+- **Consent is an append-only ledger**, not a flag. What has to be provable is when someone agreed and to which wording, so nothing in it can be updated or deleted — not even by the account that owns it.
+- **Advertising consent is separate, unticked, and never a condition** of having an account. Switch it off in Settings or from the unsubscribe link, which works without signing in.
+- **Every right is a button**: read the documents, download everything held about you, erase the account and all of it for good.
 
 ### 📖 Learn it in minutes
 An illustrated **guide lives right inside Settings**, and a full **PDF manual** with screenshots is one tap away (also in [`docs/MANUAL.pdf`](docs/MANUAL.pdf)).

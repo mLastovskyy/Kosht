@@ -56,6 +56,18 @@ data class UserProfile(
 
 class SettingsRepository(private val context: Context) {
 
+    /**
+     * Whether Android has already been asked to allow notifications. One of
+     * the reminders is on out of the box, so without asking once at the start
+     * it would be switched on and silently never arrive.
+     */
+    val notificationsAsked: Flow<Boolean> = context.dataStore.data
+        .map { it[Keys.notificationsAsked] ?: false }
+
+    suspend fun markNotificationsAsked() {
+        context.dataStore.edit { it[Keys.notificationsAsked] = true }
+    }
+
     private object Keys {
         val currencyCode = stringPreferencesKey("currency_code")
         val themeMode = stringPreferencesKey("theme_mode")
@@ -63,6 +75,7 @@ class SettingsRepository(private val context: Context) {
         val notifyDailyReminder = booleanPreferencesKey("notify_daily_reminder")
         val notifyRecurringDue = booleanPreferencesKey("notify_recurring_due")
         val notifyWeeklySummary = booleanPreferencesKey("notify_weekly_summary")
+        val notificationsAsked = booleanPreferencesKey("notifications_asked")
         val profileName = stringPreferencesKey("profile_name")
         val profileNickname = stringPreferencesKey("profile_nickname")
         val profilePhotoPath = stringPreferencesKey("profile_photo_path")

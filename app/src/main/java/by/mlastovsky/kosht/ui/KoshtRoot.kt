@@ -1,6 +1,12 @@
 package by.mlastovsky.kosht.ui
 
+import android.Manifest
+import android.os.Build
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.runtime.LaunchedEffect
+import by.mlastovsky.kosht.MainViewModel
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -58,6 +64,8 @@ fun KoshtRoot(
         AccountOnboardingScreen(accountViewModel)
         return
     }
+
+    AskForNotificationsOnce()
 
     val navController = rememberNavController()
     val backStackEntry by navController.currentBackStackEntryAsState()
@@ -172,6 +180,33 @@ fun KoshtRoot(
                 EditorScreen(onClose = { navController.popBackStack() })
             }
         }
+    }
+}
+
+/**
+ * "Payments awaiting confirmation" is on out of the box, but Android 13 and
+ * later post nothing until the user allows it — and Settings only asks when a
+ * switch is flipped, which someone who never touched the defaults would never
+ * do. So ask once, after the account question is out of the way, and remember
+ * that it was asked whatever the answer.
+ */
+@Composable
+private fun AskForNotificationsOnce(
+    viewModel: MainViewModel = viewModel(factory = AppViewModelProvider.Factory)
+) {
+    if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU) return
+    val settings by viewModel.settings.collectAsStateWithLifecycle()
+    val asked by viewModel.notificationsAsked.collectAsStateWithLifecycle()
+    val launcher = rememberLauncherForActivityResult(
+        ActivityResultContracts.RequestPermission()
+    ) { }
+    val wanted = settings?.let {
+        it.notifyDailyReminder || it.notifyRecurringDue || it.notifyWeeklySummary
+    } == true
+    LaunchedEffect(asked, wanted) {
+        if (asked || !wanted) return@LaunchedEffect
+        viewModel.markNotificationsAsked()
+        launcher.launch(Manifest.permission.POST_NOTIFICATIONS)
     }
 }
 
