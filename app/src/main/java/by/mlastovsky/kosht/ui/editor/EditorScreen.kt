@@ -15,10 +15,10 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.Orientation
 import androidx.compose.foundation.gestures.draggable
 import androidx.compose.foundation.gestures.rememberDraggableState
-import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -34,6 +34,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.Backspace
 import androidx.compose.material.icons.automirrored.rounded.ReceiptLong
@@ -222,11 +223,21 @@ fun EditorScreen(
         )
 
         AnimatedVisibility(visible = state.scanning) {
-            LinearProgressIndicator(
+            Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 16.dp)
-            )
+                    .padding(horizontal = 16.dp, vertical = 4.dp)
+            ) {
+                Text(
+                    text = stringResource(R.string.scan_ai_progress),
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.primary,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+                Spacer(Modifier.height(6.dp))
+                LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
+            }
         }
 
         TypeToggle(
@@ -237,72 +248,60 @@ fun EditorScreen(
                 .padding(horizontal = 16.dp)
         )
 
-        Box(
+        Column(
             modifier = Modifier
                 .weight(1f)
                 .fillMaxWidth()
-                .typeSwipe(state.type) { next ->
-                    view.performHapticFeedback(HapticFeedbackConstants.CLOCK_TICK)
-                    viewModel.setType(next)
-                }
+                .verticalScroll(rememberScrollState())
         ) {
-            Column(Modifier.fillMaxSize()) {
-                Spacer(Modifier.weight(1f))
+            AmountCard(
+                amountInput = state.amountInput,
+                currencyCode = state.currencyCode,
+                type = state.type,
+                scanned = state.scanned,
+                onClick = {
+                    view.performHapticFeedback(HapticFeedbackConstants.VIRTUAL_KEY)
+                    viewModel.openCalculator()
+                    showCalculator = true
+                },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp, vertical = 12.dp)
+                    .typeSwipe(state.type) { next ->
+                        view.performHapticFeedback(HapticFeedbackConstants.CLOCK_TICK)
+                        viewModel.setType(next)
+                    }
+            )
 
-                AmountDisplay(
-                    amountInput = state.amountInput,
-                    currencyCode = state.currencyCode,
-                    type = state.type,
-                    onClick = {
-                        view.performHapticFeedback(HapticFeedbackConstants.VIRTUAL_KEY)
-                        viewModel.openCalculator()
-                        showCalculator = true
+            CategoryPickerRow(
+                categories = state.categories,
+                selectedId = state.categoryId,
+                onSelect = { id ->
+                    view.performHapticFeedback(HapticFeedbackConstants.CLOCK_TICK)
+                    viewModel.selectCategory(id)
+                },
+                type = state.type,
+                actions = categoryActions,
+                contentPadding = PaddingValues(horizontal = 16.dp)
+            )
+
+            FlowRow(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp, vertical = 8.dp),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalArrangement = Arrangement.spacedBy(4.dp)
+            ) {
+                AssistChip(
+                    onClick = { showDatePicker = true },
+                    leadingIcon = {
+                        Icon(Icons.Rounded.Event, contentDescription = null, Modifier.size(18.dp))
                     },
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(vertical = 8.dp)
+                    label = { Text(relativeDate(state.date), maxLines = 1) }
                 )
 
-                Spacer(Modifier.weight(1.2f))
-            }
-        }
-
-        CategoryPickerRow(
-            categories = state.categories,
-            selectedId = state.categoryId,
-            onSelect = { id ->
-                view.performHapticFeedback(HapticFeedbackConstants.CLOCK_TICK)
-                viewModel.selectCategory(id)
-            },
-            type = state.type,
-            actions = categoryActions,
-            contentPadding = PaddingValues(horizontal = 16.dp)
-        )
-
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 16.dp, vertical = 8.dp),
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-          Row(
-            modifier = Modifier
-                .weight(1f)
-                .horizontalScroll(rememberScrollState()),
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-            verticalAlignment = Alignment.CenterVertically
-          ) {
-            AssistChip(
-                onClick = { showDatePicker = true },
-                leadingIcon = {
-                    Icon(Icons.Rounded.Event, contentDescription = null, Modifier.size(18.dp))
-                },
-                label = { Text(relativeDate(state.date)) }
-            )
-            if (state.multiAccount && state.accounts.size > 1) {
                 val account = state.accounts.firstOrNull { it.id == state.accountId }
-                if (account != null) {
+                if (state.accounts.size > 1 && account != null) {
                     AssistChip(
                         onClick = { showAccountPicker = true },
                         leadingIcon = {
@@ -322,33 +321,34 @@ fun EditorScreen(
                         }
                     )
                 }
-            }
 
-            AssistChip(
-                onClick = { showItems = true },
-                leadingIcon = {
-                    Icon(
-                        Icons.Rounded.ShoppingBasket,
-                        contentDescription = null,
-                        Modifier.size(18.dp)
-                    )
-                },
-                label = {
-                    Text(
-                        text = if (state.items.isEmpty()) {
-                            stringResource(R.string.items_add)
-                        } else {
-                            state.items.size.toString()
+                if (state.itemsAllowed) {
+                    AssistChip(
+                        onClick = { showItems = true },
+                        leadingIcon = {
+                            Icon(
+                                Icons.Rounded.ShoppingBasket,
+                                contentDescription = null,
+                                Modifier.size(18.dp)
+                            )
                         },
-                        maxLines = 1
+                        label = {
+                            Text(
+                                text = if (state.items.isEmpty()) {
+                                    stringResource(R.string.items_add)
+                                } else {
+                                    stringResource(R.string.items_add) +
+                                        " · " + state.items.size
+                                },
+                                maxLines = 1
+                            )
+                        }
                     )
                 }
-            )
 
-            if (state.scanned) {
                 AssistChip(
-                    onClick = { },
-                    enabled = false,
+                    onClick = { showScanSource = true },
+                    enabled = !state.scanning,
                     leadingIcon = {
                         Icon(
                             Icons.Rounded.DocumentScanner,
@@ -356,70 +356,80 @@ fun EditorScreen(
                             Modifier.size(18.dp)
                         )
                     },
-                    label = { Text(stringResource(R.string.scanned_mark), maxLines = 1) }
+                    label = { Text(stringResource(R.string.editor_scan_receipt), maxLines = 1) }
                 )
-            }
-          }
-            IconButton(
-                onClick = { showScanSource = true },
-                enabled = !state.scanning
-            ) {
-                Icon(
-                    Icons.Rounded.DocumentScanner,
-                    contentDescription = stringResource(R.string.editor_scan_receipt),
-                    tint = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            }
-            if (state.receiptUrl != null || state.receiptDocPath != null) {
-                IconButton(onClick = { showEReceipt = true }) {
-                    Icon(
-                        Icons.AutoMirrored.Rounded.ReceiptLong,
-                        contentDescription = stringResource(R.string.ereceipt_open),
-                        tint = MaterialTheme.colorScheme.primary
+
+                if (state.receiptUrl != null || state.receiptDocPath != null) {
+                    AssistChip(
+                        onClick = { showEReceipt = true },
+                        leadingIcon = {
+                            Icon(
+                                Icons.AutoMirrored.Rounded.ReceiptLong,
+                                contentDescription = null,
+                                Modifier.size(18.dp)
+                            )
+                        },
+                        label = { Text(stringResource(R.string.ereceipt_open), maxLines = 1) }
                     )
                 }
-            }
-            if (state.photoPath == null) {
-                IconButton(onClick = { showAttachSource = true }) {
-                    Icon(
-                        Icons.Rounded.AddAPhoto,
-                        contentDescription = stringResource(R.string.attach_photo),
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
-            } else {
+
                 val thumbnail = rememberBitmapFromPath(state.photoPath, maxDimension = 128)
-                Box(
-                    modifier = Modifier
-                        .size(44.dp)
-                        .clip(MaterialTheme.shapes.small)
-                        .background(MaterialTheme.colorScheme.surfaceContainerHigh)
-                        .clickable { showPhotoView = true },
-                    contentAlignment = Alignment.Center
-                ) {
-                    if (thumbnail != null) {
-                        Image(
-                            bitmap = thumbnail,
-                            contentDescription = stringResource(R.string.photo_receipt),
-                            contentScale = ContentScale.Crop,
-                            modifier = Modifier.fillMaxSize()
-                        )
-                    } else {
-                        Icon(
-                            Icons.Rounded.PhotoLibrary,
-                            contentDescription = null,
-                            tint = MaterialTheme.colorScheme.onSurfaceVariant
+                AssistChip(
+                    onClick = {
+                        if (state.photoPath == null) showAttachSource = true else showPhotoView = true
+                    },
+                    leadingIcon = {
+                        if (thumbnail != null) {
+                            Image(
+                                bitmap = thumbnail,
+                                contentDescription = null,
+                                contentScale = ContentScale.Crop,
+                                modifier = Modifier
+                                    .size(18.dp)
+                                    .clip(MaterialTheme.shapes.extraSmall)
+                            )
+                        } else {
+                            Icon(
+                                Icons.Rounded.AddAPhoto,
+                                contentDescription = null,
+                                Modifier.size(18.dp)
+                            )
+                        }
+                    },
+                    label = {
+                        Text(
+                            text = stringResource(
+                                if (state.photoPath == null) {
+                                    R.string.attach_photo
+                                } else {
+                                    R.string.photo_receipt
+                                }
+                            ),
+                            maxLines = 1
                         )
                     }
-                }
+                )
             }
-        }
 
-        AnimatedVisibility(visible = state.debtCategory) {
+            AnimatedVisibility(visible = state.debtCategory) {
+                OutlinedTextField(
+                    value = state.debtPerson,
+                    onValueChange = viewModel::setDebtPerson,
+                    placeholder = { Text(stringResource(R.string.debt_person_owe)) },
+                    singleLine = true,
+                    shape = MaterialTheme.shapes.medium,
+                    textStyle = MaterialTheme.typography.bodyMedium,
+                    keyboardOptions = TextInput.Sentence,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp, vertical = 6.dp)
+                )
+            }
+
             OutlinedTextField(
-                value = state.debtPerson,
-                onValueChange = viewModel::setDebtPerson,
-                placeholder = { Text(stringResource(R.string.debt_person_owe)) },
+                value = state.note,
+                onValueChange = viewModel::setNote,
+                placeholder = { Text(stringResource(R.string.editor_note_hint)) },
                 singleLine = true,
                 shape = MaterialTheme.shapes.medium,
                 textStyle = MaterialTheme.typography.bodyMedium,
@@ -429,19 +439,6 @@ fun EditorScreen(
                     .padding(horizontal = 16.dp, vertical = 6.dp)
             )
         }
-
-        OutlinedTextField(
-            value = state.note,
-            onValueChange = viewModel::setNote,
-            placeholder = { Text(stringResource(R.string.editor_note_hint)) },
-            singleLine = true,
-            shape = MaterialTheme.shapes.medium,
-            textStyle = MaterialTheme.typography.bodyMedium,
-            keyboardOptions = TextInput.Sentence,
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 16.dp, vertical = 6.dp)
-        )
 
         Button(
             onClick = {
@@ -853,10 +850,11 @@ private fun TypeToggle(
 }
 
 @Composable
-private fun AmountDisplay(
+private fun AmountCard(
     amountInput: String,
     currencyCode: String,
     type: TransactionType,
+    scanned: Boolean,
     onClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -875,42 +873,48 @@ private fun AmountDisplay(
         label = "amountColor"
     )
     val fontSize = when {
-        displayValue.length > 12 -> 40.sp
-        displayValue.length > 8 -> 48.sp
-        else -> 57.sp
+        displayValue.length > 12 -> 36.sp
+        displayValue.length > 8 -> 44.sp
+        else -> 52.sp
     }
 
     Box(
-        modifier = modifier.clickable(onClick = onClick),
+        modifier = modifier
+            .clip(MaterialTheme.shapes.large)
+            .background(MaterialTheme.colorScheme.surfaceContainerLow)
+            .clickable(onClick = onClick)
+            .padding(vertical = 20.dp, horizontal = 16.dp),
         contentAlignment = Alignment.Center
     ) {
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
             Row(verticalAlignment = Alignment.Top) {
                 Text(
                     text = displayValue,
-                    style = MaterialTheme.typography.displayLarge.copy(fontSize = fontSize),
+                    style = MaterialTheme.typography.displayMedium.copy(fontSize = fontSize),
                     color = color,
                     maxLines = 1
                 )
                 Spacer(Modifier.width(6.dp))
                 Text(
                     text = symbol,
-                    style = MaterialTheme.typography.headlineSmall,
+                    style = MaterialTheme.typography.titleLarge,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.padding(top = 8.dp)
+                    modifier = Modifier.padding(top = 6.dp)
                 )
             }
-            Spacer(Modifier.height(8.dp))
+            Spacer(Modifier.height(6.dp))
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Icon(
-                    Icons.Rounded.Calculate,
+                    if (scanned) Icons.Rounded.DocumentScanner else Icons.Rounded.Calculate,
                     contentDescription = null,
                     tint = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.size(16.dp)
                 )
                 Spacer(Modifier.width(4.dp))
                 Text(
-                    text = stringResource(R.string.editor_tap_amount),
+                    text = stringResource(
+                        if (scanned) R.string.scanned_mark else R.string.editor_tap_amount
+                    ),
                     style = MaterialTheme.typography.labelMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     maxLines = 1,

@@ -72,8 +72,9 @@
     <string name="photo_receipt">Receipt photo</string>
     <string name="photo_remove">Remove photo</string>
     <string name="photo_remove_confirm">Remove the profile photo? Your name and nickname stay.</string>
+    <string name="scan_ai_progress">AI is reading the receipt — this takes a few seconds</string>
     <string name="scan_review_title">Recognized from receipt</string>
-    <string name="scan_review_hint">Check the values and correct them if needed</string>
+    <string name="scan_review_hint">Read by the AI on your phone — check the values and correct them if needed</string>
     <string name="scan_review_date">Date: %1$s</string>
     <string name="scanned_mark">Scanned</string>
     <string name="scan_review_items">Read off the receipt: %1$d items</string>
@@ -506,6 +507,7 @@
 
     <!-- Category management -->
     <string name="category_new">New category</string>
+    <string name="category_new_short">New</string>
     <string name="category_edit">Edit category</string>
     <string name="category_picture">Picture instead of an icon</string>
     <string name="category_picture_set">Your own picture</string>
@@ -626,4 +628,23 @@ With the lock on, the task switcher stops keeping a picture of the app, so the b
     <string name="category_debt_income">Debt</string>
     <string name="category_savings_income">From savings</string>
     <string name="category_other_income">Other</string>
+
+    <!-- The short tour a new user sees once -->
+    <string name="tour_skip">Skip</string>
+    <string name="tour_next">Next</string>
+    <string name="tour_start">Get started</string>
+    <string name="tour_replay">Quick tour</string>
+    <string name="tour_replay_desc">The six screens a new user is shown</string>
+    <string name="tour_record_title">A record in three taps</string>
+    <string name="tour_record_body">The + button opens the editor: the calculator asks for the sum, you pick a category, Save writes it down. Expense or income — the switch at the top, or a swipe sideways across the amount.</string>
+    <string name="tour_scan_title">Photograph the receipt instead of typing</string>
+    <string name="tour_scan_body">"Scan receipt" reads the slip on the phone itself: a small AI model finds the total, the shop and the items. A QR code on the slip is followed to the electronic receipt.</string>
+    <string name="tour_tabs_title">Five screens, one swipe apart</string>
+    <string name="tour_tabs_body">Home with the balance, History, Statistics, Wallet, Settings. Swipe sideways or press the bottom row.</string>
+    <string name="tour_wallet_title">The Wallet keeps everything else</string>
+    <string name="tour_wallet_body">Accounts and transfers between them, regular payments (never charged behind your back — you confirm each one), debts, goals and savings.</string>
+    <string name="tour_actions_title">Some categories do more than count</string>
+    <string name="tour_actions_body">Income filed under "Debt" opens a debt in the Wallet; "Debt repaid" and "To savings" pay one off and top the other up. Delete such a record and whatever it moved comes back.</string>
+    <string name="tour_streak_title">A streak, and awards for it</string>
+    <string name="tour_streak_body">Days spent inside your daily budget build a streak, and achievements arrive on their own. The full manual lives in Settings → Guide.</string>
 </resources>

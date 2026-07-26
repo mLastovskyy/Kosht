@@ -14,12 +14,11 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
@@ -107,15 +106,25 @@ fun CategoryPickerRow(
         if (dragging == null && order != null && categories.map { it.id } == order) order = null
     }
 
+    LaunchedEffect(shown, selectedId) {
+        if (dragging != null) return@LaunchedEffect
+        val index = shown.indexOfFirst { it.id == selectedId }
+        val onScreen = listState.layoutInfo.visibleItemsInfo.any { it.key == selectedId }
+        if (index >= 0 && !onScreen) listState.scrollToItem(index)
+    }
+
     fun settle() {
         val id = dragging ?: return
         val current = order ?: return
         val info = listState.layoutInfo
         val held = info.visibleItemsInfo.firstOrNull { it.key == id } ?: return
         val center = held.offset + held.size / 2f + dragOffset
-        val over = info.visibleItemsInfo.firstOrNull {
+        val neighbours = info.visibleItemsInfo.filter { it.key is Long && it.key != id }
 
-            it.key is Long && it.key != id && center >= it.offset && center <= it.offset + it.size
+        val over = if (dragOffset > 0f) {
+            neighbours.lastOrNull { it.offset > held.offset && center >= it.offset + it.size / 2f }
+        } else {
+            neighbours.firstOrNull { it.offset < held.offset && center <= it.offset + it.size / 2f }
         } ?: return
         val from = current.indexOf(id)
         val to = current.indexOf(over.key as Long)
@@ -124,6 +133,14 @@ fun CategoryPickerRow(
 
         dragOffset += held.offset - over.offset
         view.performHapticFeedback(HapticFeedbackConstants.CLOCK_TICK)
+    }
+
+    fun clampToRow(id: Long) {
+        val info = listState.layoutInfo
+        val held = info.visibleItemsInfo.firstOrNull { it.key == id } ?: return
+        val min = (info.viewportStartOffset - held.offset).toFloat()
+        val max = (info.viewportEndOffset - held.size - held.offset).toFloat()
+        if (min <= max) dragOffset = dragOffset.coerceIn(min, max)
     }
 
     LaunchedEffect(dragging) {
@@ -204,6 +221,7 @@ fun CategoryPickerRow(
                                             kotlin.math.abs(amount.y)
                                         if (onReorder == null) return@detectDragGesturesAfterLongPress
                                         dragOffset += amount.x
+                                        clampToRow(category.id)
                                         settle()
                                     },
                                     onDragEnd = {
@@ -230,8 +248,8 @@ fun CategoryPickerRow(
                             }
                         }
                     )
+                    .width(TILE_WIDTH)
                     .padding(horizontal = 6.dp, vertical = 8.dp)
-                    .widthIn(min = TILE_MIN_WIDTH)
             ) {
                 CategoryTile(
                     iconKey = category.iconKey,
@@ -251,10 +269,10 @@ fun CategoryPickerRow(
                     horizontalAlignment = Alignment.CenterHorizontally,
                     modifier = Modifier
                         .animateItem()
+                        .width(TILE_WIDTH)
                         .clip(MaterialTheme.shapes.medium)
                         .clickable(onClick = onAddNew)
                         .padding(horizontal = 6.dp, vertical = 8.dp)
-                        .widthIn(min = TILE_MIN_WIDTH)
                 ) {
                     Box(
                         modifier = Modifier
@@ -270,7 +288,7 @@ fun CategoryPickerRow(
                         )
                     }
                     Spacer(Modifier.height(4.dp))
-                    TileLabel(stringResource(R.string.category_new), selected = false)
+                    TileLabel(stringResource(R.string.category_new_short), selected = false)
                 }
             }
         }
@@ -348,7 +366,7 @@ private fun CategoryTile(
         fontWeight = if (selected) FontWeight.Bold else FontWeight.Normal,
         reveal = reveal,
         revealOnClick = false,
-        modifier = Modifier.widthIn(max = LABEL_MAX_WIDTH)
+        modifier = Modifier.fillMaxWidth()
     )
 }
 
@@ -360,7 +378,7 @@ private fun TileLabel(text: String, selected: Boolean) {
         fontWeight = if (selected) FontWeight.Bold else FontWeight.Normal,
         maxLines = 1,
         overflow = TextOverflow.Ellipsis,
-        modifier = Modifier.widthIn(max = LABEL_MAX_WIDTH)
+        modifier = Modifier.fillMaxWidth()
     )
 }
 
@@ -477,11 +495,10 @@ fun CategoryDialog(
 
 private const val ADD_KEY = "add"
 private const val NAME_MAX = 40
-private const val HELD_SCALE = 1.12f
+private const val HELD_SCALE = 1.06f
 
 private const val MOVE_SLOP = 24f
 
-private val TILE_MIN_WIDTH = 56.dp
-private val LABEL_MAX_WIDTH = 72.dp
+private val TILE_WIDTH = 76.dp
 private val AUTO_SCROLL_EDGE = 32.dp
 private const val AUTO_SCROLL_STEP = 12f

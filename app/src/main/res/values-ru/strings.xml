@@ -72,8 +72,9 @@
     <string name="photo_receipt">Фото чека</string>
     <string name="photo_remove">Удалить фото</string>
     <string name="photo_remove_confirm">Убрать фото профиля? Имя и никнейм останутся.</string>
+    <string name="scan_ai_progress">ИИ разбирает чек — это занимает несколько секунд</string>
     <string name="scan_review_title">Распознано с чека</string>
-    <string name="scan_review_hint">Проверьте значения и поправьте при необходимости</string>
+    <string name="scan_review_hint">Разобрано ИИ прямо на телефоне — проверьте значения и поправьте при необходимости</string>
     <string name="scan_review_date">Дата: %1$s</string>
     <string name="scanned_mark">Скан чека</string>
     <string name="scan_review_items">Распознано позиций: %1$d</string>
@@ -510,6 +511,7 @@
 
     <!-- Категории: управление -->
     <string name="category_new">Новая категория</string>
+    <string name="category_new_short">Новая</string>
     <string name="category_edit">Изменить категорию</string>
     <string name="category_picture">Своя картинка вместо иконки</string>
     <string name="category_picture_set">Своя картинка</string>
@@ -630,4 +632,23 @@
     <string name="category_debt_income">Долг</string>
     <string name="category_savings_income">Из накоплений</string>
     <string name="category_other_income">Прочее</string>
+
+    <!-- Короткое знакомство при первом запуске -->
+    <string name="tour_skip">Пропустить</string>
+    <string name="tour_next">Дальше</string>
+    <string name="tour_start">Начать</string>
+    <string name="tour_replay">Краткое знакомство</string>
+    <string name="tour_replay_desc">Шесть экранов, которые видит новый пользователь</string>
+    <string name="tour_record_title">Запись в три касания</string>
+    <string name="tour_record_body">Кнопка + открывает редактор: калькулятор спрашивает сумму, вы выбираете категорию, «Сохранить» записывает. Расход или доход — переключатель сверху или свайп в сторону по сумме.</string>
+    <string name="tour_scan_title">Сфотографируйте чек вместо ввода</string>
+    <string name="tour_scan_body">«Скан чека» разбирает чек прямо на телефоне: небольшая ИИ-модель находит итог, магазин и позиции. QR-код на чеке приведёт к электронному чеку.</string>
+    <string name="tour_tabs_title">Пять экранов в одном свайпе</string>
+    <string name="tour_tabs_body">Главная с балансом, История, Статистика, Кошелёк, Настройки. Листайте вбок или нажимайте нижний ряд.</string>
+    <string name="tour_wallet_title">В Кошельке — всё остальное</string>
+    <string name="tour_wallet_body">Счета и переводы между ними, регулярные платежи (сами они не списываются — каждый подтверждаете вы), долги, цели и накопления.</string>
+    <string name="tour_actions_title">Некоторые категории не только считают</string>
+    <string name="tour_actions_body">Доход в категории «Долг» открывает долг в Кошельке, «Вернул долг» и «В накопления» гасят его и пополняют копилку. Удалите такую запись — и то, что она сдвинула, вернётся обратно.</string>
+    <string name="tour_streak_title">Стрик и награды за него</string>
+    <string name="tour_streak_body">Дни в рамках дневного бюджета складываются в стрик, достижения приходят сами. Полное руководство — в «Настройки → Руководство».</string>
 </resources>
