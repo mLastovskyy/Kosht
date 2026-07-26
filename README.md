@@ -37,7 +37,7 @@ A clean editor, smart category carousel and haptic feedback make adding a transa
 Adding a record drops you straight into a roomy bottom-sheet calculator — the editor itself stays uncluttered, and tapping the amount brings it back any time. Type `12,50+3,90+8`, hit the smart **=** to evaluate (with proper operator precedence), and **Apply** writes the sum into the amount field.
 
 ### 💳 Multiple accounts
-Cards, cash, whatever you use. One account by default keeps the app dead simple; add more and Kosht unlocks per-account balances on Home, an account picker in the editor, an account choice when confirming a recurring payment and an account filter in Statistics.
+Cards, cash, whatever you use. One account by default keeps the app dead simple; add more and Kosht unlocks per-account balances on Home, an account picker in the editor, an account choice when confirming a recurring payment and an account filter in Statistics. Tap an account to set its real balance, or use the pencil to rename it and change its icon and color.
 
 ### 📸 Receipt scanning — fully offline
 Snap a photo of a receipt and Kosht reads the total, date and store name for you, then attaches the photo to the record. Recognition runs 100% on your device — receipts never leave your phone. Review and correct anything before saving.
@@ -45,7 +45,7 @@ Snap a photo of a receipt and Kosht reads the total, date and store name for you
 ### 📊 Statistics three ways
 - **Charts** — an animated category donut and daily spending bars
 - **Calendar heatmap** — instantly spot your expensive days
-- **Monthly report** — spending vs last month, top category, no-spend days, and personalized rule-based tips ("Groceries take 45% of spending — try a weekly limit challenge")
+- **Report, on your terms** — pick the window (week, month, quarter, year) and walk back through past periods; every metric is compared with the previous period of the same length, and you choose exactly which rows to show. Plus personalized rule-based tips ("Groceries take 45% of spending — try a weekly limit challenge")
 
 ### 💱 Multi-currency done right
 - **Live official rates** from the National Bank, refreshed automatically or by hand — with the update time always visible
@@ -62,11 +62,11 @@ Snap a photo of a receipt and Kosht reads the total, date and store name for you
 
 ### 🏆 Gamification that helps, not annoys
 - **Under-budget streak** — days in a row you stayed within your daily budget (auto-calculated or set your own)
-- **Custom challenges** — "spend under 100 on eating out this week", "no-spend weekend", "save 200 this month" — you configure, Kosht tracks
-- **9 badges** to unlock as your discipline grows
+- **Custom challenges** — "spend under 100 on eating out this week", "no-spend weekend", "save 200 this month" — you configure, Kosht tracks, and a tap re-opens any challenge for editing
+- **18 awards**, from first steps to a 100-day streak, laid out as swipeable pages. Tap one to see how to earn it, how far along you are ("6 / 10"), and the day you earned it — once earned, it is yours forever
 
 ### 🔔 Smart notifications (all optional)
-An evening nudge only if nothing is logged, recurring payments awaiting confirmation, and a Monday money digest.
+An evening nudge only if nothing is logged, recurring payments awaiting confirmation, and a Monday money digest. All of them are quiet by design — no heads-up popups, no forced sound — and a tap takes you straight into the app.
 
 ### 🎨 Made for you
 Light & dark themes, Material You dynamic colors, English & Russian interface, a profile with photo or built-in avatars — and interface toggles to hide anything you don't need. Your data stays on your device. Always.

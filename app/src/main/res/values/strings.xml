@@ -37,7 +37,7 @@
     <string name="profile_nickname">Nickname</string>
     <string name="profile_default_name">Friend</string>
     <string name="profile_edit_hint">Tap to set up your profile</string>
-    <string name="profile_photo_hint">Tap the avatar to change the photo</string>
+    <string name="profile_photo_hint">Tap the avatar to pick a photo, press and hold to remove it</string>
     <string name="home_income">Income</string>
     <string name="home_expenses">Expenses</string>
     <string name="home_recent">Recent</string>
@@ -62,6 +62,7 @@
     <string name="attach_photo">Attach photo</string>
     <string name="photo_receipt">Receipt photo</string>
     <string name="photo_remove">Remove photo</string>
+    <string name="photo_remove_confirm">Remove the profile photo? Your name and nickname stay.</string>
     <string name="scan_review_title">Recognized from receipt</string>
     <string name="scan_review_hint">Check the values and correct them if needed</string>
     <string name="scan_review_date">Date: %1$s</string>
@@ -87,21 +88,30 @@
     <string name="stats_view_calendar">Calendar</string>
     <string name="stats_empty_day">No transactions this day</string>
     <string name="stats_view_report">Report</string>
-    <string name="report_verdict_great">Great month!</string>
+    <string name="report_verdict_great">Great result!</string>
     <string name="report_verdict_ok">Not bad, but could be better</string>
     <string name="report_verdict_bad">Spending exceeded income</string>
     <string name="report_spent">Spent</string>
     <string name="report_income">Income</string>
-    <string name="report_net">Month result</string>
+    <string name="report_net">Result</string>
     <string name="report_avg_day">Average per day</string>
     <string name="report_free_days">Days without spending</string>
     <string name="report_top_category">Top category</string>
     <string name="report_tips">Tips</string>
+    <string name="report_period_week">Week</string>
+    <string name="report_period_month">Month</string>
+    <string name="report_period_quarter">Quarter</string>
+    <string name="report_period_year">Year</string>
+    <string name="report_quarter_label">Q%1$d %2$d</string>
+    <string name="report_fields_title">Report metrics</string>
+    <string name="report_period_pick">Choose the period</string>
+    <string name="auto_calc">Calculator on add</string>
+    <string name="auto_calc_desc">Open the calculator automatically for a new record</string>
     <string name="tip_overspend">You spent %1$s more than you earned. Review recurring payments and the biggest category.</string>
-    <string name="tip_growth">Spending grew %1$d%% vs last month. Check what changed.</string>
+    <string name="tip_growth">Spending grew %1$d%% vs the previous period. Check what changed.</string>
     <string name="tip_top_heavy">%1$s takes %2$d%% of expenses. A weekly limit challenge could help.</string>
     <string name="tip_start_saving">The month is in the black — try setting aside %1$s (10%%) toward a goal.</string>
-    <string name="tip_keep_it_up">Spending is down %1$d%% vs last month. Keep it up!</string>
+    <string name="tip_keep_it_up">Spending is down %1$d%% vs the previous period. Keep it up!</string>
 
     <!-- Settings -->
     <string name="settings_appearance">Appearance</string>
@@ -204,7 +214,7 @@
     <string name="challenge_duration_week">Week</string>
     <string name="challenge_duration_month_end">Until month end</string>
     <string name="challenge_duration_30">30 days</string>
-    <string name="badges_title">Badges</string>
+    <string name="badges_title">Awards</string>
     <string name="badge_first_steps">First steps</string>
     <string name="badge_ten">10 records</string>
     <string name="badge_hundred">Century</string>
@@ -214,6 +224,38 @@
     <string name="badge_saver">Money box</string>
     <string name="badge_goal_done">Goal crusher</string>
     <string name="badge_surplus">In the black</string>
+    <string name="badge_income_first">First income</string>
+    <string name="badge_first_goal">Dreamer</string>
+    <string name="badge_challenge_done">Challenger</string>
+    <string name="badge_photo10">Archivist</string>
+    <string name="badge_big_saver">Treasurer</string>
+    <string name="badge_goal_three">Triple crown</string>
+    <string name="badge_challenge_five">Champion</string>
+    <string name="badge_five_hundred">Five hundred</string>
+    <string name="badge_streak100">Budget legend</string>
+    <string name="badge_first_steps_desc">Add your first record — expense or income.</string>
+    <string name="badge_income_first_desc">Record your first income.</string>
+    <string name="badge_ten_desc">Add 10 records.</string>
+    <string name="badge_scanner_desc">Scan or attach your first receipt photo.</string>
+    <string name="badge_saver_desc">Set aside money for the first time.</string>
+    <string name="badge_first_goal_desc">Create your first savings goal.</string>
+    <string name="badge_streak7_desc">Stay within the daily budget 7 days in a row.</string>
+    <string name="badge_surplus_desc">Finish a month with income above spending.</string>
+    <string name="badge_goal_done_desc">Reach a savings goal.</string>
+    <string name="badge_challenge_done_desc">Complete a challenge.</string>
+    <string name="badge_photo10_desc">Attach 10 receipt photos.</string>
+    <string name="badge_hundred_desc">Add 100 records.</string>
+    <string name="badge_streak30_desc">Stay within the daily budget 30 days in a row.</string>
+    <string name="badge_big_saver_desc">Save up a total of 1000 BYN.</string>
+    <string name="badge_goal_three_desc">Reach 3 savings goals.</string>
+    <string name="badge_challenge_five_desc">Complete 5 challenges.</string>
+    <string name="badge_five_hundred_desc">Add 500 records.</string>
+    <string name="badge_streak100_desc">Stay within the daily budget 100 days in a row.</string>
+    <string name="award_unlocked_at">Earned %1$s</string>
+    <string name="award_progress">Progress: %1$s</string>
+    <string name="action_close">Close</string>
+    <string name="challenge_until">Until %1$s</string>
+    <string name="account_edit">Edit account</string>
 
     <!-- Category management -->
     <string name="category_new">New category</string>
@@ -240,19 +282,19 @@
     <string name="guide_history_title">History</string>
     <string name="guide_history_body">Arrows switch months. The search field filters by note and custom category names. Chips: All / Expense / Income, "Category" opens a category picker (tap ✕ on the chip to clear), "Period" opens a calendar where you select a single day or a range — the period replaces month navigation until you clear it with ✕. Records are grouped by day with a net total per day. Swipe a row left to delete — an Undo snackbar appears. Tap a row to edit it.</string>
     <string name="guide_stats_title">Statistics</string>
-    <string name="guide_stats_body">Three views via the round buttons: 1) Charts — a donut of categories with the total in the middle and daily bars below; 2) Calendar — a heatmap where a darker day means more spent; tap a day to see its records; 3) Report — the month\'s verdict, spending vs last month, income, result, daily average, no-spend days, top category and personalized tips. The Expense/Income toggle applies everywhere, arrows switch months.</string>
+    <string name="guide_stats_body">Three views via the round buttons: 1) Charts — a donut of categories with the total in the middle and daily bars below; 2) Calendar — a heatmap where a darker day means more spent; tap a day to see its records; 3) Report — the verdict for a period you choose: chips switch between week, month, quarter and year, and the arrows walk back through past periods. It shows spending vs the previous period of the same length, income, result, daily average, no-spend days, top category and personalized tips; the slider icon picks exactly which of those rows you want to see. The Expense/Income toggle applies everywhere, arrows switch months.</string>
     <string name="guide_wallet_title">Wallet: rates &amp; payments</string>
     <string name="guide_wallet_body">The NBRB rates card shows official rates with the update time — the arrow button refreshes them manually. Any amount in a foreign currency shows its ≈ BYN equivalent. Changing the app currency in Settings converts all stored amounts at the current rate; each expense also freezes its BYN value at payment time, so history never drifts. Recurring payments: + adds one — title, amount, currency, the charge date picked in a calendar and a frequency (weekly / monthly / every 3 months / yearly). Nothing is charged silently: due payments appear in "Awaiting confirmation", and Confirm records the expense (for a foreign currency you can adjust the rate; with several accounts you also pick which one the payment is deducted from). The switch pauses a payment, the trash deletes it.</string>
     <string name="guide_savings_title">Debts, goals &amp; savings</string>
     <string name="guide_savings_body">Debts: + adds one — who, direction (I owe / owed to me), amount in any currency, note. The two tiles total both directions in BYN. Tap a debt to repay a part, close it or delete it. Goals: + creates a goal with a target amount; deposits linked to the goal fill its progress bar, and reaching the target celebrates 🎉. Savings: "Set aside" and "Withdraw" record movements (optionally toward a goal), the journal below lists them with BYN equivalents; the trash removes an entry.</string>
     <string name="guide_achievements_title">Achievements</string>
-    <string name="guide_achievements_body">Open with the trophy on Home. The streak card counts consecutive days you stayed within the daily budget (set it in Settings, auto = last month\'s average). Challenges: + creates one — Limit (spend under X, optionally in one category), No spend, or Save up (set aside X) — for a week, until month end or 30 days. Progress updates live; the trash removes a challenge. Badges below unlock automatically as you use the app.</string>
+    <string name="guide_achievements_body">Open with the trophy on Home. The streak card counts consecutive days you stayed within the daily budget (set it in Settings, auto = last month\'s average). Challenges: + creates one — Limit (spend under X, optionally in one category), No spend, or Save up (set aside X) — for a week, until month end or 30 days. Progress updates live; tap a challenge to edit its title, amount, category and end date, the trash removes it. Awards below scroll horizontally from easy to hard and unlock automatically as you use the app — tap any award to see how to earn it, your progress toward it (like "6 / 10"), and the date you earned it. Once earned an award stays yours forever, even if the streak resets.</string>
     <string name="guide_accounts_title">Accounts: cards &amp; cash</string>
-    <string name="guide_accounts_body">By default there is a single account and the app looks perfectly simple. Add more (Settings → Accounts: name, icon, color — e.g. Cash, a second card) and Kosht lights up: the editor gets an account chip next to the date so you choose where the money comes from or goes to, confirming a recurring payment asks which account to deduct from, Home shows a balance pill per account under the main card, and Statistics gains an account filter. Deleting an account moves its records to the primary one.</string>
+    <string name="guide_accounts_body">By default there is a single account and the app looks perfectly simple. Add more (Settings → Accounts: name, icon, color — e.g. Cash, a second card) and Kosht lights up: the editor gets an account chip next to the date so you choose where the money comes from or goes to, confirming a recurring payment asks which account to deduct from, Home shows a balance pill per account under the main card, and Statistics gains an account filter. Tapping an account opens its card: the pencil (or a tap on the name) reveals renaming plus icon and color, the balance field sets the real amount, and the trash icon deletes it — its records move to the primary account.</string>
     <string name="guide_calc_title">Amount calculator</string>
     <string name="guide_calc_body">The calculator lives in a full-width bottom sheet: it opens by itself for a new record and whenever you tap the amount. The right column of the keypad holds ÷ × − +. Type expressions like 12,50+3,90+8. While an operation is unfinished the big button turns into = — tap it to evaluate. Apply writes the result into the amount field and closes the sheet; Cancel or a swipe down leaves the amount untouched. Multiplication and division take precedence, as they should.</string>
     <string name="guide_settings_title">Settings</string>
-    <string name="guide_settings_body">Profile — tap to set a photo from the gallery or one of the built-in avatars, remove it, and set your name and nickname (used in greetings and reports). Theme: system/light/dark plus Material You dynamic colors. Language: system, Russian or English. Currency — switching converts every stored amount at the live NBRB rate. Daily budget powers the streak. Notifications: an evening reminder (only if nothing was logged), payments awaiting confirmation and a Monday summary — each with its own switch.</string>
+    <string name="guide_settings_body">Profile — tap to set a photo from the gallery or one of the built-in avatars, press and hold the avatar to remove the photo, and set your name and nickname (used in greetings and reports). Interface toggles hide anything you do not need and control whether the calculator opens by itself when adding a record. Theme: system/light/dark plus Material You dynamic colors. Language: system, Russian or English. Currency — switching converts every stored amount at the live NBRB rate. Daily budget powers the streak. Notifications: an evening reminder (only if nothing was logged), payments awaiting confirmation and a Monday summary — each with its own switch.</string>
 
     <!-- Built-in categories -->
     <string name="category_groceries">Groceries</string>
