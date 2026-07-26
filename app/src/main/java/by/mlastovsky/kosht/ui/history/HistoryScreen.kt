@@ -71,6 +71,7 @@ import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneOffset
 import java.time.format.DateTimeFormatter
+import by.mlastovsky.kosht.ui.components.TextInput
 
 @Composable
 fun HistoryScreen(
@@ -130,6 +131,7 @@ fun HistoryScreen(
                 },
                 singleLine = true,
                 shape = MaterialTheme.shapes.large,
+                keyboardOptions = TextInput.Sentence,
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(horizontal = 16.dp)

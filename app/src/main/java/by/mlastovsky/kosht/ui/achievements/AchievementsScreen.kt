@@ -97,6 +97,7 @@ import java.time.ZoneId
 import java.time.ZoneOffset
 import java.time.format.DateTimeFormatter
 import java.util.Locale
+import by.mlastovsky.kosht.ui.components.TextInput
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -642,6 +643,7 @@ private fun EditChallengeDialog(
                     onValueChange = { title = it.take(60) },
                     label = { Text(stringResource(R.string.recurring_title_hint)) },
                     singleLine = true,
+                    keyboardOptions = TextInput.Sentence,
                     modifier = Modifier.fillMaxWidth()
                 )
                 if (needsAmount) {
@@ -814,6 +816,7 @@ private fun AddChallengeDialog(
                     onValueChange = { title = it.take(60) },
                     label = { Text(stringResource(R.string.recurring_title_hint)) },
                     singleLine = true,
+                    keyboardOptions = TextInput.Sentence,
                     modifier = Modifier.fillMaxWidth()
                 )
                 if (needsAmount) {

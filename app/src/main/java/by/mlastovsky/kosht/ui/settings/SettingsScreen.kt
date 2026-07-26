@@ -20,7 +20,13 @@ import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.HelpOutline
+import androidx.compose.material.icons.automirrored.rounded.Logout
 import androidx.compose.material.icons.rounded.AccountBalanceWallet
+import androidx.compose.material.icons.rounded.CloudDone
+import androidx.compose.material.icons.rounded.CloudOff
+import androidx.compose.material.icons.rounded.CloudSync
+import androidx.compose.material.icons.rounded.PersonAddAlt
+import androidx.compose.material.icons.rounded.Sync
 import androidx.compose.material.icons.rounded.BrightnessMedium
 import androidx.compose.material.icons.rounded.Calculate
 import androidx.compose.material.icons.rounded.DateRange
@@ -42,6 +48,7 @@ import androidx.compose.material3.Checkbox
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
+import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.ListItem
 import androidx.compose.material3.ListItemDefaults
 import androidx.compose.material3.MaterialTheme
@@ -69,11 +76,14 @@ import by.mlastovsky.kosht.model.ThemeMode
 import by.mlastovsky.kosht.ui.AppViewModelProvider
 import java.util.Currency
 import java.util.Locale
+import by.mlastovsky.kosht.ui.components.TextInput
 
 @Composable
 fun SettingsScreen(
     onOpenGuide: () -> Unit,
-    viewModel: SettingsViewModel = viewModel(factory = AppViewModelProvider.Factory)
+    viewModel: SettingsViewModel = viewModel(factory = AppViewModelProvider.Factory),
+    accountViewModel: by.mlastovsky.kosht.ui.account.AccountViewModel =
+        viewModel(factory = AppViewModelProvider.Factory)
 ) {
     val settings by viewModel.settings.collectAsStateWithLifecycle()
     val language by viewModel.language.collectAsStateWithLifecycle()
@@ -127,6 +137,11 @@ fun SettingsScreen(
                 modifier = Modifier.clickable { showProfileDialog = true }
             )
             }
+        }
+
+        if (accountViewModel.isConfigured) {
+            SectionHeader(stringResource(R.string.account_title))
+            SettingsCard { AccountSettings(accountViewModel) }
         }
 
         SectionHeader(stringResource(R.string.settings_appearance))
@@ -394,33 +409,85 @@ fun SettingsScreen(
         )
 
         val offlineUpdateMessage = stringResource(R.string.update_offline)
-        (updateCheck as? UpdateCheckState.Done)?.let { done ->
-            val status = done.status
-            if (status is by.mlastovsky.kosht.data.UpdateStatus.Failed) {
-                // Unreachable server is not worth a dialog — a toast says it.
-                androidx.compose.runtime.LaunchedEffect(done) {
-                    android.widget.Toast
-                        .makeText(context, offlineUpdateMessage, android.widget.Toast.LENGTH_LONG)
-                        .show()
-                    viewModel.dismissUpdateCheck()
-                }
-            } else {
-                UpdateResultDialog(
-                    available = status as? by.mlastovsky.kosht.data.UpdateStatus.Available,
-                    onDownload = { url ->
-                        runCatching {
-                            context.startActivity(
-                                android.content.Intent(
-                                    android.content.Intent.ACTION_VIEW,
-                                    android.net.Uri.parse(url)
-                                )
-                            )
-                        }
-                        viewModel.dismissUpdateCheck()
-                    },
-                    onDismiss = viewModel::dismissUpdateCheck
-                )
+        // Coming back from the "install unknown apps" screen resumes the update.
+        val installPermissionLauncher = rememberLauncherForActivityResult(
+            ActivityResultContracts.StartActivityForResult()
+        ) {
+            (updateCheck as? UpdateCheckState.NeedsInstallPermission)?.let {
+                viewModel.installUpdate(it.available)
             }
+        }
+        when (val state = updateCheck) {
+            is UpdateCheckState.Done -> {
+                val status = state.status
+                if (status is by.mlastovsky.kosht.data.UpdateStatus.Failed) {
+                    // Unreachable server is not worth a dialog — a toast says it.
+                    androidx.compose.runtime.LaunchedEffect(state) {
+                        android.widget.Toast.makeText(
+                            context,
+                            offlineUpdateMessage,
+                            android.widget.Toast.LENGTH_LONG
+                        ).show()
+                        viewModel.dismissUpdateCheck()
+                    }
+                } else {
+                    UpdateResultDialog(
+                        available = status as? by.mlastovsky.kosht.data.UpdateStatus.Available,
+                        onInstall = viewModel::installUpdate,
+                        onDismiss = viewModel::dismissUpdateCheck
+                    )
+                }
+            }
+
+            is UpdateCheckState.Downloading -> UpdateProgressDialog(
+                title = stringResource(R.string.update_downloading_title),
+                text = stringResource(
+                    R.string.update_downloading_text,
+                    state.available.versionName
+                ),
+                percent = state.percent,
+                onCancel = viewModel::dismissUpdateCheck
+            )
+
+            is UpdateCheckState.Installing -> UpdateProgressDialog(
+                title = stringResource(R.string.update_installing_title),
+                text = stringResource(
+                    R.string.update_installing_text,
+                    state.available.versionName
+                ),
+                percent = by.mlastovsky.kosht.data.UpdateInstaller.UNKNOWN_PROGRESS,
+                onCancel = null
+            )
+
+            is UpdateCheckState.UpdateFailed -> UpdateMessageDialog(
+                title = stringResource(R.string.update_failed_title),
+                text = stringResource(R.string.update_failed_text),
+                confirmLabel = stringResource(R.string.update_retry),
+                onConfirm = { viewModel.installUpdate(state.available) },
+                onDismiss = viewModel::dismissUpdateCheck
+            )
+
+            UpdateCheckState.SignatureMismatch -> UpdateMessageDialog(
+                title = stringResource(R.string.update_signature_title),
+                text = stringResource(R.string.update_signature_text),
+                confirmLabel = stringResource(R.string.action_close),
+                onConfirm = viewModel::dismissUpdateCheck,
+                onDismiss = viewModel::dismissUpdateCheck
+            )
+
+            is UpdateCheckState.NeedsInstallPermission -> UpdateMessageDialog(
+                title = stringResource(R.string.update_permission_title),
+                text = stringResource(R.string.update_permission_text),
+                confirmLabel = stringResource(R.string.update_permission_open),
+                onConfirm = {
+                    runCatching {
+                        installPermissionLauncher.launch(viewModel.unknownSourcesIntent())
+                    }
+                },
+                onDismiss = viewModel::dismissUpdateCheck
+            )
+
+            UpdateCheckState.Idle, UpdateCheckState.Checking -> Unit
         }
         }
 
@@ -580,11 +647,193 @@ private fun DailyBudgetDialog(
     )
 }
 
-/** Version check result: a newer build to download, or already latest. */
+/**
+ * Cloud account block: sign in or up when signed out, otherwise the address,
+ * when it last synced, a manual trigger and the automatic-sync switch.
+ */
+@Composable
+private fun AccountSettings(viewModel: by.mlastovsky.kosht.ui.account.AccountViewModel) {
+    val context = LocalContext.current
+    val account by viewModel.account.collectAsStateWithLifecycle()
+    val lastSyncAt by viewModel.lastSyncAt.collectAsStateWithLifecycle()
+    val syncing by viewModel.syncing.collectAsStateWithLifecycle()
+    val report by viewModel.report.collectAsStateWithLifecycle()
+    var authDialog by remember { mutableStateOf<Boolean?>(null) }
+
+    val doneMessage = stringResource(R.string.account_sync_done)
+    val offlineMessage = stringResource(R.string.account_sync_offline)
+    val receivedTemplate = stringResource(R.string.account_sync_received)
+    val failedTemplate = stringResource(R.string.account_sync_failed)
+    report?.let { outcome ->
+        androidx.compose.runtime.LaunchedEffect(outcome) {
+            val text = when (outcome) {
+                is by.mlastovsky.kosht.ui.account.SyncReport.Done ->
+                    if (outcome.received > 0) {
+                        String.format(receivedTemplate, outcome.received)
+                    } else {
+                        doneMessage
+                    }
+
+                by.mlastovsky.kosht.ui.account.SyncReport.Offline -> offlineMessage
+                is by.mlastovsky.kosht.ui.account.SyncReport.Failed ->
+                    String.format(failedTemplate, outcome.message)
+            }
+            android.widget.Toast
+                .makeText(context, text, android.widget.Toast.LENGTH_LONG)
+                .show()
+            viewModel.clearReport()
+        }
+    }
+
+    val current = account
+    if (current == null || !current.signedIn) {
+        ListItem(
+            headlineContent = { Text(stringResource(R.string.account_sign_in)) },
+            supportingContent = { Text(stringResource(R.string.account_signed_out)) },
+            leadingContent = {
+                Icon(Icons.Rounded.CloudOff, contentDescription = null)
+            },
+            colors = transparentListColors(),
+            modifier = Modifier.clickable { authDialog = false }
+        )
+        ListItem(
+            headlineContent = { Text(stringResource(R.string.account_sign_up)) },
+            leadingContent = {
+                Icon(Icons.Rounded.PersonAddAlt, contentDescription = null)
+            },
+            colors = transparentListColors(),
+            modifier = Modifier.clickable { authDialog = true }
+        )
+    } else {
+        ListItem(
+            headlineContent = {
+                Text(
+                    text = current.email.orEmpty(),
+                    maxLines = 1,
+                    overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
+                )
+            },
+            supportingContent = {
+                Text(
+                    text = by.mlastovsky.kosht.ui.account.lastSyncLabel(lastSyncAt),
+                    maxLines = 1,
+                    overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
+                )
+            },
+            leadingContent = { Icon(Icons.Rounded.CloudDone, contentDescription = null) },
+            colors = transparentListColors()
+        )
+        ListItem(
+            headlineContent = { Text(stringResource(R.string.account_sync_now)) },
+            leadingContent = { Icon(Icons.Rounded.Sync, contentDescription = null) },
+            trailingContent = {
+                if (syncing) {
+                    CircularProgressIndicator(Modifier.size(20.dp), strokeWidth = 2.dp)
+                }
+            },
+            colors = transparentListColors(),
+            modifier = Modifier.clickable(enabled = !syncing, onClick = viewModel::syncNow)
+        )
+        ListItem(
+            headlineContent = { Text(stringResource(R.string.account_auto_sync)) },
+            supportingContent = { Text(stringResource(R.string.account_auto_sync_hint)) },
+            leadingContent = { Icon(Icons.Rounded.CloudSync, contentDescription = null) },
+            trailingContent = {
+                Switch(checked = current.autoSync, onCheckedChange = viewModel::setAutoSync)
+            },
+            colors = transparentListColors(),
+            modifier = Modifier.clickable { viewModel.setAutoSync(!current.autoSync) }
+        )
+        ListItem(
+            headlineContent = { Text(stringResource(R.string.account_sign_out)) },
+            leadingContent = {
+                Icon(Icons.AutoMirrored.Rounded.Logout, contentDescription = null)
+            },
+            colors = transparentListColors(),
+            modifier = Modifier.clickable(onClick = viewModel::signOut)
+        )
+    }
+
+    authDialog?.let { signUp ->
+        by.mlastovsky.kosht.ui.account.AccountAuthDialog(
+            signUp = signUp,
+            viewModel = viewModel,
+            onDismiss = {
+                authDialog = null
+                viewModel.clearForm()
+            }
+        )
+    }
+}
+
+/** Download/install progress; [percent] below zero shows a spinner instead. */
+@Composable
+private fun UpdateProgressDialog(
+    title: String,
+    text: String,
+    percent: Int,
+    onCancel: (() -> Unit)?
+) {
+    AlertDialog(
+        // Dismissing mid-install would leave the dialog lying about progress.
+        onDismissRequest = { onCancel?.invoke() },
+        title = { Text(title) },
+        text = {
+            Column {
+                Text(text)
+                androidx.compose.foundation.layout.Spacer(Modifier.padding(top = 12.dp))
+                if (percent >= 0) {
+                    LinearProgressIndicator(
+                        progress = { percent / 100f },
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                    Text(
+                        text = "$percent%",
+                        style = MaterialTheme.typography.bodySmall,
+                        modifier = Modifier.padding(top = 8.dp)
+                    )
+                } else {
+                    LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
+                }
+            }
+        },
+        confirmButton = {
+            if (onCancel != null) {
+                TextButton(onClick = onCancel) {
+                    Text(stringResource(R.string.action_cancel))
+                }
+            }
+        }
+    )
+}
+
+/** Single-message update dialog: failure, signature clash, permission ask. */
+@Composable
+private fun UpdateMessageDialog(
+    title: String,
+    text: String,
+    confirmLabel: String,
+    onConfirm: () -> Unit,
+    onDismiss: () -> Unit
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(title) },
+        text = { Text(text) },
+        confirmButton = {
+            TextButton(onClick = onConfirm) { Text(confirmLabel) }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) { Text(stringResource(R.string.action_close)) }
+        }
+    )
+}
+
+/** Version check result: a newer build to install, or already latest. */
 @Composable
 private fun UpdateResultDialog(
     available: by.mlastovsky.kosht.data.UpdateStatus.Available?,
-    onDownload: (String) -> Unit,
+    onInstall: (by.mlastovsky.kosht.data.UpdateStatus.Available) -> Unit,
     onDismiss: () -> Unit
 ) {
     AlertDialog(
@@ -611,7 +860,7 @@ private fun UpdateResultDialog(
         },
         confirmButton = {
             if (available != null) {
-                TextButton(onClick = { onDownload(available.downloadUrl) }) {
+                TextButton(onClick = { onInstall(available) }) {
                     Text(stringResource(R.string.update_download))
                 }
             } else {
@@ -837,6 +1086,7 @@ private fun ProfileDialog(
                     onValueChange = { name = it.take(40) },
                     label = { Text(stringResource(R.string.profile_name)) },
                     singleLine = true,
+                    keyboardOptions = TextInput.Name,
                     modifier = Modifier.fillMaxWidth()
                 )
                 OutlinedTextField(
@@ -844,6 +1094,7 @@ private fun ProfileDialog(
                     onValueChange = { nickname = it.take(24) },
                     label = { Text(stringResource(R.string.profile_nickname)) },
                     singleLine = true,
+                    keyboardOptions = TextInput.Name,
                     modifier = Modifier.fillMaxWidth()
                 )
             }

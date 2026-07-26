@@ -57,6 +57,7 @@ import by.mlastovsky.kosht.ui.relativeDate
 import by.mlastovsky.kosht.ui.settings.SettingsViewModel
 import by.mlastovsky.kosht.util.Money
 import java.time.LocalDate
+import by.mlastovsky.kosht.ui.components.TextInput
 
 @Composable
 private fun AmountField(
@@ -130,6 +131,7 @@ fun AddDebtDialog(
                         )
                     },
                     singleLine = true,
+                    keyboardOptions = TextInput.Name,
                     modifier = Modifier.fillMaxWidth()
                 )
                 AmountField(amountText, { amountText = it })
@@ -139,6 +141,7 @@ fun AddDebtDialog(
                     onValueChange = { note = it.take(120) },
                     placeholder = { Text(stringResource(R.string.editor_note_hint)) },
                     singleLine = true,
+                    keyboardOptions = TextInput.Sentence,
                     modifier = Modifier.fillMaxWidth()
                 )
             }
@@ -295,6 +298,7 @@ fun AddSavingDialog(
                     onValueChange = { note = it.take(120) },
                     placeholder = { Text(stringResource(R.string.editor_note_hint)) },
                     singleLine = true,
+                    keyboardOptions = TextInput.Sentence,
                     modifier = Modifier.fillMaxWidth()
                 )
             }
@@ -339,6 +343,7 @@ fun AddGoalDialog(
                     onValueChange = { title = it.take(60) },
                     placeholder = { Text(stringResource(R.string.goal_title_hint)) },
                     singleLine = true,
+                    keyboardOptions = TextInput.Sentence,
                     modifier = Modifier.fillMaxWidth()
                 )
                 AmountField(amountText, { amountText = it })
@@ -391,6 +396,7 @@ fun AddRecurringDialog(
                     onValueChange = { title = it.take(60) },
                     placeholder = { Text(stringResource(R.string.recurring_title_hint)) },
                     singleLine = true,
+                    keyboardOptions = TextInput.Sentence,
                     modifier = Modifier.fillMaxWidth()
                 )
                 OutlinedTextField(
@@ -519,6 +525,7 @@ fun AddAccountDialog(
                     onValueChange = { name = it.take(30) },
                     placeholder = { Text(stringResource(R.string.category_name_hint)) },
                     singleLine = true,
+                    keyboardOptions = TextInput.Sentence,
                     modifier = Modifier.fillMaxWidth()
                 )
                 LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -635,6 +642,7 @@ fun AccountBalanceDialog(
                         onValueChange = { name = it.take(30) },
                         label = { Text(stringResource(R.string.category_name_hint)) },
                         singleLine = true,
+                        keyboardOptions = TextInput.Name,
                         modifier = Modifier.fillMaxWidth()
                     )
                     LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -734,6 +742,7 @@ fun EditRecurringDialog(
                     onValueChange = { title = it.take(60) },
                     label = { Text(stringResource(R.string.recurring_title_hint)) },
                     singleLine = true,
+                    keyboardOptions = TextInput.Sentence,
                     modifier = Modifier.fillMaxWidth()
                 )
                 OutlinedTextField(
