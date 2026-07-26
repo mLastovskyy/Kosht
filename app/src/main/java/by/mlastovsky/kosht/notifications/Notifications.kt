@@ -17,8 +17,14 @@ import by.mlastovsky.kosht.R
 object Notifications {
 
     const val CHANNEL_REMINDERS = "reminders"
-    const val CHANNEL_RECURRING = "recurring"
+
+    // v2: the original channel was created with IMPORTANCE_HIGH and its
+    // importance can no longer be lowered in code — a new id is the only
+    // way to drop the heads-up popup for existing installs.
+    const val CHANNEL_RECURRING = "recurring_v2"
     const val CHANNEL_SUMMARY = "summary"
+
+    private const val CHANNEL_RECURRING_LEGACY = "recurring"
 
     const val ID_DAILY = 1
     const val ID_RECURRING = 2
@@ -26,6 +32,7 @@ object Notifications {
 
     fun ensureChannels(context: Context) {
         val manager = context.getSystemService(NotificationManager::class.java) ?: return
+        manager.deleteNotificationChannel(CHANNEL_RECURRING_LEGACY)
         manager.createNotificationChannel(
             NotificationChannel(
                 CHANNEL_REMINDERS,
@@ -37,7 +44,9 @@ object Notifications {
             NotificationChannel(
                 CHANNEL_RECURRING,
                 context.getString(R.string.channel_recurring),
-                NotificationManager.IMPORTANCE_HIGH
+                // DEFAULT, not HIGH: no heads-up popup over whatever the
+                // user is doing — a status-bar entry is enough.
+                NotificationManager.IMPORTANCE_DEFAULT
             )
         )
         manager.createNotificationChannel(
@@ -75,6 +84,11 @@ object Notifications {
             .setStyle(NotificationCompat.BigTextStyle().bigText(text))
             .setContentIntent(pending)
             .setAutoCancel(true)
+            // Quiet by design: no full-screen intent, no vibration pattern,
+            // and never louder than the channel allows.
+            .setPriority(NotificationCompat.PRIORITY_DEFAULT)
+            .setCategory(NotificationCompat.CATEGORY_REMINDER)
+            .setOnlyAlertOnce(true)
             .build()
         NotificationManagerCompat.from(context).notify(id, notification)
     }

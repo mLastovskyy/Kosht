@@ -107,6 +107,10 @@ class SettingsViewModel(
         viewModelScope.launch { settingsRepository.setConvertOnCurrencyChange(value) }
     }
 
+    fun setAutoCalculator(value: Boolean) {
+        viewModelScope.launch { settingsRepository.setAutoCalculator(value) }
+    }
+
     companion object {
         val SUPPORTED_CURRENCIES = listOf("BYN", "USD", "EUR", "PLN", "UAH", "RUB", "GBP", "KZT")
     }

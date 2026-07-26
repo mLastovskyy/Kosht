@@ -158,9 +158,12 @@ fun EditorScreen(
     }
 
     // A fresh record starts in the calculator right away — no extra tap.
+    // The behavior is a toggle in Settings → Interface.
     var calcAutoOpened by rememberSaveable { mutableStateOf(false) }
     LaunchedEffect(state.loaded) {
-        if (state.loaded && !state.isEdit && state.amountInput.isEmpty() && !calcAutoOpened) {
+        if (state.loaded && state.autoCalculator && !state.isEdit &&
+            state.amountInput.isEmpty() && !calcAutoOpened
+        ) {
             calcAutoOpened = true
             viewModel.openCalculator()
             showCalculator = true

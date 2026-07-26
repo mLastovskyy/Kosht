@@ -48,6 +48,8 @@ data class EditorUiState(
     val accounts: List<by.mlastovsky.kosht.data.db.AccountEntity> = emptyList(),
     val accountId: Long? = null,
     val multiAccount: Boolean = false,
+    /** Open the calculator automatically for a new record. */
+    val autoCalculator: Boolean = true,
     /** Working expression of the standalone calculator dialog. */
     val calcInput: String = ""
 ) {
@@ -153,6 +155,7 @@ class EditorViewModel(
             accounts = extras.accounts,
             accountId = d.accountId ?: extras.accounts.firstOrNull()?.id,
             multiAccount = settings.multiAccount,
+            autoCalculator = settings.autoCalculator,
             calcInput = extras.calcInput
         )
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), EditorUiState())

@@ -7,6 +7,7 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.fillMaxSize
@@ -20,6 +21,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.HelpOutline
 import androidx.compose.material.icons.rounded.AccountBalanceWallet
 import androidx.compose.material.icons.rounded.BrightnessMedium
+import androidx.compose.material.icons.rounded.Calculate
 import androidx.compose.material.icons.rounded.DeleteOutline
 import androidx.compose.material.icons.rounded.CurrencyExchange
 import androidx.compose.material.icons.rounded.Info
@@ -229,6 +231,13 @@ fun SettingsScreen(
                 icon = Icons.Rounded.Payments,
                 checked = current.convertOnCurrencyChange,
                 onChange = viewModel::setConvertOnCurrencyChange
+            )
+            NotificationToggle(
+                titleRes = R.string.auto_calc,
+                descRes = R.string.auto_calc_desc,
+                icon = Icons.Rounded.Calculate,
+                checked = current.autoCalculator,
+                onChange = viewModel::setAutoCalculator
             )
         }
 
@@ -458,6 +467,7 @@ private fun DailyBudgetDialog(
 
 private val PRESET_AVATARS = listOf("🦊", "🐻", "🐼", "🦁", "🐸", "🚀", "💎", "🌟", "🔥", "🤑")
 
+@OptIn(androidx.compose.foundation.ExperimentalFoundationApi::class)
 @Composable
 private fun ProfileDialog(
     initialName: String,
@@ -472,9 +482,36 @@ private fun ProfileDialog(
 ) {
     var name by remember { mutableStateOf(initialName) }
     var nickname by remember { mutableStateOf(initialNickname) }
+    var confirmRemovePhoto by remember { mutableStateOf(false) }
     val photoLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.PickVisualMedia()
     ) { uri -> if (uri != null) onPickPhoto(uri) }
+
+    if (confirmRemovePhoto) {
+        AlertDialog(
+            onDismissRequest = { confirmRemovePhoto = false },
+            title = { Text(stringResource(R.string.photo_remove)) },
+            text = { Text(stringResource(R.string.photo_remove_confirm)) },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        onRemovePhoto()
+                        confirmRemovePhoto = false
+                    }
+                ) {
+                    Text(
+                        stringResource(R.string.editor_delete),
+                        color = MaterialTheme.colorScheme.error
+                    )
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { confirmRemovePhoto = false }) {
+                    Text(stringResource(R.string.action_cancel))
+                }
+            }
+        )
+    }
 
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -484,22 +521,28 @@ private fun ProfileDialog(
                 horizontalAlignment = androidx.compose.ui.Alignment.CenterHorizontally,
                 verticalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(12.dp)
             ) {
+                // No explicit delete button: press and hold removes the
+                // photo, the hint below spells that out.
                 Avatar(
                     photoPath = photoPath,
                     fallbackText = nickname.ifBlank { name.ifBlank { defaultName } },
                     size = 72.dp,
-                    modifier = Modifier.clickable {
-                        photoLauncher.launch(
-                            androidx.activity.result.PickVisualMediaRequest(
-                                ActivityResultContracts.PickVisualMedia.ImageOnly
+                    modifier = Modifier.combinedClickable(
+                        onClick = {
+                            photoLauncher.launch(
+                                androidx.activity.result.PickVisualMediaRequest(
+                                    ActivityResultContracts.PickVisualMedia.ImageOnly
+                                )
                             )
-                        )
-                    }
+                        },
+                        onLongClick = { if (photoPath != null) confirmRemovePhoto = true }
+                    )
                 )
                 Text(
                     text = stringResource(R.string.profile_photo_hint),
                     style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    textAlign = androidx.compose.ui.text.style.TextAlign.Center
                 )
                 androidx.compose.foundation.lazy.LazyRow(
                     horizontalArrangement =
@@ -513,14 +556,6 @@ private fun ProfileDialog(
                             fallbackText = emoji,
                             size = 44.dp,
                             modifier = Modifier.clickable { onPickEmoji(emoji) }
-                        )
-                    }
-                }
-                if (photoPath != null) {
-                    TextButton(onClick = onRemovePhoto) {
-                        Text(
-                            stringResource(R.string.photo_remove),
-                            color = MaterialTheme.colorScheme.error
                         )
                     }
                 }

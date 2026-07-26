@@ -7,6 +7,7 @@ import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.longPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
+import androidx.datastore.preferences.core.stringSetPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
 import by.mlastovsky.kosht.model.AppLanguage
 import by.mlastovsky.kosht.model.ThemeMode
@@ -34,7 +35,11 @@ data class AppSettings(
     /** Recalculate stored amounts by the NBRB rate when switching currency. */
     val convertOnCurrencyChange: Boolean,
     /** Master switch for multiple money sources (cards/cash). */
-    val multiAccount: Boolean
+    val multiAccount: Boolean,
+    /** Names of [by.mlastovsky.kosht.model.ReportField] rows shown in the report. */
+    val reportFields: Set<String>,
+    /** Open the calculator automatically when adding a new record. */
+    val autoCalculator: Boolean
 )
 
 data class UserProfile(
@@ -65,6 +70,16 @@ class SettingsRepository(private val context: Context) {
         val showRates = booleanPreferencesKey("show_rates")
         val convertOnCurrencyChange = booleanPreferencesKey("convert_on_currency_change")
         val multiAccount = booleanPreferencesKey("multi_account")
+        val reportFields = stringSetPreferencesKey("report_fields")
+        val autoCalculator = booleanPreferencesKey("auto_calculator")
+    }
+
+    suspend fun setReportFields(fields: Set<String>) {
+        context.dataStore.edit { it[Keys.reportFields] = fields }
+    }
+
+    suspend fun setAutoCalculator(value: Boolean) {
+        context.dataStore.edit { it[Keys.autoCalculator] = value }
     }
 
     suspend fun setMultiAccount(value: Boolean) {
@@ -125,7 +140,11 @@ class SettingsRepository(private val context: Context) {
             showStreak = prefs[Keys.showStreak] ?: true,
             showRates = prefs[Keys.showRates] ?: true,
             convertOnCurrencyChange = prefs[Keys.convertOnCurrencyChange] ?: true,
-            multiAccount = prefs[Keys.multiAccount] ?: false
+            multiAccount = prefs[Keys.multiAccount] ?: false,
+            // Absent preference = all rows; an explicit empty set is honored.
+            reportFields = prefs[Keys.reportFields]
+                ?: by.mlastovsky.kosht.model.ReportField.entries.map { it.name }.toSet(),
+            autoCalculator = prefs[Keys.autoCalculator] ?: true
         )
     }
 
