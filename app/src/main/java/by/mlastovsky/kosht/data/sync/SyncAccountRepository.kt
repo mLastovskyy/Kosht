@@ -56,8 +56,23 @@ class SyncAccountRepository(
 
     val isConfigured: Boolean get() = api.isConfigured
 
-    suspend fun signUp(email: String, password: String): AuthOutcome =
-        api.signUp(email, password).also { store(it) }
+    suspend fun emailRegistered(email: String): Boolean? = api.emailRegistered(email)
+
+    suspend fun sendSignUpCode(email: String): AuthOutcome = api.sendSignUpCode(email)
+
+    suspend fun sendResetCode(email: String): AuthOutcome = api.sendResetCode(email)
+
+    /**
+     * The session that comes back is kept, but the account is only usable
+     * once a password is set — that is the next step of both flows.
+     */
+    suspend fun verifyCode(email: String, code: String, purpose: CodePurpose): AuthOutcome =
+        api.verifyCode(email, code, purpose).also { store(it) }
+
+    suspend fun setPassword(password: String): AuthOutcome {
+        val session = validAccessToken() ?: return AuthOutcome.Offline
+        return api.setPassword(session.accessToken, password)
+    }
 
     suspend fun signIn(email: String, password: String): AuthOutcome =
         api.signIn(email, password).also { store(it) }
@@ -90,6 +105,56 @@ class SyncAccountRepository(
         }
     }
 
+    // ---- Consent and data-subject rights ----------------------------------
+
+    /** Records agreement to the terms and, separately, to being emailed. */
+    suspend fun recordSignUpConsents(marketing: Boolean) {
+        val session = validAccessToken() ?: return
+        api.recordConsent(
+            session = session,
+            kind = CONSENT_TERMS,
+            granted = true,
+            policyVersion = POLICY_VERSION,
+            source = "sign_up"
+        )
+        api.recordConsent(
+            session = session,
+            kind = CONSENT_MARKETING,
+            granted = marketing,
+            policyVersion = POLICY_VERSION,
+            source = "sign_up"
+        )
+    }
+
+    suspend fun setMarketingConsent(granted: Boolean): Boolean {
+        val session = validAccessToken() ?: return false
+        return api.recordConsent(
+            session = session,
+            kind = CONSENT_MARKETING,
+            granted = granted,
+            policyVersion = POLICY_VERSION,
+            source = "settings"
+        )
+    }
+
+    suspend fun marketingConsent(): Boolean? {
+        val session = validAccessToken() ?: return null
+        return api.currentConsent(session, CONSENT_MARKETING)
+    }
+
+    suspend fun exportData(): String? {
+        val session = validAccessToken() ?: return null
+        return api.exportData(session)
+    }
+
+    /** Erases the cloud copy and forgets the session on this device. */
+    suspend fun deleteAccount(): Boolean {
+        val session = validAccessToken() ?: return false
+        if (!api.deleteAccount(session)) return false
+        clear()
+        return true
+    }
+
     suspend fun signOut() {
         context.accountStore.data.first()[Keys.accessToken]?.let { api.signOut(it) }
         clear()
@@ -113,6 +178,14 @@ class SyncAccountRepository(
             prefs[Keys.expiresAt] = session.expiresAt
             prefs[Keys.onboarded] = true
         }
+    }
+
+    companion object {
+        const val CONSENT_TERMS = "privacy_policy"
+        const val CONSENT_MARKETING = "marketing_email"
+
+        /** Bump together with the documents, so old agreements stay dated. */
+        const val POLICY_VERSION = "1.0"
     }
 
     private suspend fun clear() {

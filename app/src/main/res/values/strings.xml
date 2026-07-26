@@ -178,8 +178,51 @@
     <string name="account_sync_received">Synced — %1$d records came in</string>
     <string name="account_sync_offline">No connection — Kosht will sync as soon as it is back</string>
     <string name="account_sync_failed">Sync failed: %1$s</string>
-    <string name="account_confirm_email">Almost there — confirm the address from your inbox, then sign in.</string>
     <string name="account_offline">No connection. Try again once you are online.</string>
+
+    <!-- Sign-in, sign-up by emailed code, password reset -->
+    <string name="auth_reset_title">Reset password</string>
+    <string name="auth_email_step_signup">We will email a six-digit code to confirm the address.</string>
+    <string name="auth_email_step_reset">We will email a six-digit code so you can set a new password.</string>
+    <string name="auth_continue">Continue</string>
+    <string name="auth_code_title">Enter the code</string>
+    <string name="auth_code_sent">A six-digit code went to %1$s.</string>
+    <string name="auth_code_label">Code</string>
+    <string name="auth_code_valid_for">Valid for %1$s</string>
+    <string name="auth_code_expired">The code has expired. Send a new one.</string>
+    <string name="auth_resend">Send again</string>
+    <string name="auth_resend_in">Send again in %1$s</string>
+    <string name="auth_change_email">Change email</string>
+    <string name="auth_password_title">Create a password</string>
+    <string name="auth_password_step">You will use it to sign in on your other devices.</string>
+    <string name="auth_password_new">New password</string>
+    <string name="auth_save">Save</string>
+    <string name="auth_forgot">Forgot your password?</string>
+    <string name="auth_show_password">Show password</string>
+    <string name="auth_hide_password">Hide password</string>
+    <string name="auth_err_email_taken">This address already has an account. Sign in, or reset the password if you have forgotten it.</string>
+    <string name="auth_err_email_unknown">No account uses this address yet. Create one instead.</string>
+    <string name="auth_err_wrong_code">Wrong code. Check the email and try again.</string>
+    <string name="auth_err_too_many">Too many attempts. Wait a minute and try again.</string>
+    <string name="auth_err_wrong_credentials">Wrong email or password.</string>
+    <string name="auth_err_weak_password">Use at least 6 characters.</string>
+
+    <!-- Documents and consent -->
+    <string name="legal_section">Documents &amp; consent</string>
+    <string name="legal_terms">Terms of use</string>
+    <string name="legal_privacy">Personal data policy</string>
+    <string name="legal_read">Read</string>
+    <string name="legal_accept">I accept the Terms of use and the Personal data policy</string>
+    <string name="legal_marketing">Email me about new features</string>
+    <string name="legal_marketing_hint">Optional. You can switch it off at any time.</string>
+    <string name="legal_export">Download my data</string>
+    <string name="legal_export_failed">Could not prepare the file.</string>
+    <string name="legal_delete">Delete account and data</string>
+    <string name="legal_delete_title">Delete the account?</string>
+    <string name="legal_delete_text">The cloud copy and everything in it is erased for good, and this cannot be undone. Records already on this phone stay where they are.</string>
+    <string name="legal_delete_confirm">Delete</string>
+    <string name="legal_deleted">The account and its data have been deleted.</string>
+    <string name="legal_delete_failed">Could not delete the account. Try again.</string>
     <string name="account_password_short">Use at least 6 characters</string>
     <string name="account_email_invalid">Enter a valid email address</string>
     <string name="account_not_configured">Cloud sync is not configured in this build.</string>

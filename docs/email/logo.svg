@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 108 108">
+  <!-- Kosht mark: the launcher icon, flattened for email clients. -->
+  <rect width="108" height="108" rx="24" fill="#176B4E"/>
+  <!-- Card peeking out of the wallet -->
+  <path fill="#FFFFFF" fill-opacity="0.85"
+        d="M40,34 L60,34 A3,3 0 0 1 63,37 L63,40 L37,40 L37,37 A3,3 0 0 1 40,34 Z"/>
+  <!-- Wallet body with a cut-out clasp slot -->
+  <path fill="#FFFFFF" fill-rule="evenodd"
+        d="M38,40 L70,40 A6,6 0 0 1 76,46 L76,66 A6,6 0 0 1 70,72 L38,72 A6,6 0 0 1 32,66 L32,46 A6,6 0 0 1 38,40 Z M64,52 L68,52 A4,4 0 0 1 72,56 A4,4 0 0 1 68,60 L64,60 A4,4 0 0 1 64,52 Z"/>
+</svg>

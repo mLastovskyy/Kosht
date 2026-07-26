@@ -19,8 +19,13 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.rounded.Article
 import androidx.compose.material.icons.automirrored.rounded.HelpOutline
 import androidx.compose.material.icons.automirrored.rounded.Logout
+import androidx.compose.material.icons.rounded.DeleteForever
+import androidx.compose.material.icons.rounded.Download
+import androidx.compose.material.icons.rounded.MarkEmailRead
+import androidx.compose.material.icons.rounded.PrivacyTip
 import androidx.compose.material.icons.rounded.AccountBalanceWallet
 import androidx.compose.material.icons.rounded.CloudDone
 import androidx.compose.material.icons.rounded.CloudOff
@@ -142,6 +147,9 @@ fun SettingsScreen(
         if (accountViewModel.isConfigured) {
             SectionHeader(stringResource(R.string.account_title))
             SettingsCard { AccountSettings(accountViewModel) }
+
+            SectionHeader(stringResource(R.string.legal_section))
+            SettingsCard { LegalSettings(accountViewModel) }
         }
 
         SectionHeader(stringResource(R.string.settings_appearance))
@@ -658,7 +666,6 @@ private fun AccountSettings(viewModel: by.mlastovsky.kosht.ui.account.AccountVie
     val lastSyncAt by viewModel.lastSyncAt.collectAsStateWithLifecycle()
     val syncing by viewModel.syncing.collectAsStateWithLifecycle()
     val report by viewModel.report.collectAsStateWithLifecycle()
-    var authDialog by remember { mutableStateOf<Boolean?>(null) }
 
     val doneMessage = stringResource(R.string.account_sync_done)
     val offlineMessage = stringResource(R.string.account_sync_offline)
@@ -694,7 +701,7 @@ private fun AccountSettings(viewModel: by.mlastovsky.kosht.ui.account.AccountVie
                 Icon(Icons.Rounded.CloudOff, contentDescription = null)
             },
             colors = transparentListColors(),
-            modifier = Modifier.clickable { authDialog = false }
+            modifier = Modifier.clickable { viewModel.startSignIn() }
         )
         ListItem(
             headlineContent = { Text(stringResource(R.string.account_sign_up)) },
@@ -702,7 +709,7 @@ private fun AccountSettings(viewModel: by.mlastovsky.kosht.ui.account.AccountVie
                 Icon(Icons.Rounded.PersonAddAlt, contentDescription = null)
             },
             colors = transparentListColors(),
-            modifier = Modifier.clickable { authDialog = true }
+            modifier = Modifier.clickable { viewModel.startSignUp() }
         )
     } else {
         ListItem(
@@ -754,13 +761,159 @@ private fun AccountSettings(viewModel: by.mlastovsky.kosht.ui.account.AccountVie
         )
     }
 
-    authDialog?.let { signUp ->
-        by.mlastovsky.kosht.ui.account.AccountAuthDialog(
-            signUp = signUp,
-            viewModel = viewModel,
-            onDismiss = {
-                authDialog = null
-                viewModel.clearForm()
+    by.mlastovsky.kosht.ui.account.AuthDialog(viewModel)
+}
+
+/**
+ * The documents and the choices that go with them, in one place: read either
+ * agreement, switch the mailing off, take a copy of everything held, or erase
+ * the account outright. Every right the law grants is a tap away rather than
+ * an email to somebody.
+ */
+@Composable
+private fun LegalSettings(viewModel: by.mlastovsky.kosht.ui.account.AccountViewModel) {
+    val context = LocalContext.current
+    val account by viewModel.account.collectAsStateWithLifecycle()
+    val marketing by viewModel.marketingConsent.collectAsStateWithLifecycle()
+    val exported by viewModel.exported.collectAsStateWithLifecycle()
+    var confirmDelete by remember { mutableStateOf(false) }
+    val signedIn = account?.signedIn == true
+
+    val pdfError = stringResource(R.string.guide_pdf_error)
+    fun openPdf(asset: String, file: String) {
+        if (!by.mlastovsky.kosht.util.AssetPdf.open(context, asset, file)) {
+            android.widget.Toast.makeText(context, pdfError, android.widget.Toast.LENGTH_SHORT)
+                .show()
+        }
+    }
+
+    androidx.compose.runtime.LaunchedEffect(signedIn) {
+        if (signedIn) viewModel.loadMarketingConsent()
+    }
+
+    val exportFailed = stringResource(R.string.legal_export_failed)
+    exported?.let { json ->
+        androidx.compose.runtime.LaunchedEffect(json) {
+            val shared = runCatching {
+                val dir = java.io.File(context.cacheDir, "docs").apply { mkdirs() }
+                val file = java.io.File(dir, "kosht-my-data.json")
+                file.writeText(json)
+                val uri = androidx.core.content.FileProvider.getUriForFile(
+                    context,
+                    context.packageName + ".fileprovider",
+                    file
+                )
+                context.startActivity(
+                    android.content.Intent.createChooser(
+                        android.content.Intent(android.content.Intent.ACTION_SEND)
+                            .setType("application/json")
+                            .putExtra(android.content.Intent.EXTRA_STREAM, uri)
+                            .addFlags(android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION),
+                        null
+                    )
+                )
+            }.isSuccess
+            if (!shared) {
+                android.widget.Toast
+                    .makeText(context, exportFailed, android.widget.Toast.LENGTH_LONG)
+                    .show()
+            }
+            viewModel.clearExport()
+        }
+    }
+
+    ListItem(
+        headlineContent = { Text(stringResource(R.string.legal_terms)) },
+        leadingContent = {
+            Icon(Icons.AutoMirrored.Rounded.Article, contentDescription = null)
+        },
+        colors = transparentListColors(),
+        modifier = Modifier.clickable { openPdf("legal/terms.pdf", "kosht-terms.pdf") }
+    )
+    ListItem(
+        headlineContent = {
+            Text(
+                text = stringResource(R.string.legal_privacy),
+                maxLines = 2,
+                overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
+            )
+        },
+        leadingContent = { Icon(Icons.Rounded.PrivacyTip, contentDescription = null) },
+        colors = transparentListColors(),
+        modifier = Modifier.clickable {
+            openPdf("legal/privacy-policy.pdf", "kosht-privacy.pdf")
+        }
+    )
+
+    if (!signedIn) return
+
+    ListItem(
+        headlineContent = { Text(stringResource(R.string.legal_marketing)) },
+        supportingContent = { Text(stringResource(R.string.legal_marketing_hint)) },
+        leadingContent = { Icon(Icons.Rounded.MarkEmailRead, contentDescription = null) },
+        trailingContent = {
+            Switch(
+                checked = marketing == true,
+                onCheckedChange = viewModel::setMarketingConsent
+            )
+        },
+        colors = transparentListColors(),
+        modifier = Modifier.clickable { viewModel.setMarketingConsent(marketing != true) }
+    )
+    ListItem(
+        headlineContent = { Text(stringResource(R.string.legal_export)) },
+        leadingContent = { Icon(Icons.Rounded.Download, contentDescription = null) },
+        colors = transparentListColors(),
+        modifier = Modifier.clickable(onClick = viewModel::exportData)
+    )
+    ListItem(
+        headlineContent = {
+            Text(
+                text = stringResource(R.string.legal_delete),
+                color = MaterialTheme.colorScheme.error
+            )
+        },
+        leadingContent = {
+            Icon(
+                imageVector = Icons.Rounded.DeleteForever,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.error
+            )
+        },
+        colors = transparentListColors(),
+        modifier = Modifier.clickable { confirmDelete = true }
+    )
+
+    val deleted = stringResource(R.string.legal_deleted)
+    val deleteFailed = stringResource(R.string.legal_delete_failed)
+    if (confirmDelete) {
+        AlertDialog(
+            onDismissRequest = { confirmDelete = false },
+            title = { Text(stringResource(R.string.legal_delete_title)) },
+            text = { Text(stringResource(R.string.legal_delete_text)) },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        confirmDelete = false
+                        viewModel.deleteAccount { ok ->
+                            android.widget.Toast.makeText(
+                                context,
+                                if (ok) deleted else deleteFailed,
+                                android.widget.Toast.LENGTH_LONG
+                            ).show()
+                        }
+                    }
+                ) {
+                    Text(
+                        text = stringResource(R.string.legal_delete_confirm),
+                        color = MaterialTheme.colorScheme.error
+                    )
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { confirmDelete = false }) {
+                    Text(stringResource(R.string.action_cancel))
+                }
             }
         )
     }

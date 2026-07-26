@@ -178,8 +178,51 @@
     <string name="account_sync_received">Синхронизировано, получено записей: %1$d</string>
     <string name="account_sync_offline">Нет соединения — синхронизируем, как только оно появится</string>
     <string name="account_sync_failed">Не удалось синхронизировать: %1$s</string>
-    <string name="account_confirm_email">Почти готово — подтвердите адрес письмом из почты и войдите.</string>
     <string name="account_offline">Нет соединения. Попробуйте, когда появится интернет.</string>
+
+    <!-- Вход, регистрация по коду из письма, сброс пароля -->
+    <string name="auth_reset_title">Сброс пароля</string>
+    <string name="auth_email_step_signup">Отправим на почту шестизначный код, чтобы подтвердить адрес.</string>
+    <string name="auth_email_step_reset">Отправим на почту шестизначный код, чтобы задать новый пароль.</string>
+    <string name="auth_continue">Далее</string>
+    <string name="auth_code_title">Введите код</string>
+    <string name="auth_code_sent">Шестизначный код отправлен на %1$s.</string>
+    <string name="auth_code_label">Код</string>
+    <string name="auth_code_valid_for">Действует ещё %1$s</string>
+    <string name="auth_code_expired">Код истёк. Отправьте новый.</string>
+    <string name="auth_resend">Отправить снова</string>
+    <string name="auth_resend_in">Отправить снова через %1$s</string>
+    <string name="auth_change_email">Изменить почту</string>
+    <string name="auth_password_title">Придумайте пароль</string>
+    <string name="auth_password_step">С ним вы будете входить на других устройствах.</string>
+    <string name="auth_password_new">Новый пароль</string>
+    <string name="auth_save">Сохранить</string>
+    <string name="auth_forgot">Забыли пароль?</string>
+    <string name="auth_show_password">Показать пароль</string>
+    <string name="auth_hide_password">Скрыть пароль</string>
+    <string name="auth_err_email_taken">На эту почту уже есть аккаунт. Войдите или сбросьте пароль, если забыли его.</string>
+    <string name="auth_err_email_unknown">На эту почту аккаунта пока нет. Создайте его.</string>
+    <string name="auth_err_wrong_code">Неверный код. Проверьте письмо и попробуйте снова.</string>
+    <string name="auth_err_too_many">Слишком много попыток. Подождите минуту и попробуйте снова.</string>
+    <string name="auth_err_wrong_credentials">Неверная почта или пароль.</string>
+    <string name="auth_err_weak_password">Минимум 6 символов.</string>
+
+    <!-- Документы и согласия -->
+    <string name="legal_section">Документы и согласия</string>
+    <string name="legal_terms">Пользовательское соглашение</string>
+    <string name="legal_privacy">Политика обработки персональных данных</string>
+    <string name="legal_read">Прочитать</string>
+    <string name="legal_accept">Принимаю Пользовательское соглашение и Политику обработки персональных данных</string>
+    <string name="legal_marketing">Присылать письма о новых возможностях</string>
+    <string name="legal_marketing_hint">Необязательно. Отключить можно в любой момент.</string>
+    <string name="legal_export">Скачать мои данные</string>
+    <string name="legal_export_failed">Не удалось подготовить файл.</string>
+    <string name="legal_delete">Удалить аккаунт и данные</string>
+    <string name="legal_delete_title">Удалить аккаунт?</string>
+    <string name="legal_delete_text">Облачная копия и всё, что в ней, будут удалены безвозвратно, отменить это нельзя. Записи, которые уже есть на этом телефоне, останутся на месте.</string>
+    <string name="legal_delete_confirm">Удалить</string>
+    <string name="legal_deleted">Аккаунт и данные удалены.</string>
+    <string name="legal_delete_failed">Не удалось удалить аккаунт. Попробуйте ещё раз.</string>
     <string name="account_password_short">Минимум 6 символов</string>
     <string name="account_email_invalid">Введите корректный адрес почты</string>
     <string name="account_not_configured">В этой сборке синхронизация не настроена.</string>

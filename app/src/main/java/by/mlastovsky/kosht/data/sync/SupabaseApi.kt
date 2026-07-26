@@ -25,13 +25,54 @@ data class SupabaseSession(
 sealed interface AuthOutcome {
     data class Success(val session: SupabaseSession) : AuthOutcome
 
-    /** Signed up, but Supabase wants the address confirmed by email first. */
-    data object ConfirmEmail : AuthOutcome
+    /** The six-digit code is on its way to the address. */
+    data object CodeSent : AuthOutcome
 
-    /** Wrong password, address already taken, weak password, ... */
-    data class Rejected(val message: String) : AuthOutcome
+    data class Rejected(val reason: AuthError, val detail: String) : AuthOutcome
 
     data object Offline : AuthOutcome
+}
+
+/**
+ * Auth failures worth their own wording. The server answers in English and
+ * phrases things its own way, so the few cases a user actually hits are
+ * recognised here and shown as proper localized text.
+ */
+enum class AuthError {
+    WrongCode,
+    TooManyRequests,
+    WrongCredentials,
+    WeakPassword,
+    EmailTaken,
+    Unknown;
+
+    companion object {
+        fun of(message: String): AuthError {
+            val text = message.lowercase()
+            return when {
+                "expired" in text || "invalid" in text && "token" in text -> WrongCode
+                "otp" in text && ("invalid" in text || "incorrect" in text) -> WrongCode
+                "security purposes" in text || "rate limit" in text ||
+                    "too many" in text -> TooManyRequests
+
+                "already registered" in text || "already been registered" in text -> EmailTaken
+                "password" in text && ("short" in text || "least" in text ||
+                    "weak" in text) -> WeakPassword
+
+                "invalid login" in text || "invalid credentials" in text -> WrongCredentials
+                else -> Unknown
+            }
+        }
+    }
+}
+
+/** Which code the server should be checking against. */
+enum class CodePurpose(val type: String) {
+    /** Confirms a new address and creates the account. */
+    SignUp("email"),
+
+    /** Lets someone who forgot their password set a new one. */
+    Reset("recovery")
 }
 
 private class HttpFailure(val code: Int, val body: String) : IOException("HTTP $code")
@@ -54,15 +95,54 @@ class SupabaseApi(
 
     // ---- Accounts ---------------------------------------------------------
 
-    suspend fun signUp(email: String, password: String): AuthOutcome =
-        authCall("$baseUrl/auth/v1/signup", credentials(email, password)) { body ->
-            // Without a token the address needs confirming before first use.
-            if (body.optString("access_token").isBlank()) {
-                AuthOutcome.ConfirmEmail
-            } else {
-                AuthOutcome.Success(body.toSession())
-            }
-        }
+    /**
+     * Whether the address already has an account. Null when the question
+     * could not be asked at all, in which case the caller carries on rather
+     * than blocking someone over a failed lookup.
+     */
+    suspend fun emailRegistered(email: String): Boolean? = withContext(Dispatchers.IO) {
+        runCatching {
+            val body = JSONObject().put("check_email", email.trim())
+            send("$baseUrl/rest/v1/rpc/email_registered", "POST", null, body.toString())
+                .trim()
+                .toBooleanStrictOrNull()
+        }.getOrNull()
+    }
+
+    /** Emails a six-digit code and creates the account behind it. */
+    suspend fun sendSignUpCode(email: String): AuthOutcome = authCall(
+        url = "$baseUrl/auth/v1/otp",
+        body = JSONObject().put("email", email.trim()).put("create_user", true)
+    ) { AuthOutcome.CodeSent }
+
+    /** Emails a six-digit code for setting a forgotten password. */
+    suspend fun sendResetCode(email: String): AuthOutcome = authCall(
+        url = "$baseUrl/auth/v1/recover",
+        body = JSONObject().put("email", email.trim())
+    ) { AuthOutcome.CodeSent }
+
+    /**
+     * Exchanges the code for a session. [purpose] tells the server which code
+     * it was: the one confirming a new address, or the one recovering a
+     * password. They are not interchangeable.
+     */
+    suspend fun verifyCode(email: String, code: String, purpose: CodePurpose): AuthOutcome =
+        authCall(
+            url = "$baseUrl/auth/v1/verify",
+            body = JSONObject()
+                .put("email", email.trim())
+                .put("token", code.trim())
+                .put("type", purpose.type)
+        ) { AuthOutcome.Success(it.toSession()) }
+
+    /** Sets the password of the signed-in account. */
+    suspend fun setPassword(accessToken: String, password: String): AuthOutcome =
+        authCall(
+            url = "$baseUrl/auth/v1/user",
+            body = JSONObject().put("password", password),
+            method = "PUT",
+            token = accessToken
+        ) { AuthOutcome.CodeSent }
 
     suspend fun signIn(email: String, password: String): AuthOutcome =
         authCall(
@@ -87,6 +167,64 @@ class SupabaseApi(
                 )
             }
         }
+    }
+
+    // ---- Consent and data-subject rights ----------------------------------
+
+    /**
+     * Appends to the consent ledger. Consents are never updated in place:
+     * what has to be provable is when someone agreed and to which wording.
+     */
+    suspend fun recordConsent(
+        session: SupabaseSession,
+        kind: String,
+        granted: Boolean,
+        policyVersion: String,
+        source: String
+    ): Boolean = withContext(Dispatchers.IO) {
+        runCatching {
+            val row = JSONObject()
+                .put("user_id", session.userId)
+                .put("kind", kind)
+                .put("granted", granted)
+                .put("policy_version", policyVersion)
+                .put("source", source)
+            send(
+                url = "$baseUrl/rest/v1/consents",
+                method = "POST",
+                token = session.accessToken,
+                body = JSONArray().put(row).toString(),
+                extraHeaders = mapOf("Prefer" to "return=minimal")
+            )
+            true
+        }.getOrDefault(false)
+    }
+
+    /** Latest word on one kind of consent; null when it was never given. */
+    suspend fun currentConsent(session: SupabaseSession, kind: String): Boolean? =
+        withContext(Dispatchers.IO) {
+            runCatching {
+                val query = "select=granted&kind=eq.$kind"
+                val rows = JSONArray(
+                    send("$baseUrl/rest/v1/current_consents?$query", "GET", session.accessToken, null)
+                )
+                rows.optJSONObject(0)?.optBoolean("granted")
+            }.getOrNull()
+        }
+
+    /** Everything held about the account, as one JSON document. */
+    suspend fun exportData(session: SupabaseSession): String? = withContext(Dispatchers.IO) {
+        runCatching {
+            send("$baseUrl/rest/v1/rpc/export_my_data", "POST", session.accessToken, "{}")
+        }.getOrNull()
+    }
+
+    /** Erases the account and, by cascade, everything attached to it. */
+    suspend fun deleteAccount(session: SupabaseSession): Boolean = withContext(Dispatchers.IO) {
+        runCatching {
+            send("$baseUrl/rest/v1/rpc/delete_my_account", "POST", session.accessToken, "{}")
+            true
+        }.getOrDefault(false)
     }
 
     // ---- Sync rows --------------------------------------------------------
@@ -133,12 +271,17 @@ class SupabaseApi(
     private suspend fun authCall(
         url: String,
         body: JSONObject,
+        method: String = "POST",
+        token: String? = null,
         onSuccess: (JSONObject) -> AuthOutcome
     ): AuthOutcome = withContext(Dispatchers.IO) {
         try {
-            onSuccess(JSONObject(send(url, "POST", token = null, body = body.toString())))
+            val response = send(url, method, token = token, body = body.toString())
+            // Sending a code answers with an empty body, not with JSON.
+            onSuccess(if (response.isBlank()) JSONObject() else JSONObject(response))
         } catch (failure: HttpFailure) {
-            AuthOutcome.Rejected(failure.readableMessage())
+            val detail = failure.readableMessage()
+            AuthOutcome.Rejected(AuthError.of(detail), detail)
         } catch (offline: IOException) {
             AuthOutcome.Offline
         }
@@ -171,6 +314,7 @@ class SupabaseApi(
         extraHeaders: Map<String, String> = emptyMap()
     ): String {
         val connection = (URL(url).openConnection() as HttpURLConnection).apply {
+            // HttpURLConnection refuses PATCH but is fine with PUT and DELETE.
             requestMethod = method
             connectTimeout = 15_000
             readTimeout = 30_000

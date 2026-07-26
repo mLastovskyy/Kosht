@@ -1,0 +1,65 @@
+/* Deliberately plain: these are documents, not pages. Numbered clauses so
+   anything in them can be cited, generous margins for reading on paper. */
+@page { size: A4; margin: 20mm 18mm 18mm; }
+
+body {
+    font-family: "Times New Roman", Georgia, serif;
+    font-size: 11.5pt;
+    line-height: 1.5;
+    color: #111;
+    margin: 0;
+}
+
+h1 {
+    font-size: 15pt;
+    text-align: center;
+    margin: 0 0 4pt;
+    text-transform: uppercase;
+    letter-spacing: 0.4pt;
+}
+
+.subtitle { text-align: center; font-size: 10.5pt; color: #444; margin: 0 0 6pt; }
+.meta { text-align: center; font-size: 9.5pt; color: #666; margin: 0 0 20pt; }
+
+h2 {
+    font-size: 12pt;
+    margin: 18pt 0 6pt;
+    page-break-after: avoid;
+}
+
+p, li { text-align: justify; margin: 0 0 6pt; }
+
+ol.clauses { padding-left: 0; list-style: none; counter-reset: clause; }
+ol.clauses > li { counter-increment: clause; margin-bottom: 6pt; }
+ol.clauses > li::before {
+    content: counter(section) "." counter(clause) ". ";
+    font-weight: bold;
+}
+
+section { counter-increment: section; }
+body { counter-reset: section; }
+
+ul { margin: 0 0 6pt; padding-left: 18pt; }
+ul li { margin-bottom: 3pt; }
+
+table { width: 100%; border-collapse: collapse; margin: 8pt 0 10pt; font-size: 10.5pt; }
+th, td { border: 0.6pt solid #999; padding: 5pt 7pt; text-align: left; vertical-align: top; }
+th { background: #f0f0f0; font-weight: bold; }
+
+.fill { background: #fff3cd; padding: 0 3pt; border-bottom: 0.8pt dashed #a07800; }
+
+.note {
+    font-size: 10pt;
+    border: 0.6pt solid #999;
+    padding: 8pt 10pt;
+    margin: 12pt 0;
+    background: #fafafa;
+}
+
+footer {
+    margin-top: 22pt;
+    padding-top: 8pt;
+    border-top: 0.6pt solid #bbb;
+    font-size: 9.5pt;
+    color: #555;
+}
