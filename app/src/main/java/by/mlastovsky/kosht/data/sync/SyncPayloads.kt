@@ -111,6 +111,9 @@ object SyncPayloads {
             scanned = json.optBoolean("scanned", local?.scanned ?: false),
             transferToAccountId = index.accountId(json.stringOrNull("transferToAccountUid")),
             transferFeeMinor = json.optLong("transferFeeMinor"),
+
+            debtId = local?.debtId,
+            debtDeltaMinor = local?.debtDeltaMinor ?: 0,
             sync = meta
         )
     }

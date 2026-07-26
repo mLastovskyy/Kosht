@@ -78,6 +78,9 @@ data class EditorUiState(
     val calcInput: String = ""
 ) {
 
+    val itemsAllowed: Boolean
+        get() = type == TransactionType.EXPENSE
+
     val calcPendingOperation: Boolean
         get() = Expr.hasPendingOperation(calcInput)
 
@@ -272,7 +275,13 @@ class EditorViewModel(
     }
 
     fun setType(type: TransactionType) {
-        draft.update { it.copy(type = type, categoryId = null) }
+        draft.update {
+            it.copy(
+                type = type,
+                categoryId = null,
+                items = if (type == TransactionType.EXPENSE) it.items else emptyList()
+            )
+        }
     }
 
     fun selectCategory(id: Long) {
@@ -541,6 +550,17 @@ class EditorViewModel(
                 )
                 repository.saveItems(original.id, draft.value.items)
             } else {
+                val debtId = if (state.debtCategory && state.debtPerson.isNotBlank()) {
+                    walletRepository.addDebt(
+                        personName = state.debtPerson,
+                        direction = DebtDirection.I_OWE,
+                        amountMinor = amountMinor,
+                        currencyCode = state.currencyCode,
+                        note = state.note.trim()
+                    )
+                } else {
+                    null
+                }
                 val id = repository.addTransaction(
                     TransactionEntity(
                         amountMinor = amountMinor,
@@ -554,20 +574,12 @@ class EditorViewModel(
                         bynMinor = bynMinor,
                         receiptUrl = draft.value.receiptUrl,
                         receiptDocPath = draft.value.receiptDocPath,
-                        scanned = draft.value.scanned
+                        scanned = draft.value.scanned,
+                        debtId = debtId,
+                        debtDeltaMinor = if (debtId == null) 0 else -amountMinor
                     )
                 )
                 repository.saveItems(id, draft.value.items)
-
-                if (state.debtCategory && state.debtPerson.isNotBlank()) {
-                    walletRepository.addDebt(
-                        personName = state.debtPerson,
-                        direction = DebtDirection.I_OWE,
-                        amountMinor = amountMinor,
-                        currencyCode = state.currencyCode,
-                        note = state.note.trim()
-                    )
-                }
             }
             onDone()
         }
@@ -589,11 +601,7 @@ class EditorViewModel(
     fun delete(onDone: () -> Unit) {
         val original = draft.value.original ?: return
         viewModelScope.launch {
-
-            val items = repository.itemsOf(original.id)
-            repository.deleteTransaction(original)
-
-            DeletionEvents.report(original, items)
+            DeletionEvents.report(repository.remove(original))
             onDone()
         }
     }

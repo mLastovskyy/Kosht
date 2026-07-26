@@ -33,7 +33,11 @@ data class LedgerEntry(
     val amountMinor: Long,
     val note: String,
     val bynMinor: Long?,
-    val accountId: Long?
+    val accountId: Long?,
+
+    val debtId: Long? = null,
+
+    val debtDeltaMinor: Long = 0
 )
 
 class WalletRepository(
@@ -76,12 +80,12 @@ class WalletRepository(
                 closedAt = if (remaining == 0L) System.currentTimeMillis() else null
             )
         )
-        record(entry)
+        record(entry?.copy(debtId = debt.id, debtDeltaMinor = debt.amountMinor - remaining))
     }
 
     suspend fun closeDebt(debt: DebtEntity, entry: LedgerEntry? = null) {
         debtDao.update(debt.copy(closedAt = System.currentTimeMillis()))
-        record(entry)
+        record(entry?.copy(debtId = debt.id))
     }
 
     private suspend fun record(entry: LedgerEntry?) {
@@ -99,7 +103,9 @@ class WalletRepository(
                 timestamp = now,
                 createdAt = now,
                 bynMinor = entry.bynMinor,
-                accountId = entry.accountId
+                accountId = entry.accountId,
+                debtId = entry.debtId,
+                debtDeltaMinor = entry.debtDeltaMinor
             )
         )
     }

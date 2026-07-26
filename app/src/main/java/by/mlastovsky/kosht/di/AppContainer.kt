@@ -39,6 +39,8 @@ class AppContainer(
             database.categoryDao(),
             database.recurringDao(),
             database.transactionItemDao(),
+            database.debtDao(),
+            database.syncDao(),
             photoStore
         )
     }

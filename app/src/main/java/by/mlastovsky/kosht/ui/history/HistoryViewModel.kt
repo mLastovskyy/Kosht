@@ -150,11 +150,7 @@ class HistoryViewModel(
 
     fun delete(item: TransactionWithCategory) {
         viewModelScope.launch {
-
-            val items = repository.itemsOf(item.transaction.id)
-            repository.deleteTransaction(item.transaction)
-
-            DeletionEvents.report(item.transaction, items)
+            DeletionEvents.report(repository.remove(item.transaction))
         }
     }
 }

@@ -5,9 +5,13 @@ import by.mlastovsky.kosht.data.db.CategoryDao
 import by.mlastovsky.kosht.data.db.CategoryEntity
 import by.mlastovsky.kosht.data.db.CategoryTotal
 import by.mlastovsky.kosht.data.db.DailyCategorySpend
+import by.mlastovsky.kosht.data.db.DebtDao
+import by.mlastovsky.kosht.data.db.DebtEntity
 import by.mlastovsky.kosht.data.db.ItemInContext
 import by.mlastovsky.kosht.data.db.MonthlyTotals
 import by.mlastovsky.kosht.data.db.RecurringDao
+import by.mlastovsky.kosht.data.db.SyncDao
+import by.mlastovsky.kosht.data.db.SyncEntity
 import by.mlastovsky.kosht.data.db.TransactionDao
 import by.mlastovsky.kosht.data.db.TransactionEntity
 import by.mlastovsky.kosht.data.db.TransactionItemDao
@@ -30,6 +34,8 @@ class TransactionRepository(
     private val categoryDao: CategoryDao,
     private val recurringDao: RecurringDao,
     private val itemDao: TransactionItemDao,
+    private val debtDao: DebtDao,
+    private val syncDao: SyncDao,
 
     private val photoStore: PhotoStore
 ) {
@@ -75,12 +81,52 @@ class TransactionRepository(
         transactionDao.insert(transaction)
 
     suspend fun restore(record: DeletedRecord) {
-        transactionDao.insert(record.transaction)
-        if (record.items.isNotEmpty()) itemDao.insertAll(record.items)
+        val now = System.currentTimeMillis()
+        transactionDao.insert(record.transaction.freshlySynced(now))
+        if (record.items.isNotEmpty()) itemDao.insertAll(record.items.map { it.freshlySynced(now) })
+        record.debt?.let { debt ->
+            val restored = debt.freshlySynced(now)
+            if (debtDao.getById(debt.id) == null) debtDao.insert(restored) else debtDao.update(restored)
+            syncDao.dropTombstone(SyncEntity.DEBTS.table, debt.sync.uid)
+        }
+        syncDao.dropTombstone(SyncEntity.TRANSACTIONS.table, record.transaction.sync.uid)
+        record.items.forEach {
+            syncDao.dropTombstone(SyncEntity.TRANSACTION_ITEMS.table, it.sync.uid)
+        }
     }
+
+    private fun TransactionEntity.freshlySynced(now: Long) =
+        copy(sync = sync.copy(updatedAt = now))
+
+    private fun TransactionItemEntity.freshlySynced(now: Long) =
+        copy(sync = sync.copy(updatedAt = now))
+
+    private fun DebtEntity.freshlySynced(now: Long) = copy(sync = sync.copy(updatedAt = now))
 
     suspend fun updateTransaction(transaction: TransactionEntity) =
         transactionDao.update(transaction)
+
+    suspend fun remove(transaction: TransactionEntity): DeletedRecord {
+        val items = itemDao.itemsFor(transaction.id)
+        val debt = transaction.debtId?.let { debtDao.getById(it) }
+        transactionDao.delete(transaction)
+        if (debt != null) undoDebtEffect(debt, transaction.debtDeltaMinor)
+        return DeletedRecord(transaction, items, debt)
+    }
+
+    private suspend fun undoDebtEffect(debt: DebtEntity, deltaMinor: Long) {
+        if (deltaMinor < 0) {
+            debtDao.deleteById(debt.id)
+            return
+        }
+        debtDao.update(
+            debt.copy(
+                amountMinor = debt.amountMinor + deltaMinor,
+                closedAt = null,
+                sync = debt.sync.copy(updatedAt = System.currentTimeMillis())
+            )
+        )
+    }
 
     suspend fun deleteTransaction(transaction: TransactionEntity) =
         transactionDao.delete(transaction)

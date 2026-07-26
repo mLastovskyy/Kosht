@@ -71,9 +71,7 @@ class TransferViewModel(
 
     fun delete(transfer: TransactionEntity, onDone: () -> Unit) {
         viewModelScope.launch {
-            transactions.deleteTransaction(transfer)
-
-            DeletionEvents.report(transfer)
+            DeletionEvents.report(transactions.remove(transfer))
             onDone()
         }
     }

@@ -55,6 +55,11 @@ data class TransactionEntity(
 
     @ColumnInfo(defaultValue = "0")
     val transferFeeMinor: Long = 0,
+
+    val debtId: Long? = null,
+
+    @ColumnInfo(defaultValue = "0")
+    val debtDeltaMinor: Long = 0,
     @Embedded
     val sync: SyncMeta = SyncMeta()
 ) {
