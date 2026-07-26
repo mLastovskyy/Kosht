@@ -2,10 +2,15 @@ package by.mlastovsky.kosht.ui.wallet
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import by.mlastovsky.kosht.data.AccountRepository
+import by.mlastovsky.kosht.data.AppSettings
+import by.mlastovsky.kosht.data.CategorySeed
+import by.mlastovsky.kosht.data.LedgerEntry
 import by.mlastovsky.kosht.data.RatesRepository
 import by.mlastovsky.kosht.data.SettingsRepository
 import by.mlastovsky.kosht.data.TransactionRepository
 import by.mlastovsky.kosht.data.WalletRepository
+import by.mlastovsky.kosht.data.db.AccountEntity
 import by.mlastovsky.kosht.data.db.CategoryEntity
 import by.mlastovsky.kosht.data.db.DebtEntity
 import by.mlastovsky.kosht.data.db.RateEntity
@@ -14,8 +19,12 @@ import by.mlastovsky.kosht.data.db.SavingEntity
 import by.mlastovsky.kosht.data.db.SavingGoalEntity
 import by.mlastovsky.kosht.data.db.SavingTotal
 import by.mlastovsky.kosht.model.DebtDirection
+import by.mlastovsky.kosht.model.RecurringFrequency
 import by.mlastovsky.kosht.model.TransactionType
+import by.mlastovsky.kosht.ui.components.CategoryEdit
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asSharedFlow
@@ -55,45 +64,37 @@ data class WalletUiState(
     val recurring: List<RecurringWithCategory> = emptyList(),
     val dueRecurringIds: Set<Long> = emptySet(),
     val expenseCategories: List<CategoryEntity> = emptyList(),
-    /** Planned payments can be income too, and those need their own categories. */
+
     val incomeCategories: List<CategoryEntity> = emptyList(),
     val multiAccount: Boolean = false,
-    /** Accounts with their shown balances (transactions + adjustment). */
-    val accountsWithBalances: List<Pair<by.mlastovsky.kosht.data.db.AccountEntity, Long>> =
+
+    val accountsWithBalances: List<Pair<AccountEntity, Long>> =
         emptyList()
 ) {
-    /**
-     * Accounts worth offering in a picker: none until the user keeps several,
-     * so a single-account setup never has to answer the question.
-     */
-    val pickableAccounts: List<by.mlastovsky.kosht.data.db.AccountEntity>
+
+    val pickableAccounts: List<AccountEntity>
         get() = if (multiAccount) accountsWithBalances.map { it.first } else emptyList()
 }
 
 class WalletViewModel(
     private val walletRepository: WalletRepository,
-    transactionRepository: TransactionRepository,
+    private val transactionRepository: TransactionRepository,
     private val ratesRepository: RatesRepository,
     private val settingsRepository: SettingsRepository,
-    private val accountRepository: by.mlastovsky.kosht.data.AccountRepository
+    private val accountRepository: AccountRepository
 ) : ViewModel() {
 
     private val refreshingRates = MutableStateFlow(false)
 
-    private val _rateRefreshFailed = kotlinx.coroutines.flow.MutableSharedFlow<Unit>()
+    private val _rateRefreshFailed = MutableSharedFlow<Unit>()
 
-    /** Emitted when a manual refresh could not reach the rates server. */
-    val rateRefreshFailed: kotlinx.coroutines.flow.SharedFlow<Unit> =
+    val rateRefreshFailed: SharedFlow<Unit> =
         _rateRefreshFailed.asSharedFlow()
 
     init {
         viewModelScope.launch { ratesRepository.refreshIfStale() }
     }
 
-    /**
-     * Manual refresh. Offline it keeps the rates from the last successful
-     * check and reports the failure so the UI can say so.
-     */
     fun refreshRates() {
         if (refreshingRates.value) return
         viewModelScope.launch {
@@ -127,13 +128,12 @@ class WalletViewModel(
 
     private data class ContextData(
         val rates: Map<String, RateEntity>,
-        val settings: by.mlastovsky.kosht.data.AppSettings,
+        val settings: AppSettings,
         val categories: Pair<List<CategoryEntity>, List<CategoryEntity>>,
         val refreshing: Boolean,
-        val accountsWithBalances: List<Pair<by.mlastovsky.kosht.data.db.AccountEntity, Long>>
+        val accountsWithBalances: List<Pair<AccountEntity, Long>>
     )
 
-    /** Expense and income categories, for whichever a planned payment is. */
     private val categories = combine(
         transactionRepository.observeCategories(TransactionType.EXPENSE),
         transactionRepository.observeCategories(TransactionType.INCOME),
@@ -221,20 +221,57 @@ class WalletViewModel(
         }
     }
 
-    fun repayDebt(debt: DebtEntity, amountMinor: Long) {
+    fun repayDebt(debt: DebtEntity, amountMinor: Long, note: String?, accountId: Long?) {
         if (amountMinor <= 0) return
-        viewModelScope.launch { walletRepository.repayDebt(debt, amountMinor) }
+        viewModelScope.launch {
+            walletRepository.repayDebt(
+                debt,
+                amountMinor,
+                debtEntry(debt, amountMinor, note, accountId)
+            )
+        }
     }
 
-    fun closeDebt(debt: DebtEntity) {
-        viewModelScope.launch { walletRepository.closeDebt(debt) }
+    fun closeDebt(debt: DebtEntity, note: String?, accountId: Long?) {
+        viewModelScope.launch {
+            walletRepository.closeDebt(
+                debt,
+                debtEntry(debt, debt.amountMinor, note, accountId)
+            )
+        }
+    }
+
+    private fun debtEntry(
+        debt: DebtEntity,
+        amountMinor: Long,
+        note: String?,
+        accountId: Long?
+    ): LedgerEntry? {
+        if (note == null || amountMinor <= 0) return null
+        val state = uiState.value
+        val converted = inAppCurrency(amountMinor, debt.currencyCode) ?: return null
+        val income = debt.direction == DebtDirection.OWED_TO_ME
+        return LedgerEntry(
+            categoryKey = if (income) CategorySeed.DEBT_INCOME else CategorySeed.DEBT_EXPENSE,
+            type = if (income) TransactionType.INCOME else TransactionType.EXPENSE,
+            amountMinor = converted,
+            note = note,
+            bynMinor = RatesRepository.toBynMinor(converted, state.currencyCode, state.rates),
+            accountId = accountId
+        )
+    }
+
+    private fun inAppCurrency(amountMinor: Long, from: String): Long? {
+        val to = uiState.value.currencyCode
+        if (from == to) return amountMinor
+        val rate = suggestedRate(from, to) ?: return null
+        return Math.round(amountMinor * rate)
     }
 
     fun deleteDebt(debt: DebtEntity) {
         viewModelScope.launch { walletRepository.deleteDebt(debt.id) }
     }
 
-    /** Corrects a debt: who, which way, how much, in what, and the note. */
     fun updateDebt(
         debt: DebtEntity,
         personName: String,
@@ -266,20 +303,16 @@ class WalletViewModel(
         viewModelScope.launch { accountRepository.addAccount(name, iconKey, colorArgb) }
     }
 
-    fun deleteAccount(account: by.mlastovsky.kosht.data.db.AccountEntity) {
+    fun deleteAccount(account: AccountEntity) {
         viewModelScope.launch { accountRepository.deleteAccount(account) }
     }
 
-    fun setAccountBalance(account: by.mlastovsky.kosht.data.db.AccountEntity, targetMinor: Long) {
+    fun setAccountBalance(account: AccountEntity, targetMinor: Long) {
         viewModelScope.launch { accountRepository.setAccountBalance(account, targetMinor) }
     }
 
-    /**
-     * Changes how an account looks. A rename drops the built-in key so the
-     * custom name wins over the localized one.
-     */
     fun updateAccountAppearance(
-        account: by.mlastovsky.kosht.data.db.AccountEntity,
+        account: AccountEntity,
         name: String,
         iconKey: String,
         colorArgb: Long,
@@ -298,11 +331,48 @@ class WalletViewModel(
         }
     }
 
-    fun addSaving(amountMinor: Long, currencyCode: String, note: String, goalId: Long? = null) {
+    fun addSaving(
+        amountMinor: Long,
+        currencyCode: String,
+        note: String,
+        goalId: Long? = null,
+        deductNote: String? = null,
+        accountId: Long? = null
+    ) {
         if (amountMinor == 0L) return
         viewModelScope.launch {
-            walletRepository.addSaving(amountMinor, currencyCode, note, goalId)
+            walletRepository.addSaving(
+                amountMinor,
+                currencyCode,
+                note,
+                goalId,
+                savingEntry(amountMinor, currencyCode, deductNote, accountId)
+            )
         }
+    }
+
+    private fun savingEntry(
+        amountMinor: Long,
+        currencyCode: String,
+        note: String?,
+        accountId: Long?
+    ): LedgerEntry? {
+        if (note == null || amountMinor == 0L) return null
+        val state = uiState.value
+        val converted = inAppCurrency(Math.abs(amountMinor), currencyCode) ?: return null
+        val withdrawal = amountMinor < 0
+        return LedgerEntry(
+            categoryKey = if (withdrawal) {
+                CategorySeed.SAVINGS_INCOME
+            } else {
+                CategorySeed.SAVINGS_EXPENSE
+            },
+            type = if (withdrawal) TransactionType.INCOME else TransactionType.EXPENSE,
+            amountMinor = converted,
+            note = note,
+            bynMinor = RatesRepository.toBynMinor(converted, state.currencyCode, state.rates),
+            accountId = accountId
+        )
     }
 
     fun addGoal(title: String, targetMinor: Long, currencyCode: String) {
@@ -314,12 +384,6 @@ class WalletViewModel(
         viewModelScope.launch { walletRepository.deleteGoal(goal.goal.id) }
     }
 
-    /**
-     * Renames a goal, moves its target or changes its currency. Switching the
-     * currency carries what is already set aside toward it across at the
-     * official rate — the same thing changing the app currency does — so the
-     * progress bar keeps meaning what it says.
-     */
     fun updateGoal(
         goalUi: GoalUi,
         title: String,
@@ -355,7 +419,7 @@ class WalletViewModel(
         currencyCode: String,
         categoryId: Long,
         firstDue: java.time.LocalDate,
-        frequency: by.mlastovsky.kosht.model.RecurringFrequency,
+        frequency: RecurringFrequency,
         type: TransactionType,
         accountId: Long?
     ) {
@@ -368,12 +432,48 @@ class WalletViewModel(
         }
     }
 
+    fun addCategory(edit: CategoryEdit, type: TransactionType, onCreated: (Long) -> Unit) {
+        if (edit.name.isBlank()) return
+        viewModelScope.launch {
+            onCreated(
+                transactionRepository.addCategory(
+                    edit.name,
+                    edit.iconKey,
+                    edit.colorArgb,
+                    type,
+                    edit.iconUri
+                )
+            )
+        }
+    }
+
+    fun reorderCategories(ids: List<Long>) {
+        viewModelScope.launch { transactionRepository.reorderCategories(ids) }
+    }
+
+    fun updateCategory(id: Long, edit: CategoryEdit) {
+        viewModelScope.launch {
+            transactionRepository.updateCategory(
+                id,
+                edit.name,
+                edit.iconKey,
+                edit.colorArgb,
+                edit.iconUri,
+                edit.iconCleared
+            )
+        }
+    }
+
+    fun deleteCategory(category: CategoryEntity) {
+        viewModelScope.launch { transactionRepository.deleteCategory(category) }
+    }
+
     fun updateRecurringDetails(
         item: RecurringWithCategory,
         title: String,
         amountMinor: Long,
         nextDue: java.time.LocalDate,
-        frequency: by.mlastovsky.kosht.model.RecurringFrequency,
+        frequency: RecurringFrequency,
         type: TransactionType,
         categoryId: Long,
         accountId: Long?
@@ -402,11 +502,6 @@ class WalletViewModel(
         viewModelScope.launch { walletRepository.deleteRecurring(item.recurring.id) }
     }
 
-    /**
-     * Confirms a due payment with a user-checked amount (in the payment's own
-     * currency) and rate: recorded = amount × rate, in the app currency, on the
-     * chosen account — or on the one the plan already names.
-     */
     fun confirmRecurring(
         item: RecurringWithCategory,
         amountMinor: Long,
@@ -422,7 +517,6 @@ class WalletViewModel(
         }
     }
 
-    /** Official cross rate between the charge currency and the app currency. */
     fun suggestedRate(from: String, to: String): Double? {
         val rates = uiState.value.rates
         val fromRate = rates[from] ?: return null

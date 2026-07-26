@@ -43,15 +43,14 @@ fun TransactionRow(
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
     supportingText: String? = null,
-    /** Needed to name both ends of a transfer; ordinary records ignore it. */
+
     accounts: List<AccountEntity> = emptyList()
 ) {
     val transaction = item.transaction
     val isIncome = transaction.type == TransactionType.INCOME
     val transfer = transaction.isTransfer
     val amountText = when {
-        // A transfer is neither income nor expense: the money is still there,
-        // so it carries no sign — only what left the source account.
+
         transfer -> Money.format(transaction.transferTotalMinor, currencyCode)
         isIncome -> "+" + Money.format(transaction.amountMinor, currencyCode)
         else -> "−" + Money.format(transaction.amountMinor, currencyCode)
@@ -75,7 +74,8 @@ fun TransactionRow(
         } else {
             CategoryBadge(
                 iconKey = item.category.iconKey,
-                color = Color(item.category.colorArgb)
+                color = Color(item.category.colorArgb),
+                iconPath = item.category.iconPath
             )
         }
         Column(modifier = Modifier.weight(1f)) {
@@ -91,7 +91,7 @@ fun TransactionRow(
                     overflow = TextOverflow.Ellipsis,
                     modifier = Modifier.weight(1f, fill = false)
                 )
-                // Where the figures came from, long after the scan itself.
+
                 if (transaction.scanned) {
                     Spacer(Modifier.width(6.dp))
                     Icon(
@@ -134,7 +134,6 @@ fun TransactionRow(
     }
 }
 
-/** A transfer belongs to no category, so it gets a badge of its own. */
 @Composable
 private fun TransferBadge() {
     Box(

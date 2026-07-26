@@ -6,13 +6,6 @@ import androidx.room.Index
 import androidx.room.PrimaryKey
 import by.mlastovsky.kosht.model.TransactionType
 
-/**
- * A spending/income category.
- *
- * Built-in categories carry a stable [key] so their display name can be resolved
- * from localized string resources; user-created categories have [key] = null and
- * store the display name directly in [name].
- */
 @Entity(tableName = "categories", indices = [Index("uid")])
 data class CategoryEntity(
     @PrimaryKey(autoGenerate = true)
@@ -23,6 +16,8 @@ data class CategoryEntity(
     val colorArgb: Long,
     val type: TransactionType,
     val position: Int,
+
+    val iconPath: String? = null,
     @Embedded
     val sync: SyncMeta = SyncMeta()
 )

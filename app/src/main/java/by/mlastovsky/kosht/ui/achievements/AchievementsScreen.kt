@@ -32,7 +32,6 @@ import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.AssistChip
 import androidx.compose.material3.DatePicker
 import androidx.compose.material3.DatePickerDialog
-import androidx.compose.material3.rememberDatePickerState
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
@@ -47,6 +46,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
+import androidx.compose.material3.rememberDatePickerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -70,9 +70,10 @@ import by.mlastovsky.kosht.data.awards.ChallengeStatus
 import by.mlastovsky.kosht.data.db.CategoryEntity
 import by.mlastovsky.kosht.model.ChallengeType
 import by.mlastovsky.kosht.ui.AppViewModelProvider
-import by.mlastovsky.kosht.ui.CategoryVisuals
 import by.mlastovsky.kosht.ui.awards.AwardVisuals
-import by.mlastovsky.kosht.ui.components.CategoryBadge
+import by.mlastovsky.kosht.ui.components.CategoryActions
+import by.mlastovsky.kosht.ui.components.CategoryPickerRow
+import by.mlastovsky.kosht.ui.components.TextInput
 import by.mlastovsky.kosht.ui.relativeDate
 import by.mlastovsky.kosht.ui.theme.KoshtTheme
 import by.mlastovsky.kosht.util.Money
@@ -83,7 +84,6 @@ import java.time.ZoneId
 import java.time.ZoneOffset
 import java.time.format.DateTimeFormatter
 import java.util.Locale
-import by.mlastovsky.kosht.ui.components.TextInput
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -95,6 +95,14 @@ fun AchievementsScreen(
     var showAddChallenge by remember { mutableStateOf(false) }
     var challengeToEdit by remember { mutableStateOf<ChallengeProgress?>(null) }
     var selectedAward by remember { mutableStateOf<BadgeUi?>(null) }
+    val categoryActions = remember(viewModel) {
+        CategoryActions(
+            add = viewModel::addCategory,
+            reorder = viewModel::reorderCategories,
+            update = viewModel::updateCategory,
+            delete = viewModel::deleteCategory
+        )
+    }
 
     Column(
         modifier = Modifier
@@ -189,6 +197,7 @@ fun AchievementsScreen(
                 viewModel.addChallenge(type, title, amount, categoryId, end)
                 showAddChallenge = false
             },
+            categoryActions = categoryActions,
             onDismiss = { showAddChallenge = false }
         )
     }
@@ -202,6 +211,7 @@ fun AchievementsScreen(
                 viewModel.updateChallenge(challenge, title, amount, categoryId, end)
                 challengeToEdit = null
             },
+            categoryActions = categoryActions,
             onDismiss = { challengeToEdit = null }
         )
     }
@@ -343,10 +353,6 @@ private fun challengeSubtitle(challenge: ChallengeProgress, currencyCode: String
         )
     }
 
-/**
- * Awards laid out as swipeable pages (2 rows × 3) with dot indicators —
- * flicking through pages beats one long horizontal scroll.
- */
 @Composable
 private fun AwardPages(
     badges: List<BadgeUi>,
@@ -462,10 +468,6 @@ private fun BadgeCell(
     }
 }
 
-/**
- * Award details: how to earn it, plus the earn date once unlocked or the
- * current progress while still locked.
- */
 @Composable
 private fun AwardDialog(badge: BadgeUi, onDismiss: () -> Unit) {
     AlertDialog(
@@ -534,7 +536,6 @@ private fun formatDate(epochMillis: Long): String =
         .toLocalDate()
         .format(DateTimeFormatter.ofPattern("d MMMM yyyy", Locale.getDefault()))
 
-/** Edit an existing challenge: title, amount, category and end date. */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun EditChallengeDialog(
@@ -542,6 +543,7 @@ private fun EditChallengeDialog(
     categories: List<CategoryEntity>,
     currencyCode: String,
     onConfirm: (title: String, amountMinor: Long, categoryId: Long?, end: LocalDate) -> Unit,
+    categoryActions: CategoryActions,
     onDismiss: () -> Unit
 ) {
     var title by remember { mutableStateOf(challenge.entity.title) }
@@ -578,36 +580,12 @@ private fun EditChallengeDialog(
                     )
                 }
                 if (challenge.entity.type == ChallengeType.SPEND_LIMIT) {
-                    LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        item {
-                            FilterChip(
-                                selected = categoryId == null,
-                                onClick = { categoryId = null },
-                                label = { Text(stringResource(R.string.filter_all_categories)) }
-                            )
-                        }
-                        items(categories, key = { it.id }) { category ->
-                            Column(
-                                horizontalAlignment = Alignment.CenterHorizontally,
-                                modifier = Modifier
-                                    .clip(MaterialTheme.shapes.medium)
-                                    .clickable { categoryId = category.id }
-                                    .padding(4.dp)
-                            ) {
-                                CategoryBadge(
-                                    iconKey = category.iconKey,
-                                    color = Color(category.colorArgb),
-                                    selected = category.id == categoryId,
-                                    size = 36.dp
-                                )
-                                Text(
-                                    text = CategoryVisuals.displayName(category),
-                                    style = MaterialTheme.typography.labelSmall,
-                                    maxLines = 1
-                                )
-                            }
-                        }
-                    }
+                    ChallengeCategoryRow(
+                        categories = categories,
+                        selectedId = categoryId,
+                        onSelect = { categoryId = it },
+                        actions = categoryActions
+                    )
                 }
                 AssistChip(
                     onClick = { showDatePicker = true },
@@ -683,6 +661,7 @@ private fun AddChallengeDialog(
         categoryId: Long?,
         end: LocalDate
     ) -> Unit,
+    categoryActions: CategoryActions,
     onDismiss: () -> Unit
 ) {
     var type by remember { mutableStateOf(ChallengeType.SPEND_LIMIT) }
@@ -751,36 +730,12 @@ private fun AddChallengeDialog(
                     )
                 }
                 if (type == ChallengeType.SPEND_LIMIT) {
-                    LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        item {
-                            FilterChip(
-                                selected = categoryId == null,
-                                onClick = { categoryId = null },
-                                label = { Text(stringResource(R.string.filter_all_categories)) }
-                            )
-                        }
-                        items(categories, key = { it.id }) { category ->
-                            Column(
-                                horizontalAlignment = Alignment.CenterHorizontally,
-                                modifier = Modifier
-                                    .clip(MaterialTheme.shapes.medium)
-                                    .clickable { categoryId = category.id }
-                                    .padding(4.dp)
-                            ) {
-                                CategoryBadge(
-                                    iconKey = category.iconKey,
-                                    color = Color(category.colorArgb),
-                                    selected = category.id == categoryId,
-                                    size = 36.dp
-                                )
-                                Text(
-                                    text = CategoryVisuals.displayName(category),
-                                    style = MaterialTheme.typography.labelSmall,
-                                    maxLines = 1
-                                )
-                            }
-                        }
-                    }
+                    ChallengeCategoryRow(
+                        categories = categories,
+                        selectedId = categoryId,
+                        onSelect = { categoryId = it },
+                        actions = categoryActions
+                    )
                 }
                 LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     items(
@@ -816,6 +771,31 @@ private fun AddChallengeDialog(
         },
         dismissButton = {
             TextButton(onClick = onDismiss) { Text(stringResource(R.string.action_cancel)) }
+        }
+    )
+}
+
+@Composable
+private fun ChallengeCategoryRow(
+    categories: List<CategoryEntity>,
+    selectedId: Long?,
+    onSelect: (Long?) -> Unit,
+    actions: CategoryActions
+) {
+    CategoryPickerRow(
+        categories = categories,
+        selectedId = selectedId,
+        onSelect = { onSelect(it) },
+        actions = actions,
+        badgeSize = 36.dp,
+        leading = {
+            item(key = "all") {
+                FilterChip(
+                    selected = selectedId == null,
+                    onClick = { onSelect(null) },
+                    label = { Text(stringResource(R.string.filter_all_categories)) }
+                )
+            }
         }
     )
 }

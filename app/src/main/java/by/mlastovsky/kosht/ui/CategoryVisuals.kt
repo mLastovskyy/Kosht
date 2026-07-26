@@ -17,6 +17,7 @@ import androidx.compose.material.icons.rounded.DirectionsCar
 import androidx.compose.material.icons.rounded.Favorite
 import androidx.compose.material.icons.rounded.FitnessCenter
 import androidx.compose.material.icons.rounded.Flight
+import androidx.compose.material.icons.rounded.Handshake
 import androidx.compose.material.icons.rounded.Home
 import androidx.compose.material.icons.rounded.Laptop
 import androidx.compose.material.icons.rounded.LocalCafe
@@ -36,12 +37,9 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
 import by.mlastovsky.kosht.R
+import by.mlastovsky.kosht.data.CategorySeed
 import by.mlastovsky.kosht.data.db.CategoryEntity
 
-/**
- * Maps persistent category icon keys to Material icons and built-in category
- * keys to localized display names.
- */
 object CategoryVisuals {
 
     private val icons: Map<String, ImageVector> = mapOf(
@@ -56,11 +54,12 @@ object CategoryVisuals {
         "gifts" to Icons.Rounded.CardGiftcard,
         "education" to Icons.Rounded.School,
         "travel" to Icons.Rounded.Flight,
+        "debt" to Icons.Rounded.Handshake,
         "other" to Icons.Rounded.Category,
         "salary" to Icons.Rounded.Payments,
         "freelance" to Icons.Rounded.Laptop,
         "investments" to Icons.AutoMirrored.Rounded.TrendingUp,
-        // Extra icons available when creating custom categories.
+
         "wallet" to Icons.Rounded.AccountBalanceWallet,
         "card" to Icons.Rounded.CreditCard,
         "bank" to Icons.Rounded.AccountBalance,
@@ -78,10 +77,8 @@ object CategoryVisuals {
         "tools" to Icons.Rounded.Build
     )
 
-    /** Icon keys offered in the custom category editor, in display order. */
     val pickableIconKeys: List<String> = icons.keys.toList()
 
-    /** Colors offered in the custom category editor. */
     val pickableColors: List<Long> = listOf(
         0xFF43A047, 0xFF2E7D32, 0xFF00897B, 0xFF00ACC1, 0xFF039BE5, 0xFF1E88E5,
         0xFF3949AB, 0xFF5E35B1, 0xFF8E24AA, 0xFFD81B60, 0xFFE53935, 0xFFF4511E,
@@ -103,17 +100,22 @@ object CategoryVisuals {
         "gifts" -> R.string.category_gifts
         "education" -> R.string.category_education
         "travel" -> R.string.category_travel
+        CategorySeed.DEBT_EXPENSE -> R.string.category_debt_expense
+        CategorySeed.SAVINGS_EXPENSE -> R.string.category_savings_expense
         "other_expense" -> R.string.category_other_expense
         "salary" -> R.string.category_salary
         "freelance" -> R.string.category_freelance
         "gift_income" -> R.string.category_gift_income
         "investments" -> R.string.category_investments
+        CategorySeed.DEBT_INCOME -> R.string.category_debt_income
+        CategorySeed.SAVINGS_INCOME -> R.string.category_savings_income
         "other_income" -> R.string.category_other_income
         else -> null
     }
 
     @Composable
     fun displayName(category: CategoryEntity): String {
+        if (category.name.isNotBlank()) return category.name
         val res = category.key?.let { nameRes(it) }
         return if (res != null) stringResource(res) else category.name
     }

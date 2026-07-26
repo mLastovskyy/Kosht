@@ -23,7 +23,6 @@ import by.mlastovsky.kosht.model.TransactionType
 import org.json.JSONArray
 import org.json.JSONObject
 
-/** One record as the cloud stores it. */
 data class SyncRow(
     val entity: SyncEntity,
     val uid: String,
@@ -32,11 +31,6 @@ data class SyncRow(
     val payload: JSONObject
 )
 
-/**
- * Translates between local row ids and the cloud identities they map to.
- * Local ids are per-device autoincrement values and mean nothing anywhere
- * else, so every reference travels as the target's uid.
- */
 class UidIndex(
     categories: List<UidRef>,
     accounts: List<UidRef>,
@@ -70,15 +64,6 @@ class UidIndex(
     fun goalId(uid: String?): Long? = uid?.let { goalIdByUid[it] }
 }
 
-/**
- * Field names match the Room entities so the stored JSON stays readable, e.g.
- * `select payload->>'amountMinor' from sync_rows where entity='transactions'`.
- *
- * A photo's local path never travels -- it would be meaningless on another
- * device. The image itself stays on the phone unless the user switches photo
- * sync on, in which case the payload carries the name of the uploaded object
- * and the file goes to storage rather than into this row.
- */
 object SyncPayloads {
 
     fun of(row: TransactionEntity, index: UidIndex): JSONObject? {
@@ -93,8 +78,7 @@ object SyncPayloads {
             .put("accountUid", index.accountUid(row.accountId))
             .put("bynMinor", row.bynMinor)
             .put("receiptUrl", row.receiptUrl)
-            // Where the photo was uploaded, when the user asked for that. The
-            // local path still never travels -- only the object's name does.
+
             .put("photoKey", row.photoKey)
             .put("scanned", row.scanned)
             .put("transferToAccountUid", index.accountUid(row.transferToAccountId))
@@ -116,12 +100,12 @@ object SyncPayloads {
             note = json.optString("note"),
             timestamp = json.getLong("timestamp"),
             createdAt = json.getLong("createdAt"),
-            // Local-only: the image itself never leaves the device.
+
             photoPath = local?.photoPath,
             accountId = index.accountId(json.stringOrNull("accountUid")),
             bynMinor = json.longOrNull("bynMinor"),
             receiptUrl = json.stringOrNull("receiptUrl"),
-            // The link travels, the downloaded copy does not.
+
             receiptDocPath = local?.receiptDocPath,
             photoKey = json.stringOrNull("photoKey") ?: local?.photoKey,
             scanned = json.optBoolean("scanned", local?.scanned ?: false),
@@ -131,10 +115,6 @@ object SyncPayloads {
         )
     }
 
-    /**
-     * A product line. It only means anything next to its record, so it travels
-     * with that record's identity and waits if the record has not arrived yet.
-     */
     fun of(row: TransactionItemEntity, index: UidIndex): JSONObject? {
         val transactionUid = index.transactionUid(row.transactionId) ?: return null
         return JSONObject()
@@ -179,6 +159,8 @@ object SyncPayloads {
         colorArgb = json.getLong("colorArgb"),
         type = TransactionType.valueOf(json.getString("type")),
         position = json.getInt("position"),
+
+        iconPath = local?.iconPath,
         sync = meta
     )
 
@@ -272,8 +254,7 @@ object SyncPayloads {
             frequency = RecurringFrequency.valueOf(json.getString("frequency")),
             enabled = json.optBoolean("enabled", true),
             createdAt = json.getLong("createdAt"),
-            // Plans made before payments could be income are expenses, which
-            // is what an older device leaves this field out to say.
+
             type = json.stringOrNull("type")
                 ?.let { runCatching { TransactionType.valueOf(it) }.getOrNull() }
                 ?: TransactionType.EXPENSE,
@@ -339,10 +320,6 @@ object SyncPayloads {
         sync = meta
     )
 
-    /**
-     * The settings row. Unlike the others it has no local id and no uid of its
-     * own — there is exactly one per account, under [SETTINGS_UID].
-     */
     fun of(row: SyncedSettings): JSONObject = JSONObject()
         .put("currencyCode", row.settings.currencyCode)
         .put("themeMode", row.settings.themeMode.name)
@@ -366,10 +343,6 @@ object SyncPayloads {
         .put("profileNickname", row.profileNickname)
         .put("profileEmoji", row.profileEmoji)
 
-    /**
-     * [fallback] supplies anything an older or newer version of the app did
-     * not send, so one unknown field never resets a screenful of preferences.
-     */
     fun toSettings(
         json: JSONObject,
         updatedAt: Long,
@@ -421,7 +394,6 @@ object SyncPayloads {
         )
     }
 
-    /** One settings row per account, so its identity is a constant. */
     const val SETTINGS_UID = "settings"
 }
 

@@ -4,32 +4,41 @@ import android.net.Uri
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import by.mlastovsky.kosht.data.AccountRepository
+import by.mlastovsky.kosht.data.CategorySeed
+import by.mlastovsky.kosht.data.DeletionEvents
 import by.mlastovsky.kosht.data.ItemDraft
 import by.mlastovsky.kosht.data.PhotoStore
 import by.mlastovsky.kosht.data.RatesRepository
 import by.mlastovsky.kosht.data.SettingsRepository
 import by.mlastovsky.kosht.data.TransactionRepository
+import by.mlastovsky.kosht.data.WalletRepository
+import by.mlastovsky.kosht.data.db.AccountEntity
 import by.mlastovsky.kosht.data.db.CategoryEntity
 import by.mlastovsky.kosht.data.db.TransactionEntity
 import by.mlastovsky.kosht.data.receipt.ReceiptScanner
+import by.mlastovsky.kosht.model.DebtDirection
 import by.mlastovsky.kosht.model.TransactionType
-import kotlinx.coroutines.flow.first
+import by.mlastovsky.kosht.ui.components.CategoryEdit
 import by.mlastovsky.kosht.ui.navigation.Routes
 import by.mlastovsky.kosht.util.Dates
+import by.mlastovsky.kosht.util.Expr
 import by.mlastovsky.kosht.util.Money
 import by.mlastovsky.kosht.util.Notes
+import java.time.LocalDate
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flatMapLatest
+import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-import java.time.LocalDate
 
 data class EditorUiState(
     val loaded: Boolean = false,
@@ -43,58 +52,57 @@ data class EditorUiState(
     val currencyCode: String = SettingsRepository.DEFAULT_CURRENCY,
     val scanning: Boolean = false,
     val photoPath: String? = null,
-    /** Electronic receipt reached through a scanned QR, if there was one. */
+
     val receiptUrl: String? = null,
     val receiptDocPath: String? = null,
     val pendingScan: PendingScan? = null,
-    val accounts: List<by.mlastovsky.kosht.data.db.AccountEntity> = emptyList(),
+    val accounts: List<AccountEntity> = emptyList(),
     val accountId: Long? = null,
     val multiAccount: Boolean = false,
-    /** The figures were read off a receipt rather than typed. */
+
     val scanned: Boolean = false,
-    /** What the record was spent on, line by line. Optional, often empty. */
+
     val items: List<ItemDraft> = emptyList(),
-    /** Item names already used in this category, offered while typing. */
+
     val itemSuggestions: List<String> = emptyList(),
-    /** Built-in key of the chosen category; picks the suggested lines. */
+
     val itemCategoryKey: String? = null,
-    /**
-     * The record turned out to be a transfer between accounts, which is edited
-     * in its own dialog rather than here. The screen closes on it.
-     */
+
+    val debtCategory: Boolean = false,
+    val debtPerson: String = "",
+
     val isTransfer: Boolean = false,
-    /** Open the calculator automatically for a new record. */
+
     val autoCalculator: Boolean = true,
-    /** Working expression of the standalone calculator dialog. */
+
     val calcInput: String = ""
 ) {
-    /** An arithmetic operation is typed in the calculator but not evaluated yet. */
-    val calcPendingOperation: Boolean
-        get() = by.mlastovsky.kosht.util.Expr.hasPendingOperation(calcInput)
 
-    /** The calculator expression evaluates to a positive amount. */
+    val calcPendingOperation: Boolean
+        get() = Expr.hasPendingOperation(calcInput)
+
     val calcCanApply: Boolean
-        get() = (by.mlastovsky.kosht.util.Expr.evaluateToMinor(calcInput, currencyCode) ?: 0L) > 0L
+        get() = (Expr.evaluateToMinor(calcInput, currencyCode) ?: 0L) > 0L
 
     val canSave: Boolean
         get() = categoryId != null &&
-            (by.mlastovsky.kosht.util.Expr.evaluateToMinor(amountInput, currencyCode) ?: 0L) > 0L
+            (Expr.evaluateToMinor(amountInput, currencyCode) ?: 0L) > 0L &&
 
-    /** What the listed products add up to — shown next to the record's amount. */
+            (!debtCategory || debtPerson.isNotBlank())
+
     val itemsTotalMinor: Long
         get() = items.sumOf { it.amountMinor }
 }
 
-/** Scan result awaiting user review before it is applied to the draft. */
 data class PendingScan(
     val amountInput: String,
     val date: LocalDate?,
     val merchant: String?,
     val photoPath: String?,
-    /** Set when the figures came from an electronic receipt behind a QR. */
+
     val receiptUrl: String? = null,
     val receiptDocPath: String? = null,
-    /** The shopping the slip listed, when its lines could be read. */
+
     val items: List<ItemDraft> = emptyList()
 ) {
     val fromQr: Boolean get() = receiptUrl != null || receiptDocPath != null
@@ -108,7 +116,9 @@ class EditorViewModel(
     private val receiptScanner: ReceiptScanner,
     private val photoStore: PhotoStore,
     private val ratesRepository: RatesRepository,
-    accountRepository: by.mlastovsky.kosht.data.AccountRepository
+    accountRepository: AccountRepository,
+
+    private val walletRepository: WalletRepository
 ) : ViewModel() {
 
     private val transactionId: Long = savedStateHandle[Routes.EDITOR_ARG_ID] ?: Routes.NO_ID
@@ -127,7 +137,9 @@ class EditorViewModel(
         val scanned: Boolean = false,
         val isTransfer: Boolean = false,
         val items: List<ItemDraft> = emptyList(),
-        /** Original entity when editing, to preserve id/createdAt/time of day. */
+
+        val debtPerson: String = "",
+
         val original: TransactionEntity? = null
     )
 
@@ -137,7 +149,6 @@ class EditorViewModel(
 
     private val pendingScan = MutableStateFlow<PendingScan?>(null)
 
-    /** Expression typed in the standalone calculator dialog. */
     private val calcInput = MutableStateFlow("")
 
     private val categoriesForType = draft
@@ -148,22 +159,17 @@ class EditorViewModel(
     private data class Aux(
         val scanning: Boolean,
         val pending: PendingScan?,
-        val accounts: List<by.mlastovsky.kosht.data.db.AccountEntity>,
+        val accounts: List<AccountEntity>,
         val calcInput: String,
         val itemHints: ItemHints
     )
 
-    /** What to offer while listing the items of a record, and where from. */
     private data class ItemHints(
         val names: List<String> = emptyList(),
-        /** Built-in key of the chosen category; picks the suggested lines. */
+
         val categoryKey: String? = null
     )
 
-    /**
-     * The category actually in force — the chosen one, or the first of the type
-     * when nothing is chosen yet, exactly as [uiState] resolves it.
-     */
     private val selectedCategory = combine(
         draft.map { it.categoryId }.distinctUntilChanged(),
         categoriesForType
@@ -173,7 +179,7 @@ class EditorViewModel(
 
     private val itemHints = selectedCategory.flatMapLatest { category ->
         if (category == null) {
-            kotlinx.coroutines.flow.flowOf(ItemHints())
+            flowOf(ItemHints())
         } else {
             repository.observeItemNames(category.id).map { ItemHints(it, category.key) }
         }
@@ -221,6 +227,11 @@ class EditorViewModel(
             items = d.items,
             itemSuggestions = extras.itemHints.names,
             itemCategoryKey = extras.itemHints.categoryKey,
+
+            debtCategory = d.original == null &&
+                categories.firstOrNull { it.id == effectiveCategoryId }?.key ==
+                CategorySeed.DEBT_INCOME,
+            debtPerson = d.debtPerson,
             autoCalculator = settings.autoCalculator,
             calcInput = extras.calcInput
         )
@@ -280,13 +291,6 @@ class EditorViewModel(
         draft.update { it.copy(date = date) }
     }
 
-    // --- What the record was spent on ---
-
-    /**
-     * Adds a line of what the record was for. A nameless line says nothing, so
-     * it is refused rather than stored — the whole list is optional anyway.
-     * [priceMinor] is the price of one, the way a receipt prints it.
-     */
     fun addItem(name: String, priceMinor: Long, quantity: Double?) {
         val draftItem = itemOrNull(name, priceMinor, quantity) ?: return
         draft.update { it.copy(items = it.items + draftItem) }
@@ -307,10 +311,6 @@ class EditorViewModel(
         }
     }
 
-    /**
-     * A price with a quantity is the price of one: two at 1,75 is a line of
-     * 3,50, which is what the receipt says and what the statistics add up.
-     */
     private fun itemOrNull(name: String, priceMinor: Long, quantity: Double?): ItemDraft? {
         if (name.isBlank()) return null
         val count = quantity?.takeIf { it > 0 }
@@ -322,14 +322,10 @@ class EditorViewModel(
         )
     }
 
-    // --- Calculator dialog ---
-
-    /** Seeds the calculator with the current amount when the dialog opens. */
     fun openCalculator() {
         calcInput.value = draft.value.amountInput
     }
 
-    /** The operand after the last operator — keypad rules apply per operand. */
     private fun lastOperand(input: String): String =
         input.takeLastWhile { it.isDigit() || it == '.' }
 
@@ -361,7 +357,6 @@ class EditorViewModel(
         }
     }
 
-    /** Appends a calculator operator (＋ − × ÷) after a digit. */
     fun onOperator(op: Char) {
         calcInput.update { input ->
             when {
@@ -373,10 +368,9 @@ class EditorViewModel(
         }
     }
 
-    /** Evaluates the typed expression and replaces it with the result. */
     fun onEquals() {
         calcInput.update { input ->
-            val minor = by.mlastovsky.kosht.util.Expr
+            val minor = Expr
                 .evaluateToMinor(input, currentCurrency())
             if (minor == null || minor < 0) input else minorToInput(minor)
         }
@@ -386,18 +380,13 @@ class EditorViewModel(
         calcInput.update { it.dropLast(1) }
     }
 
-    /** Writes the evaluated calculator result into the amount input. */
     fun applyCalculator() {
-        val minor = by.mlastovsky.kosht.util.Expr
+        val minor = Expr
             .evaluateToMinor(calcInput.value, currentCurrency()) ?: return
         if (minor <= 0) return
         draft.update { it.copy(amountInput = minorToInput(minor)) }
     }
 
-    /**
-     * Runs on-device OCR over a receipt photo and prefills the draft with the
-     * recognized total, date and merchant. Reports success via [onResult].
-     */
     fun scanReceipt(uri: Uri, onResult: (Boolean) -> Unit) {
         if (scanning.value) return
         viewModelScope.launch {
@@ -407,7 +396,7 @@ class EditorViewModel(
             scanning.value = false
             val amount = scanned?.parsed?.amountMinor
             if (amount != null) {
-                // Let the user review/correct the result before applying.
+
                 pendingScan.value = PendingScan(
                     amountInput = minorToInput(amount),
                     date = scanned.parsed.date,
@@ -427,7 +416,6 @@ class EditorViewModel(
         }
     }
 
-    /** Applies the (possibly corrected) scan result to the draft. */
     fun applyScan(amountInput: String, note: String) {
         val pending = pendingScan.value ?: return
         draft.update { d ->
@@ -443,17 +431,15 @@ class EditorViewModel(
                 photoPath = pending.photoPath ?: d.photoPath,
                 receiptUrl = pending.receiptUrl ?: d.receiptUrl,
                 receiptDocPath = pending.receiptDocPath ?: d.receiptDocPath,
-                // Where the figures came from, kept with the record itself.
+
                 scanned = true,
-                // The slip's own lines, when it had readable ones. A list the
-                // user has already typed is theirs and is left alone.
+
                 items = if (d.items.isEmpty()) pending.items else d.items
             )
         }
         pendingScan.value = null
     }
 
-    /** Discards the scan result along with everything it downloaded. */
     fun dismissScan() {
         pendingScan.value?.let {
             photoStore.delete(it.photoPath)
@@ -479,7 +465,6 @@ class EditorViewModel(
         }
     }
 
-    /** Detaches the electronic receipt and drops its downloaded copy. */
     fun removeEReceipt() {
         draft.update { d ->
             photoStore.delete(d.receiptDocPath)
@@ -487,17 +472,49 @@ class EditorViewModel(
         }
     }
 
-    fun addCategory(name: String, iconKey: String, colorArgb: Long) {
-        if (name.isBlank()) return
+    fun addCategory(edit: CategoryEdit, type: TransactionType, onCreated: (Long) -> Unit) {
+        if (edit.name.isBlank()) return
         viewModelScope.launch {
-            val id = repository.addCategory(name, iconKey, colorArgb, draft.value.type)
-            draft.update { it.copy(categoryId = id) }
+            onCreated(
+                repository.addCategory(
+                    edit.name,
+                    edit.iconKey,
+                    edit.colorArgb,
+                    type,
+                    edit.iconUri
+                )
+            )
         }
+    }
+
+    fun reorderCategories(ids: List<Long>) {
+        viewModelScope.launch { repository.reorderCategories(ids) }
+    }
+
+    fun updateCategory(id: Long, edit: CategoryEdit) {
+        viewModelScope.launch {
+            repository.updateCategory(
+                id,
+                edit.name,
+                edit.iconKey,
+                edit.colorArgb,
+                edit.iconUri,
+                edit.iconCleared
+            )
+        }
+    }
+
+    fun deleteCategory(category: CategoryEntity) {
+        viewModelScope.launch { repository.deleteCategory(category) }
+    }
+
+    fun setDebtPerson(name: String) {
+        draft.update { it.copy(debtPerson = name.take(DEBT_PERSON_MAX)) }
     }
 
     fun save(onDone: () -> Unit) {
         val state = uiState.value
-        val amountMinor = by.mlastovsky.kosht.util.Expr
+        val amountMinor = Expr
             .evaluateToMinor(state.amountInput, state.currencyCode) ?: return
         val categoryId = state.categoryId ?: return
         if (amountMinor <= 0) return
@@ -541,15 +558,21 @@ class EditorViewModel(
                     )
                 )
                 repository.saveItems(id, draft.value.items)
+
+                if (state.debtCategory && state.debtPerson.isNotBlank()) {
+                    walletRepository.addDebt(
+                        personName = state.debtPerson,
+                        direction = DebtDirection.I_OWE,
+                        amountMinor = amountMinor,
+                        currencyCode = state.currencyCode,
+                        note = state.note.trim()
+                    )
+                }
             }
             onDone()
         }
     }
 
-    /**
-     * Freezes the BYN equivalent at save time. An unchanged amount keeps the
-     * originally fixed value so old records never drift with the rate.
-     */
     private suspend fun resolveBynMinor(
         amountMinor: Long,
         currencyCode: String,
@@ -566,14 +589,11 @@ class EditorViewModel(
     fun delete(onDone: () -> Unit) {
         val original = draft.value.original ?: return
         viewModelScope.launch {
-            // Read while they still exist: the delete cascades them away, and
-            // the undo offer is what has to hand them back.
+
             val items = repository.itemsOf(original.id)
             repository.deleteTransaction(original)
-            // The photo and the downloaded receipt are deleted only once the
-            // undo offer has passed -- restoring a record whose picture is
-            // already gone would put it back pointing at nothing.
-            by.mlastovsky.kosht.data.DeletionEvents.report(original, items)
+
+            DeletionEvents.report(original, items)
             onDone()
         }
     }
@@ -600,5 +620,7 @@ class EditorViewModel(
 
     private companion object {
         const val MAX_INTEGER_DIGITS = 9
+
+        const val DEBT_PERSON_MAX = 40
     }
 }

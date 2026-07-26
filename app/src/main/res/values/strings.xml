@@ -360,14 +360,20 @@
     <string name="action_confirm">Confirm</string>
     <string name="section_recurring">Monthly payments</string>
     <string name="recurring_new">New payment</string>
+    <string name="recurring_new_income">New income</string>
     <string name="recurring_title_hint">Title</string>
+    <string name="recurring_source_hint">Source</string>
+    <string name="recurring_amount_expense">Amount to charge</string>
+    <string name="recurring_amount_income">Amount received</string>
     <string name="recurring_first_date">Charge date</string>
+    <string name="recurring_first_date_income">Date received</string>
     <string name="freq_weekly">Weekly</string>
     <string name="freq_monthly">Monthly</string>
     <string name="freq_quarterly">Every 3 months</string>
     <string name="freq_yearly">Yearly</string>
     <string name="recurring_rate">Rate %1$s → %2$s</string>
     <string name="recurring_converted">Will be charged: %1$s</string>
+    <string name="recurring_converted_income">Will be credited: %1$s</string>
     <string name="recurring_confirm_expense">Will be recorded as an expense</string>
     <string name="recurring_confirm_income">Will be recorded as income</string>
     <string name="wallet_empty_recurring">No recurring payments yet</string>
@@ -379,6 +385,9 @@
     <string name="debt_i_owe">I owe</string>
     <string name="debt_owed_to_me">Owed to me</string>
     <string name="debt_repay">Repay part</string>
+    <string name="debt_record_history">Record in history</string>
+    <string name="debt_note_closed">Debt closed: %1$s</string>
+    <string name="debt_note_part">Part of a debt: %1$s</string>
     <string name="debt_close">Close debt</string>
     <string name="wallet_empty_debts">No debts — nice!</string>
     <string name="section_savings">Savings</string>
@@ -399,6 +408,8 @@
     <string name="goal_currency_converts">What is already set aside toward it moves across at the NBRB rate</string>
     <string name="debt_edit">Edit debt</string>
     <string name="savings_in_currency">Set aside in %1$s</string>
+    <string name="savings_deduct_account">Take it off an account</string>
+    <string name="savings_return_account">Put it back on an account</string>
     <string name="goals_pick">Toward a goal</string>
     <string name="goals_none">No goal</string>
     <string name="achievements_title">Achievements</string>
@@ -495,6 +506,10 @@
 
     <!-- Category management -->
     <string name="category_new">New category</string>
+    <string name="category_edit">Edit category</string>
+    <string name="category_picture">Picture instead of an icon</string>
+    <string name="category_picture_set">Your own picture</string>
+    <string name="category_picture_remove">Remove</string>
     <string name="category_name_hint">Name</string>
     <string name="category_icon">Icon</string>
     <string name="category_color">Color</string>
@@ -525,7 +540,7 @@ The sync icon sits in the row with your address: it starts a sync and turns into
     <string name="guide_home_title">Home</string>
     <string name="guide_home_body">The big card shows your total balance (all income minus all expenses) with this month\'s income and expenses below it. If your currency is not BYN, the ≈ line shows the equivalent at the live rate. In the top row: the 🔥 chip is your under-budget streak, the trophy opens Achievements, and the avatar opens your profile — the same dialog Settings opens, so a name or a picture can be changed right where you are looking at it. The app deals itself one of the built-in avatars on the very first launch, so there is a face there from the start; pick another and yours is the one that stays. "Recent" lists the latest records — tap one to edit, "All" jumps to History. The big + button adds a transaction.</string>
     <string name="guide_editor_title">Adding a transaction</string>
-    <string name="guide_editor_body">Switch Expense/Income at the top. For a new record the calculator opens by itself in a bottom sheet; type the sum (comma adds cents) and hit Apply — tap the amount any time to open it again. Pick a category in the carousel — the "New" circle creates your own with a name, icon and color. The date chip opens a calendar (defaults to today). Write an optional note. In the bottom row the basket chip lists what you bought (optional — see "Products in a record"), the scanner icon reads a receipt photo and the photo icon attaches one from camera or gallery; tap the thumbnail to view or remove it. A record whose figures came off a receipt carries a small scanner mark here and in every list. Save finishes. When editing an existing record a trash icon appears in the top bar.</string>
+    <string name="guide_editor_body">Switch Expense/Income at the top, or swipe sideways across the amount — the same gesture that moves the app\'s own tabs. For a new record the calculator opens by itself in a bottom sheet; type the sum (comma adds cents) and hit Apply — tap the amount any time to open it again. Pick a category in the carousel — the "New" circle creates your own with a name, icon and color. Press and hold one and it comes off the row: drag it to where it belongs and the new order is kept everywhere, or let go without moving and the category opens for correcting — name, icon, color, or the trash, which moves its records to "Other" rather than losing them. Instead of an icon from the set you can pick a photo from the gallery, the logo of a payment app or a shop: it fills the circle wherever the category appears, and the palette steps aside while it is there. Income filed under "Debt" asks one more thing, who the money is owed to, and opens that debt on the Wallet tab with the note you wrote. The date chip opens a calendar (defaults to today). Write an optional note. In the bottom row the basket chip lists what you bought (optional — see "Products in a record"), the scanner icon reads a receipt photo and the photo icon attaches one from camera or gallery; tap the thumbnail to view or remove it. A record whose figures came off a receipt carries a small scanner mark here and in every list. Save finishes. When editing an existing record a trash icon appears in the top bar.</string>
     <string name="guide_scan_title">Receipt scanning</string>
     <string name="guide_scan_body">In the editor tap the scanner icon (bottom row, next to the photo icon), then shoot the receipt or pick it from the gallery.
 
@@ -543,15 +558,15 @@ The slip\'s own lines are read as well. When the receipt lists what was bought, 
 
 Swiping a row deletes it and offers it back: "Transaction deleted — Undo" appears along the bottom, always above the add button, and the same offer follows a delete from the editor. The receipt photo is only thrown away once that offer has passed, so undoing really does put everything back.</string>
     <string name="guide_stats_title">Statistics</string>
-    <string name="guide_stats_body">Three views via the round buttons: 1) Charts — a donut of categories with the total in the middle and daily bars below; 2) Calendar — a heatmap where a darker day means more spent; tap a day to see its records; 3) Report — the verdict for a whole period, with arrows walking back through past ones. It shows spending vs the previous period of the same length, income, result, daily average, no-spend days, top category and personalized tips. Which period it covers (week, month, quarter, year) and which rows are shown are set in Settings → Report. The Expense/Income toggle applies to charts and calendar, arrows switch months. Under the category list the Products block appears as soon as any record of the month lists what was bought: every product with what it cost you in total, how much of the shopping that is and how many records mention it. Transfers between your own accounts are left out of every figure here — moving money is neither spending nor earning.</string>
+    <string name="guide_stats_body">Three views via the round buttons: 1) Charts — a donut of categories with the total in the middle and daily bars below; 2) Calendar — a heatmap where a darker day means more spent; tap a day to see its records; 3) Report — the verdict for a whole period, with arrows walking back through past ones. It shows spending vs the previous period of the same length, income, result, daily average, no-spend days, top category and personalized tips. Which period it covers (week, month, quarter, year) and which rows are shown are set in Settings → Report. The Expense/Income toggle applies to charts and calendar, arrows switch months. Under the category list the Products block appears as soon as any record of the month lists what was bought — income too, since a salary can be split into the pay and the bonus: every product with what it cost you in total, how much of the shopping that is and how many records mention it. One product is one row however it was typed: case and stray spaces are ignored, and ё reads as е. Transfers between your own accounts are left out of every figure here — moving money is neither spending nor earning.</string>
     <string name="guide_wallet_title">Wallet: rates &amp; payments</string>
-    <string name="guide_wallet_body">The NBRB rates card shows official rates with the update time — the arrow button refreshes them manually; without a connection the rates from the last successful check stay on screen and a toast explains why nothing changed. Any amount in a foreign currency shows its ≈ BYN equivalent. Changing the app currency in Settings converts all stored amounts at the current rate; each expense also freezes its BYN value at payment time, so history never drifts. Planned payments: + adds one — Expense or Income (a salary is as regular as a subscription), title, amount, currency, the date picked in a calendar, a frequency (weekly / monthly / every 3 months / yearly), a category and, with several accounts, the account it moves on. Nothing is charged silently: due payments appear in "Awaiting confirmation", and Confirm records the movement — the dialog says which way it goes, starts from the account the plan names and lets you adjust both the amount and, for a foreign currency, the rate. Tap a payment to change any of it, the switch pauses it, the trash deletes it.</string>
+    <string name="guide_wallet_body">The NBRB rates card shows official rates with the update time — the arrow button refreshes them manually; without a connection the rates from the last successful check stay on screen and a toast explains why nothing changed. Any amount in a foreign currency shows its ≈ BYN equivalent. Changing the app currency in Settings converts all stored amounts at the current rate; each expense also freezes its BYN value at payment time, so history never drifts. Planned payments: + adds one — Expense or Income (a salary is as regular as a subscription), title, amount, currency, the date picked in a calendar, a frequency (weekly / monthly / every 3 months / yearly), a category and, with several accounts, the account it moves on. The dialog reads the way the money goes: a bill has a title, an amount to charge and a charge date, a salary a source, a sum and the date it lands. Nothing is charged silently: due payments appear in "Awaiting confirmation", and Confirm records the movement — the dialog says which way it goes, starts from the account the plan names and lets you adjust both the amount and, for a foreign currency, the rate. Tap a payment to change any of it, the switch pauses it, the trash deletes it.</string>
     <string name="guide_savings_title">Debts, goals &amp; savings</string>
-    <string name="guide_savings_body">Debts: + adds one — who, direction (I owe / owed to me), amount in any currency, note. The two tiles total both directions in BYN. Tap a debt to repay a part, close it or delete it — and the pencil in that dialog opens the debt itself for correcting: the person, the direction, the sum, the currency, the note.
+    <string name="guide_savings_body">Debts: + adds one — who, direction (I owe / owed to me), amount in any currency, note. The two tiles total both directions in BYN. Tap a debt to repay a part, close it or delete it — and the pencil in that dialog opens the debt itself for correcting: the person, the direction, the sum, the currency, the note. Money that changes hands lands in the history as well: an expense for what you owed, income for what was owed to you, marked as the debt closed or a part of it. The tick above the buttons is what decides — clear it for a debt settled outside the app — and with several accounts you say which one it moved on.
 
 Goals: + creates a goal with a target amount; deposits linked to the goal fill its progress bar, and reaching the target celebrates 🎉. Tap a goal to change any of it — the name, the target, the currency it is counted in — with the trash in the corner of that dialog. Changing the currency carries what is already set aside toward it across at the official rate, so the progress bar keeps meaning what it says.
 
-Savings: "Set aside" and "Withdraw" record movements (optionally toward a goal), the journal below lists them with BYN equivalents; the trash removes an entry. The sum can be in any currency: pick it in the chips and Kosht converts it into the currency the savings are counted in — the app\'s, or the goal\'s — at the National Bank rate. That converted figure sits in its own field, and it is editable: the bank\'s arithmetic and the official rate rarely agree to the last kopeck, and what actually left the account is what should be written down.</string>
+Savings: "Set aside" and "Withdraw" record movements (optionally toward a goal), the journal below lists them with BYN equivalents; the trash removes an entry. The sum can be in any currency: pick it in the chips and Kosht converts it into the currency the savings are counted in — the app\'s, or the goal\'s — at the National Bank rate. That converted figure sits in its own field, and it is editable: the bank\'s arithmetic and the official rate rarely agree to the last kopeck, and what actually left the account is what should be written down. Savings are counted apart from the accounts, so by default nothing else moves; tick «Take it off an account» and the sum really leaves the one you pick — as an expense when you set it aside, as income back onto it when you withdraw — so the balance follows the jar.</string>
     <string name="guide_achievements_title">Achievements</string>
     <string name="guide_achievements_body">Open with the trophy on Home. The streak card counts consecutive days you stayed within the daily budget (set it in Settings, auto = last month\'s average). Challenges: + creates one — Limit (spend under X, optionally in one category), No spend, or Save up (set aside X) — for a week, until month end or 30 days. Progress updates live; tap a challenge to edit its title, amount, category and end date, the trash removes it. Below are 30 awards, six to a page, easiest first: from the first record to a year inside the budget, a thousand records, five thousand saved, a perfect month without a single day over budget, three months in a row in the black, and twenty challenges completed. Tap any award to see how to earn it, your progress toward it (like "6 / 10"), and the date you earned it. An award unlocks the moment it is deserved, whichever screen you are on: a congratulation appears over the app and a quiet note lands in the shade — you never have to open this screen for it to count. Once earned an award stays yours forever, even if the streak resets.</string>
     <string name="guide_accounts_title">Accounts: cards &amp; cash</string>
@@ -565,7 +580,7 @@ Switch on Settings → Interface → "Transfer fee" and the dialog gains a fee f
 
 Tap a transfer in any list to correct it or delete it — the same dialog opens, with Delete in place of Cancel, and the usual Undo offer follows. Deleting an account also deletes the transfers that ran between it and the account inheriting its records: those would have ended up going from itself to itself.</string>
     <string name="guide_items_title">Products in a record</string>
-    <string name="guide_items_body">A record can say what the money went on, not just how much of it went. The basket chip in the editor opens the list: type a product, optionally what it cost and how many, and Add puts it in. Tap a line to correct it, ✕ removes it. Names you have used before are offered as chips while you type — tapping one keeps the spelling identical, which is what makes the statistics add up.
+    <string name="guide_items_body">A record can say what the money went on, not just how much of it went. The basket chip in the editor opens the list: type a product, optionally what it cost and how many, and Add puts it in. Tap a line to correct it, ✕ removes it. Names you have used before are offered as chips while you type — tapping one keeps the spelling identical. Typing it differently is no great loss either: the statistics fold case and stray spaces together, so "молоко", "Молоко  " and "МОЛОКО" stay one product with one total.
 
 Nothing here is required. A record with no list is complete, the chip stays quiet until you use it, and the amount of the record is never overwritten by what the lines add up to — the list is a description of the purchase, not a second source of truth.
 
@@ -601,10 +616,14 @@ With the lock on, the task switcher stops keeping a picture of the app, so the b
     <string name="category_gifts">Gifts</string>
     <string name="category_education">Education</string>
     <string name="category_travel">Travel</string>
+    <string name="category_debt_expense">Debt repaid</string>
+    <string name="category_savings_expense">To savings</string>
     <string name="category_other_expense">Other</string>
     <string name="category_salary">Salary</string>
     <string name="category_freelance">Freelance</string>
     <string name="category_gift_income">Gifts</string>
     <string name="category_investments">Investments</string>
+    <string name="category_debt_income">Debt</string>
+    <string name="category_savings_income">From savings</string>
     <string name="category_other_income">Other</string>
 </resources>

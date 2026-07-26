@@ -8,17 +8,16 @@ import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.animateColorAsState
-import androidx.compose.foundation.Image
-import androidx.compose.animation.core.Spring
-import androidx.compose.animation.core.animateFloatAsState
-import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.Orientation
+import androidx.compose.foundation.gestures.draggable
+import androidx.compose.foundation.gestures.rememberDraggableState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -26,20 +25,15 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
-import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.layout.widthIn
-import androidx.compose.foundation.lazy.LazyRow
-import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.Backspace
-import androidx.compose.material.icons.rounded.Add
+import androidx.compose.material.icons.automirrored.rounded.ReceiptLong
 import androidx.compose.material.icons.rounded.AddAPhoto
 import androidx.compose.material.icons.rounded.Calculate
 import androidx.compose.material.icons.rounded.Close
@@ -49,7 +43,6 @@ import androidx.compose.material.icons.rounded.Event
 import androidx.compose.material.icons.rounded.PhotoCamera
 import androidx.compose.material.icons.rounded.PhotoLibrary
 import androidx.compose.material.icons.rounded.ShoppingBasket
-import androidx.compose.material.icons.automirrored.rounded.ReceiptLong
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.AssistChip
 import androidx.compose.material3.Button
@@ -65,7 +58,6 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.material3.SegmentedButton
 import androidx.compose.material3.SegmentedButtonDefaults
 import androidx.compose.material3.SingleChoiceSegmentedButtonRow
@@ -74,10 +66,11 @@ import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.rememberDatePickerState
+import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableLongStateOf
+import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -85,13 +78,13 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -100,21 +93,24 @@ import androidx.core.content.FileProvider
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import by.mlastovsky.kosht.R
-import by.mlastovsky.kosht.data.db.CategoryEntity
 import by.mlastovsky.kosht.model.TransactionType
+import by.mlastovsky.kosht.ui.AccountVisuals
 import by.mlastovsky.kosht.ui.AppViewModelProvider
 import by.mlastovsky.kosht.ui.CategoryVisuals
-import by.mlastovsky.kosht.ui.components.CategoryBadge
+import by.mlastovsky.kosht.ui.components.CategoryActions
+import by.mlastovsky.kosht.ui.components.CategoryPickerRow
+import by.mlastovsky.kosht.ui.components.TextInput
 import by.mlastovsky.kosht.ui.components.rememberBitmapFromPath
 import by.mlastovsky.kosht.ui.relativeDate
 import by.mlastovsky.kosht.ui.theme.KoshtTheme
+import by.mlastovsky.kosht.util.Expr
 import by.mlastovsky.kosht.util.Money
+import by.mlastovsky.kosht.util.Notes
 import java.io.File
 import java.time.Instant
 import java.time.ZoneOffset
 import java.util.Currency
 import java.util.Locale
-import by.mlastovsky.kosht.ui.components.TextInput
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -126,7 +122,14 @@ fun EditorScreen(
     val view = LocalView.current
     val context = LocalContext.current
     var showDatePicker by remember { mutableStateOf(false) }
-    var showNewCategory by remember { mutableStateOf(false) }
+    val categoryActions = remember(viewModel) {
+        CategoryActions(
+            add = viewModel::addCategory,
+            reorder = viewModel::reorderCategories,
+            update = viewModel::updateCategory,
+            delete = viewModel::deleteCategory
+        )
+    }
     var showScanSource by remember { mutableStateOf(false) }
     var showAttachSource by remember { mutableStateOf(false) }
     var showAccountPicker by remember { mutableStateOf(false) }
@@ -163,14 +166,10 @@ fun EditorScreen(
         if (success && target != null) viewModel.attachPhoto(target)
     }
 
-    // A transfer between accounts is not a category-and-amount record; it has
-    // a dialog of its own, so the editor bows out rather than showing half of it.
     LaunchedEffect(state.isTransfer) {
         if (state.isTransfer) onClose()
     }
 
-    // A fresh record starts in the calculator right away — no extra tap.
-    // The behavior is a toggle in Settings → Interface.
     var calcAutoOpened by rememberSaveable { mutableStateOf(false) }
     LaunchedEffect(state.loaded) {
         if (state.loaded && state.autoCalculator && !state.isEdit &&
@@ -233,34 +232,46 @@ fun EditorScreen(
                 .padding(horizontal = 16.dp)
         )
 
-        // The amount is the hero: centered in the free space, controls
-        // grouped compactly at the bottom.
-        Spacer(Modifier.weight(1f))
-
-        AmountDisplay(
-            amountInput = state.amountInput,
-            currencyCode = state.currencyCode,
-            type = state.type,
-            onClick = {
-                view.performHapticFeedback(HapticFeedbackConstants.VIRTUAL_KEY)
-                viewModel.openCalculator()
-                showCalculator = true
-            },
+        Box(
             modifier = Modifier
+                .weight(1f)
                 .fillMaxWidth()
-                .padding(vertical = 8.dp)
-        )
+                .typeSwipe(state.type) { next ->
+                    view.performHapticFeedback(HapticFeedbackConstants.CLOCK_TICK)
+                    viewModel.setType(next)
+                }
+        ) {
+            Column(Modifier.fillMaxSize()) {
+                Spacer(Modifier.weight(1f))
 
-        Spacer(Modifier.weight(1.2f))
+                AmountDisplay(
+                    amountInput = state.amountInput,
+                    currencyCode = state.currencyCode,
+                    type = state.type,
+                    onClick = {
+                        view.performHapticFeedback(HapticFeedbackConstants.VIRTUAL_KEY)
+                        viewModel.openCalculator()
+                        showCalculator = true
+                    },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(vertical = 8.dp)
+                )
 
-        CategoryPicker(
+                Spacer(Modifier.weight(1.2f))
+            }
+        }
+
+        CategoryPickerRow(
             categories = state.categories,
             selectedId = state.categoryId,
             onSelect = { id ->
                 view.performHapticFeedback(HapticFeedbackConstants.CLOCK_TICK)
                 viewModel.selectCategory(id)
             },
-            onAddNew = { showNewCategory = true }
+            type = state.type,
+            actions = categoryActions,
+            contentPadding = PaddingValues(horizontal = 16.dp)
         )
 
         Row(
@@ -292,15 +303,14 @@ fun EditorScreen(
                         },
                         label = {
                             Text(
-                                by.mlastovsky.kosht.ui.AccountVisuals.displayName(account),
+                                AccountVisuals.displayName(account),
                                 maxLines = 1
                             )
                         }
                     )
                 }
             }
-            // What was bought. Optional, so it stays a single quiet chip —
-            // with a count once there is something in it.
+
             AssistChip(
                 onClick = { showItems = true },
                 leadingIcon = {
@@ -321,7 +331,7 @@ fun EditorScreen(
                     )
                 }
             )
-            // Says where the figures came from, on the record and ever after.
+
             if (state.scanned) {
                 AssistChip(
                     onClick = { },
@@ -390,6 +400,21 @@ fun EditorScreen(
                     }
                 }
             }
+        }
+
+        AnimatedVisibility(visible = state.debtCategory) {
+            OutlinedTextField(
+                value = state.debtPerson,
+                onValueChange = viewModel::setDebtPerson,
+                placeholder = { Text(stringResource(R.string.debt_person_owe)) },
+                singleLine = true,
+                shape = MaterialTheme.shapes.medium,
+                textStyle = MaterialTheme.typography.bodyMedium,
+                keyboardOptions = TextInput.Sentence,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp, vertical = 6.dp)
+            )
         }
 
         OutlinedTextField(
@@ -488,16 +513,6 @@ fun EditorScreen(
         }
     }
 
-    if (showNewCategory) {
-        NewCategoryDialog(
-            onDismiss = { showNewCategory = false },
-            onConfirm = { name, iconKey, color ->
-                viewModel.addCategory(name, iconKey, color)
-                showNewCategory = false
-            }
-        )
-    }
-
     if (showScanSource) {
         PhotoSourceDialog(
             title = stringResource(R.string.editor_scan_receipt),
@@ -545,7 +560,7 @@ fun EditorScreen(
                     state.accounts.forEach { account ->
                         ListItem(
                             headlineContent = {
-                                Text(by.mlastovsky.kosht.ui.AccountVisuals.displayName(account))
+                                Text(AccountVisuals.displayName(account))
                             },
                             leadingContent = {
                                 Icon(
@@ -599,7 +614,7 @@ fun EditorScreen(
             suggestions = state.itemSuggestions,
             categoryKey = state.itemCategoryKey,
             currencyCode = state.currencyCode,
-            recordAmountMinor = by.mlastovsky.kosht.util.Expr
+            recordAmountMinor = Expr
                 .evaluateToMinor(state.amountInput, state.currencyCode) ?: 0L,
             onAdd = viewModel::addItem,
             onUpdate = viewModel::updateItem,
@@ -711,7 +726,7 @@ private fun ScanReviewDialog(
                 )
                 OutlinedTextField(
                     value = noteText,
-                    onValueChange = { noteText = it.take(by.mlastovsky.kosht.util.Notes.MAX_LENGTH) },
+                    onValueChange = { noteText = it.take(Notes.MAX_LENGTH) },
                     label = { Text(stringResource(R.string.editor_note_hint)) },
                     singleLine = true,
                     keyboardOptions = TextInput.Sentence,
@@ -723,10 +738,7 @@ private fun ScanReviewDialog(
                         style = MaterialTheme.typography.bodyMedium
                     )
                 }
-                // The slip's own lines, when it had readable ones: said out
-                // loud here, editable in the items chip afterwards. When they
-                // do not add up to the total, that is said too rather than
-                // papered over with an invented line.
+
                 if (pending.items.isNotEmpty()) {
                     val listed = pending.items.sumOf { it.amountMinor }
                     val total = Money.parseToMinor(
@@ -896,12 +908,6 @@ private fun AmountDisplay(
     }
 }
 
-/**
- * Standalone calculator in a full-width bottom sheet: the keypad lives
- * here, not in the editor itself. It opens by itself for a fresh record
- * and on any tap on the amount. "=" evaluates a pending expression;
- * Apply writes the result into the editor's amount input.
- */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun CalculatorSheet(
@@ -1005,85 +1011,30 @@ private fun CalculatorSheet(
 }
 
 @Composable
-private fun CategoryPicker(
-    categories: List<CategoryEntity>,
-    selectedId: Long?,
-    onSelect: (Long) -> Unit,
-    onAddNew: () -> Unit
-) {
-    LazyRow(
-        contentPadding = PaddingValues(horizontal = 16.dp),
-        horizontalArrangement = Arrangement.spacedBy(4.dp)
-    ) {
-        items(categories, key = { it.id }) { category ->
-            val selected = category.id == selectedId
-            val scale by animateFloatAsState(
-                targetValue = if (selected) 1.08f else 1f,
-                animationSpec = spring(
-                    dampingRatio = Spring.DampingRatioMediumBouncy,
-                    stiffness = Spring.StiffnessMedium
-                ),
-                label = "badgeScale"
-            )
-            Column(
-                horizontalAlignment = Alignment.CenterHorizontally,
-                modifier = Modifier
-                    .clip(MaterialTheme.shapes.medium)
-                    .clickable { onSelect(category.id) }
-                    .padding(horizontal = 6.dp, vertical = 8.dp)
-                    .widthIn(min = 56.dp)
-            ) {
-                CategoryBadge(
-                    iconKey = category.iconKey,
-                    color = Color(category.colorArgb),
-                    selected = selected,
-                    size = 48.dp,
-                    modifier = Modifier.scale(scale)
-                )
-                Spacer(Modifier.height(4.dp))
-                Text(
-                    text = CategoryVisuals.displayName(category),
-                    style = MaterialTheme.typography.labelSmall,
-                    fontWeight = if (selected) FontWeight.Bold else FontWeight.Normal,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                    modifier = Modifier.widthIn(max = 72.dp)
-                )
+private fun Modifier.typeSwipe(
+    type: TransactionType,
+    onChange: (TransactionType) -> Unit
+): Modifier {
+    val threshold = with(LocalDensity.current) { SWIPE_THRESHOLD.toPx() }
+    var travelled by remember { mutableFloatStateOf(0f) }
+    val state = rememberDraggableState { delta -> travelled += delta }
+    return this.draggable(
+        state = state,
+        orientation = Orientation.Horizontal,
+        onDragStarted = { travelled = 0f },
+        onDragStopped = {
+            val next = when {
+                travelled <= -threshold -> TransactionType.INCOME
+                travelled >= threshold -> TransactionType.EXPENSE
+                else -> null
             }
+            travelled = 0f
+            if (next != null && next != type) onChange(next)
         }
-        item(key = "add") {
-            Column(
-                horizontalAlignment = Alignment.CenterHorizontally,
-                modifier = Modifier
-                    .clip(MaterialTheme.shapes.medium)
-                    .clickable(onClick = onAddNew)
-                    .padding(horizontal = 6.dp, vertical = 8.dp)
-                    .widthIn(min = 56.dp)
-            ) {
-                Box(
-                    modifier = Modifier
-                        .size(48.dp)
-                        .clip(CircleShape)
-                        .background(MaterialTheme.colorScheme.surfaceContainerHigh),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Icon(
-                        Icons.Rounded.Add,
-                        contentDescription = null,
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
-                Spacer(Modifier.height(4.dp))
-                Text(
-                    text = stringResource(R.string.category_new),
-                    style = MaterialTheme.typography.labelSmall,
-                    maxLines = 1,
-                    modifier = Modifier.widthIn(max = 72.dp)
-                )
-            }
-        }
-    }
+    )
 }
+
+private val SWIPE_THRESHOLD = 56.dp
 
 @Composable
 private fun Keypad(
@@ -1096,7 +1047,7 @@ private fun Keypad(
         modifier = Modifier.fillMaxWidth(),
         verticalArrangement = Arrangement.spacedBy(8.dp)
     ) {
-        // A slim calculator column on the right: sum up items on the fly.
+
         listOf("123" to '÷', "456" to '×', "789" to '−').forEach { (rowDigits, op) ->
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -1185,73 +1136,4 @@ private fun KeypadButton(
     ) {
         content()
     }
-}
-
-@Composable
-private fun NewCategoryDialog(
-    onDismiss: () -> Unit,
-    onConfirm: (name: String, iconKey: String, colorArgb: Long) -> Unit
-) {
-    var name by remember { mutableStateOf("") }
-    var iconKey by remember { mutableStateOf(CategoryVisuals.pickableIconKeys.first()) }
-    var colorArgb by remember { mutableLongStateOf(CategoryVisuals.pickableColors.first()) }
-
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = { Text(stringResource(R.string.category_new)) },
-        text = {
-            Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
-                OutlinedTextField(
-                    value = name,
-                    onValueChange = { name = it.take(40) },
-                    placeholder = { Text(stringResource(R.string.category_name_hint)) },
-                    singleLine = true,
-                    keyboardOptions = TextInput.Sentence,
-                    modifier = Modifier.fillMaxWidth()
-                )
-                Text(
-                    stringResource(R.string.category_icon),
-                    style = MaterialTheme.typography.labelLarge
-                )
-                LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    items(CategoryVisuals.pickableIconKeys) { key ->
-                        CategoryBadge(
-                            iconKey = key,
-                            color = Color(colorArgb),
-                            selected = key == iconKey,
-                            size = 40.dp,
-                            modifier = Modifier
-                                .clip(CircleShape)
-                                .clickable { iconKey = key }
-                        )
-                    }
-                }
-                Text(
-                    stringResource(R.string.category_color),
-                    style = MaterialTheme.typography.labelLarge
-                )
-                LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    items(CategoryVisuals.pickableColors) { color ->
-                        val selected = color == colorArgb
-                        Box(
-                            modifier = Modifier
-                                .size(if (selected) 40.dp else 32.dp)
-                                .clip(CircleShape)
-                                .background(Color(color))
-                                .clickable { colorArgb = color }
-                        )
-                    }
-                }
-            }
-        },
-        confirmButton = {
-            TextButton(
-                onClick = { onConfirm(name.trim(), iconKey, colorArgb) },
-                enabled = name.isNotBlank()
-            ) { Text(stringResource(R.string.action_add)) }
-        },
-        dismissButton = {
-            TextButton(onClick = onDismiss) { Text(stringResource(R.string.action_cancel)) }
-        }
-    )
 }

@@ -2,6 +2,7 @@ package by.mlastovsky.kosht.data
 
 import by.mlastovsky.kosht.data.db.AwardDao
 import by.mlastovsky.kosht.data.db.AwardEntity
+import by.mlastovsky.kosht.data.db.CategoryDao
 import by.mlastovsky.kosht.data.db.ChallengeDao
 import by.mlastovsky.kosht.data.db.ChallengeEntity
 import by.mlastovsky.kosht.data.db.DebtDao
@@ -19,27 +20,32 @@ import by.mlastovsky.kosht.data.db.TransactionDao
 import by.mlastovsky.kosht.data.db.TransactionEntity
 import by.mlastovsky.kosht.model.ChallengeType
 import by.mlastovsky.kosht.model.DebtDirection
+import by.mlastovsky.kosht.model.RecurringFrequency
 import by.mlastovsky.kosht.model.TransactionType
+import java.time.LocalDate
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
-import java.time.LocalDate
 
-/**
- * Debts, savings, goals, challenges and recurring charges — everything on
- * the Wallet tab and the achievements screen.
- */
+data class LedgerEntry(
+    val categoryKey: String,
+    val type: TransactionType,
+    val amountMinor: Long,
+    val note: String,
+    val bynMinor: Long?,
+    val accountId: Long?
+)
+
 class WalletRepository(
     private val debtDao: DebtDao,
     private val savingDao: SavingDao,
     private val recurringDao: RecurringDao,
     private val transactionDao: TransactionDao,
+    private val categoryDao: CategoryDao,
     private val goalDao: GoalDao,
     private val challengeDao: ChallengeDao,
     private val awardDao: AwardDao
 ) {
-
-    // --- Debts ---
 
     fun observeDebts(): Flow<List<DebtEntity>> = debtDao.observeActive()
 
@@ -62,8 +68,7 @@ class WalletRepository(
         )
     )
 
-    /** Reduces the remaining amount; closes the debt when fully repaid. */
-    suspend fun repayDebt(debt: DebtEntity, repaymentMinor: Long) {
+    suspend fun repayDebt(debt: DebtEntity, repaymentMinor: Long, entry: LedgerEntry? = null) {
         val remaining = (debt.amountMinor - repaymentMinor).coerceAtLeast(0)
         debtDao.update(
             debt.copy(
@@ -71,18 +76,37 @@ class WalletRepository(
                 closedAt = if (remaining == 0L) System.currentTimeMillis() else null
             )
         )
+        record(entry)
     }
 
-    suspend fun closeDebt(debt: DebtEntity) {
+    suspend fun closeDebt(debt: DebtEntity, entry: LedgerEntry? = null) {
         debtDao.update(debt.copy(closedAt = System.currentTimeMillis()))
+        record(entry)
     }
 
-    /** A debt written down wrong stays wrong until it can be corrected. */
+    private suspend fun record(entry: LedgerEntry?) {
+        if (entry == null || entry.amountMinor <= 0) return
+        val categoryId = categoryDao.getByKey(entry.categoryKey)?.id
+            ?: categoryDao.observeByType(entry.type).first().firstOrNull()?.id
+            ?: return
+        val now = System.currentTimeMillis()
+        transactionDao.insert(
+            TransactionEntity(
+                amountMinor = entry.amountMinor,
+                type = entry.type,
+                categoryId = categoryId,
+                note = entry.note,
+                timestamp = now,
+                createdAt = now,
+                bynMinor = entry.bynMinor,
+                accountId = entry.accountId
+            )
+        )
+    }
+
     suspend fun updateDebt(debt: DebtEntity) = debtDao.update(debt)
 
     suspend fun deleteDebt(id: Long) = debtDao.deleteById(id)
-
-    // --- Savings ---
 
     fun observeSavings(limit: Int): Flow<List<SavingEntity>> = savingDao.observeRecent(limit)
 
@@ -94,7 +118,8 @@ class WalletRepository(
         amountMinor: Long,
         currencyCode: String,
         note: String,
-        goalId: Long? = null
+        goalId: Long? = null,
+        entry: LedgerEntry? = null
     ): Long {
         val id = savingDao.insert(
             SavingEntity(
@@ -105,13 +130,12 @@ class WalletRepository(
                 goalId = goalId
             )
         )
+        record(entry)
         if (goalId != null) checkGoalAchieved(goalId)
         return id
     }
 
     suspend fun deleteSaving(id: Long) = savingDao.deleteById(id)
-
-    // --- Savings goals ---
 
     fun observeGoals(): Flow<List<SavingGoalEntity>> = goalDao.observeAll()
 
@@ -132,13 +156,6 @@ class WalletRepository(
         goalDao.deleteById(id)
     }
 
-    /**
-     * Renames a goal, moves its target, or changes the currency it is counted
-     * in. [savingsFactor] converts what has already been set aside toward it —
-     * a goal adds its deposits up, so the two cannot be in different currencies.
-     * Reaching the target this way counts as reaching it, and lowering the
-     * target below what is saved is a goal met, not a goal broken.
-     */
     suspend fun updateGoal(goal: SavingGoalEntity, savingsFactor: Double? = null) {
         goalDao.update(goal)
         if (savingsFactor != null && savingsFactor > 0.0) {
@@ -150,15 +167,13 @@ class WalletRepository(
     private suspend fun checkGoalAchieved(goalId: Long) {
         val goal = goalDao.getById(goalId) ?: return
         if (goal.achievedAt != null) return
-        // One-shot read of the freshly updated progress.
+
         val total = goalDao.observeProgress().first()
             .firstOrNull { it.goalId == goalId }?.total ?: 0L
         if (total >= goal.targetMinor) {
             goalDao.update(goal.copy(achievedAt = System.currentTimeMillis()))
         }
     }
-
-    // --- Challenges ---
 
     fun observeChallenges(): Flow<List<ChallengeEntity>> = challengeDao.observeAll()
 
@@ -185,22 +200,16 @@ class WalletRepository(
 
     suspend fun deleteChallenge(id: Long) = challengeDao.deleteById(id)
 
-    // --- Awards ---
-
     fun observeAwards(): Flow<List<AwardEntity>> = awardDao.observeAll()
 
-    /** Earned awards as key → the moment it was earned. */
     fun observeAwardsByKey(): Flow<Map<String, Long>> = awardDao.observeAll()
         .map { awards -> awards.associate { it.key to it.unlockedAt } }
 
-    /** Marks freshly met awards as earned; already earned keep their date. */
     suspend fun unlockAwards(keys: List<String>) {
         if (keys.isEmpty()) return
         val now = System.currentTimeMillis()
         awardDao.insertAll(keys.map { AwardEntity(key = it, unlockedAt = now) })
     }
-
-    // --- Recurring charges ---
 
     fun observeRecurring(): Flow<List<RecurringWithCategory>> = recurringDao.observeAll()
 
@@ -210,7 +219,7 @@ class WalletRepository(
         currencyCode: String,
         categoryId: Long,
         firstDue: LocalDate,
-        frequency: by.mlastovsky.kosht.model.RecurringFrequency,
+        frequency: RecurringFrequency,
         type: TransactionType = TransactionType.EXPENSE,
         accountId: Long? = null
     ): Long = recurringDao.insert(
@@ -235,12 +244,6 @@ class WalletRepository(
         recurringDao.update(recurring.copy(enabled = enabled))
     }
 
-    /**
-     * Confirms a due payment: records it as the movement the plan describes
-     * (already converted to the app currency by the caller when needed) on the
-     * chosen account, and advances the next due date by one period. Nothing is
-     * written until the user confirms, which is the whole point of the plan.
-     */
     suspend fun confirmRecurring(
         recurring: RecurringEntity,
         chargeAmountMinor: Long,

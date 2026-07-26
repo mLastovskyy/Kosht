@@ -5,26 +5,28 @@ import androidx.lifecycle.viewModelScope
 import by.mlastovsky.kosht.data.SettingsRepository
 import by.mlastovsky.kosht.data.TransactionRepository
 import by.mlastovsky.kosht.data.WalletRepository
+import by.mlastovsky.kosht.data.awards.AwardProgress
 import by.mlastovsky.kosht.data.awards.AwardRules
 import by.mlastovsky.kosht.data.awards.AwardTracker
 import by.mlastovsky.kosht.data.awards.ChallengeProgress
 import by.mlastovsky.kosht.data.db.CategoryEntity
 import by.mlastovsky.kosht.model.ChallengeType
 import by.mlastovsky.kosht.model.TransactionType
+import by.mlastovsky.kosht.ui.components.CategoryEdit
 import by.mlastovsky.kosht.util.Money
+import java.time.LocalDate
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
-import java.time.LocalDate
 
 data class BadgeUi(
     val key: String,
     val unlocked: Boolean,
-    /** When the award was earned; null while still locked. */
+
     val unlockedAt: Long? = null,
-    /** "3 / 10"-style progress toward a locked quantitative award. */
+
     val progressText: String? = null
 )
 
@@ -38,15 +40,10 @@ data class AchievementsUiState(
     val currencyCode: String = SettingsRepository.DEFAULT_CURRENCY
 )
 
-/**
- * Shapes the achievements screen out of what the app-wide award tracker has
- * already worked out. Nothing is judged here: the tracker is what earns awards,
- * whether or not this screen is open, and this only decides how they read.
- */
 class AchievementsViewModel(
     private val walletRepository: WalletRepository,
     private val tracker: AwardTracker,
-    transactionRepository: TransactionRepository,
+    private val transactionRepository: TransactionRepository,
     settingsRepository: SettingsRepository
 ) : ViewModel() {
 
@@ -80,9 +77,8 @@ class AchievementsViewModel(
         }
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), AchievementsUiState())
 
-    /** "6 / 10", or the same in money when the target is an amount. */
     private fun progressText(
-        award: by.mlastovsky.kosht.data.awards.AwardProgress,
+        award: AwardProgress,
         unlocked: Boolean
     ): String? {
         if (unlocked) return null
@@ -94,6 +90,42 @@ class AchievementsViewModel(
         } else {
             "${current.coerceAtMost(target)} / $target"
         }
+    }
+
+    fun addCategory(edit: CategoryEdit, type: TransactionType, onCreated: (Long) -> Unit) {
+        if (edit.name.isBlank()) return
+        viewModelScope.launch {
+            onCreated(
+                transactionRepository.addCategory(
+                    edit.name,
+                    edit.iconKey,
+                    edit.colorArgb,
+                    type,
+                    edit.iconUri
+                )
+            )
+        }
+    }
+
+    fun reorderCategories(ids: List<Long>) {
+        viewModelScope.launch { transactionRepository.reorderCategories(ids) }
+    }
+
+    fun updateCategory(id: Long, edit: CategoryEdit) {
+        viewModelScope.launch {
+            transactionRepository.updateCategory(
+                id,
+                edit.name,
+                edit.iconKey,
+                edit.colorArgb,
+                edit.iconUri,
+                edit.iconCleared
+            )
+        }
+    }
+
+    fun deleteCategory(category: CategoryEntity) {
+        viewModelScope.launch { transactionRepository.deleteCategory(category) }
     }
 
     fun addChallenge(

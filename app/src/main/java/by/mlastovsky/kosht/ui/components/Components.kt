@@ -6,10 +6,13 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
 import androidx.compose.animation.togetherWith
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -23,6 +26,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
@@ -30,15 +34,39 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import by.mlastovsky.kosht.ui.CategoryVisuals
 
-/** Category icon in a tinted circle, used across all lists and pickers. */
 @Composable
 fun CategoryBadge(
     iconKey: String,
     color: Color,
     modifier: Modifier = Modifier,
     size: Dp = 44.dp,
-    selected: Boolean = false
+    selected: Boolean = false,
+    iconPath: String? = null
 ) {
+    val picture = rememberBitmapFromPath(iconPath, maxDimension = PICTURE_PIXELS)
+    if (picture != null) {
+        Box(
+            modifier = modifier
+                .size(size)
+                .clip(CircleShape)
+                .then(
+                    if (selected) {
+                        Modifier.border(2.dp, MaterialTheme.colorScheme.primary, CircleShape)
+                    } else {
+                        Modifier
+                    }
+                ),
+            contentAlignment = Alignment.Center
+        ) {
+            Image(
+                bitmap = picture,
+                contentDescription = null,
+                contentScale = ContentScale.Crop,
+                modifier = Modifier.fillMaxSize()
+            )
+        }
+        return
+    }
     val background = if (selected) color else color.copy(alpha = 0.16f)
     val tint = if (selected) Color.White else color
     Box(
@@ -57,10 +85,8 @@ fun CategoryBadge(
     }
 }
 
-/**
- * Text that animates vertically (old value slides out, new slides in)
- * whenever the string changes — used for balances and totals.
- */
+private const val PICTURE_PIXELS = 256
+
 @Composable
 fun AnimatedAmountText(
     text: String,

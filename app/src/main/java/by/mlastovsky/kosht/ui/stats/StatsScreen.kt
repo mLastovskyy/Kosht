@@ -58,6 +58,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
@@ -72,6 +73,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import by.mlastovsky.kosht.R
 import by.mlastovsky.kosht.model.TransactionType
+import by.mlastovsky.kosht.ui.AccountVisuals
 import by.mlastovsky.kosht.ui.AppViewModelProvider
 import by.mlastovsky.kosht.ui.CategoryVisuals
 import by.mlastovsky.kosht.ui.components.AnimatedAmountText
@@ -80,6 +82,7 @@ import by.mlastovsky.kosht.ui.components.EmptyState
 import by.mlastovsky.kosht.ui.components.MonthSelector
 import by.mlastovsky.kosht.ui.components.TransactionRow
 import by.mlastovsky.kosht.ui.components.monthTitle
+import by.mlastovsky.kosht.ui.editor.formatQuantity
 import by.mlastovsky.kosht.ui.relativeDate
 import by.mlastovsky.kosht.util.Money
 import java.time.LocalDate
@@ -107,8 +110,7 @@ fun StatsScreen(
             .statusBarsPadding()
     ) {
         if (viewMode == 2) {
-            // The report walks its own timeline, independent of the
-            // charts' month.
+
             ReportPeriodBar(
                 state = state,
                 onPrevious = viewModel::previousReportPeriod,
@@ -127,8 +129,7 @@ fun StatsScreen(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(horizontal = 16.dp),
-            // With no type toggle in the report the view buttons keep
-            // their usual place at the right edge.
+
             horizontalArrangement = if (viewMode == 2) {
                 Arrangement.End
             } else {
@@ -136,8 +137,7 @@ fun StatsScreen(
             },
             verticalAlignment = Alignment.CenterVertically
         ) {
-            // The report covers expenses and income at once, so the
-            // Expense/Income switch would be dead weight there.
+
             if (viewMode != 2) {
                 TypeToggle(
                     type = state.type,
@@ -175,13 +175,13 @@ fun StatsScreen(
         }
 
         if (state.accounts.size > 1) {
-            androidx.compose.foundation.lazy.LazyRow(
+            LazyRow(
                 contentPadding = PaddingValues(horizontal = 16.dp),
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
                 modifier = Modifier.padding(top = 8.dp)
             ) {
                 item {
-                    androidx.compose.material3.FilterChip(
+                    FilterChip(
                         selected = state.accountFilter == null,
                         onClick = { viewModel.setAccountFilter(null) },
                         label = { Text(stringResource(R.string.stats_all_accounts)) }
@@ -189,11 +189,11 @@ fun StatsScreen(
                 }
                 items(state.accounts.size, key = { state.accounts[it].id }) { index ->
                     val account = state.accounts[index]
-                    androidx.compose.material3.FilterChip(
+                    FilterChip(
                         selected = state.accountFilter == account.id,
                         onClick = { viewModel.setAccountFilter(account.id) },
                         label = {
-                            Text(by.mlastovsky.kosht.ui.AccountVisuals.displayName(account))
+                            Text(AccountVisuals.displayName(account))
                         }
                     )
                 }
@@ -223,8 +223,7 @@ fun StatsScreen(
 
 @Composable
 private fun ChartsContent(state: StatsUiState) {
-    // Which category is showing what was bought inside it. One at a time: the
-    // list stays readable, and the answer is right under the question.
+
     var expandedCategory by rememberSaveable { mutableStateOf<Long?>(null) }
 
     LazyColumn(
@@ -264,8 +263,7 @@ private fun ChartsContent(state: StatsUiState) {
                 CategorySliceRow(
                     slice = slice,
                     currencyCode = state.currencyCode,
-                    // Only a category that has products invites a tap, and the
-                    // basket says so; the rest stay a plain list.
+
                     products = products.size,
                     expanded = expandedCategory == slice.category.id,
                     onClick = {
@@ -291,11 +289,6 @@ private fun ChartsContent(state: StatsUiState) {
     }
 }
 
-/**
- * One product inside the category above it: what it cost in total, how much of
- * that category's shopping it is, and how often it turned up. Indented, so it
- * reads as part of the category rather than a category of its own.
- */
 @Composable
 private fun ProductRowItem(
     product: ProductRow,
@@ -315,14 +308,13 @@ private fun ProductRowItem(
                     text = product.name,
                     style = MaterialTheme.typography.bodyLarge,
                     maxLines = 1,
-                    overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
+                    overflow = TextOverflow.Ellipsis,
                     modifier = Modifier.weight(1f)
                 )
                 Text(
-                    // "2 × 1,75" when the lines counted anything, the way a
-                    // receipt spells it out; otherwise how many records it is in.
+
                     text = product.quantity?.let { quantity ->
-                        by.mlastovsky.kosht.ui.editor.formatQuantity(quantity) + " × " +
+                        formatQuantity(quantity) + " × " +
                             Money.format(
                                 Math.round(product.totalMinor / quantity),
                                 currencyCode
@@ -417,10 +409,6 @@ private fun CalendarContent(
     }
 }
 
-/**
- * Report timeline: arrows walk through periods, the title says which one
- * is shown. The period kind and the visible metrics live in Settings.
- */
 @Composable
 private fun ReportPeriodBar(
     state: StatsUiState,
@@ -591,7 +579,7 @@ private fun DailyBarChart(
                 color = trackColor,
                 topLeft = Offset(x, size.height - 4.dp.toPx()),
                 size = Size(barWidth, 4.dp.toPx()),
-                cornerRadius = androidx.compose.ui.geometry.CornerRadius(corner)
+                cornerRadius = CornerRadius(corner)
             )
             if (value > 0) {
                 val barHeight =
@@ -600,7 +588,7 @@ private fun DailyBarChart(
                     color = color,
                     topLeft = Offset(x, size.height - barHeight),
                     size = Size(barWidth, barHeight),
-                    cornerRadius = androidx.compose.ui.geometry.CornerRadius(corner)
+                    cornerRadius = CornerRadius(corner)
                 )
             }
         }
@@ -612,7 +600,7 @@ private fun CategorySliceRow(
     slice: CategorySlice,
     currencyCode: String,
     modifier: Modifier = Modifier,
-    /** How many products the records of this category list; 0 hides the tap. */
+
     products: Int = 0,
     expanded: Boolean = false,
     onClick: () -> Unit = {}
@@ -628,7 +616,8 @@ private fun CategorySliceRow(
         CategoryBadge(
             iconKey = slice.category.iconKey,
             color = Color(slice.category.colorArgb),
-            size = 40.dp
+            size = 40.dp,
+            iconPath = slice.category.iconPath
         )
         Column(Modifier.weight(1f)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
@@ -636,11 +625,10 @@ private fun CategorySliceRow(
                     text = CategoryVisuals.displayName(slice.category),
                     style = MaterialTheme.typography.bodyLarge,
                     maxLines = 1,
-                    overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
+                    overflow = TextOverflow.Ellipsis,
                     modifier = Modifier.weight(1f, fill = false)
                 )
-                // The basket is the invitation: this category can say what was
-                // actually bought inside it.
+
                 if (products > 0) {
                     Icon(
                         imageVector = Icons.Rounded.ShoppingBasket,

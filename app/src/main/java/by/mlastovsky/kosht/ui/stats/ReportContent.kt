@@ -42,7 +42,7 @@ fun ReportContent(state: StatsUiState) {
             VerdictCard(report)
         }
         item(key = "metrics") {
-            // Rows are user-configurable via the tune icon in the period bar.
+
             if (state.reportFields.isEmpty()) return@item
             Column(
                 modifier = Modifier
@@ -105,7 +105,8 @@ fun ReportContent(state: StatsUiState) {
                         CategoryBadge(
                             iconKey = top.category.iconKey,
                             color = Color(top.category.colorArgb),
-                            size = 28.dp
+                            size = 28.dp,
+                            iconPath = top.category.iconPath
                         )
                         Text(
                             text = CategoryVisuals.displayName(top.category) +

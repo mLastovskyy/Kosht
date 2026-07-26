@@ -1,22 +1,24 @@
 package by.mlastovsky.kosht.data
 
+import android.net.Uri
 import by.mlastovsky.kosht.data.db.CategoryDao
 import by.mlastovsky.kosht.data.db.CategoryEntity
 import by.mlastovsky.kosht.data.db.CategoryTotal
+import by.mlastovsky.kosht.data.db.DailyCategorySpend
 import by.mlastovsky.kosht.data.db.ItemInContext
+import by.mlastovsky.kosht.data.db.MonthlyTotals
 import by.mlastovsky.kosht.data.db.RecurringDao
 import by.mlastovsky.kosht.data.db.TransactionDao
 import by.mlastovsky.kosht.data.db.TransactionEntity
+import by.mlastovsky.kosht.data.db.TransactionItemDao
 import by.mlastovsky.kosht.data.db.TransactionItemEntity
 import by.mlastovsky.kosht.data.db.TransactionWithCategory
 import by.mlastovsky.kosht.model.TransactionType
+import by.mlastovsky.kosht.util.ItemNames
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.map
 
-/**
- * A product line on its way to being saved: what the editor holds before the
- * record it belongs to has an id.
- */
 data class ItemDraft(
     val name: String,
     val amountMinor: Long = 0,
@@ -27,7 +29,9 @@ class TransactionRepository(
     private val transactionDao: TransactionDao,
     private val categoryDao: CategoryDao,
     private val recurringDao: RecurringDao,
-    private val itemDao: by.mlastovsky.kosht.data.db.TransactionItemDao
+    private val itemDao: TransactionItemDao,
+
+    private val photoStore: PhotoStore
 ) {
 
     fun observeBetween(from: Long, to: Long): Flow<List<TransactionWithCategory>> =
@@ -59,10 +63,10 @@ class TransactionRepository(
 
     fun observeFirstTimestamp(): Flow<Long?> = transactionDao.observeFirstTimestamp()
 
-    fun observeDailyCategorySpend(): Flow<List<by.mlastovsky.kosht.data.db.DailyCategorySpend>> =
+    fun observeDailyCategorySpend(): Flow<List<DailyCategorySpend>> =
         transactionDao.observeDailyCategorySpend()
 
-    fun observeMonthlyTotals(): Flow<List<by.mlastovsky.kosht.data.db.MonthlyTotals>> =
+    fun observeMonthlyTotals(): Flow<List<MonthlyTotals>> =
         transactionDao.observeMonthlyTotals()
 
     suspend fun getTransaction(id: Long): TransactionWithCategory? = transactionDao.getById(id)
@@ -70,12 +74,7 @@ class TransactionRepository(
     suspend fun addTransaction(transaction: TransactionEntity): Long =
         transactionDao.insert(transaction)
 
-    /**
-     * Puts a deleted record back exactly as it was, product lines included —
-     * they were cascaded away with it, so restoring only the record would quietly
-     * lose them.
-     */
-    suspend fun restore(record: by.mlastovsky.kosht.data.DeletedRecord) {
+    suspend fun restore(record: DeletedRecord) {
         transactionDao.insert(record.transaction)
         if (record.items.isNotEmpty()) itemDao.insertAll(record.items)
     }
@@ -88,27 +87,20 @@ class TransactionRepository(
 
     suspend fun deleteTransactionById(id: Long) = transactionDao.deleteById(id)
 
-    // --- What a record was spent on ----------------------------------------
-
     fun observeItems(transactionId: Long): Flow<List<TransactionItemEntity>> =
         itemDao.observeFor(transactionId)
 
     suspend fun itemsOf(transactionId: Long): List<TransactionItemEntity> =
         itemDao.itemsFor(transactionId)
 
-    /** Everything bought in a period, for the product statistics. */
     fun observeItemsBetween(from: Long, to: Long): Flow<List<ItemInContext>> =
         itemDao.observeBetween(from, to)
 
-    /** Item names already used in a category, for suggesting them again. */
     fun observeItemNames(categoryId: Long): Flow<List<String>> =
-        itemDao.observeNamesIn(categoryId)
+        itemDao.observeNamesIn(categoryId).map { names ->
+            names.distinctBy { ItemNames.key(it) }
+        }
 
-    /**
-     * Replaces the product lines of a record. Rewriting them wholesale is what
-     * keeps the editor honest: what is on screen is what is stored, and the
-     * order the user put them in survives.
-     */
     suspend fun saveItems(transactionId: Long, items: List<ItemDraft>) {
         itemDao.deleteFor(transactionId)
         if (items.isEmpty()) return
@@ -126,27 +118,8 @@ class TransactionRepository(
         )
     }
 
-    /**
-     * One settled spelling per product, so the statistics can group by name:
-     * trimmed, single-spaced, and cased the way a list reads best. Kotlin's
-     * lowercase understands Cyrillic, which SQLite's own lower() does not —
-     * hence doing it here rather than in the query.
-     */
-    fun normalizeItemName(raw: String): String? {
-        val trimmed = raw.trim().replace(Regex("""\s{2,}"""), " ").take(ITEM_NAME_MAX)
-        if (trimmed.none { it.isLetterOrDigit() }) return null
-        val lower = trimmed.lowercase()
-        return lower.replaceFirstChar { it.uppercaseChar() }
-    }
+    fun normalizeItemName(raw: String): String? = ItemNames.normalize(raw)
 
-    // --- Transfers between the user's own accounts -------------------------
-
-    /**
-     * Writes a transfer as one record: the amount, plus what the transfer cost,
-     * leaves [fromAccountId] and the amount lands on [toAccountId]. Nothing is
-     * spent or earned, so the statistics skip such rows and only the balances
-     * move. Returns false when the transfer makes no sense.
-     */
     suspend fun saveTransfer(
         original: TransactionEntity?,
         fromAccountId: Long,
@@ -178,8 +151,7 @@ class TransactionRepository(
         transactionDao.insert(
             TransactionEntity(
                 amountMinor = amountMinor,
-                // The row hangs off the source account, which is where the
-                // money goes out; the destination is the transfer marker.
+
                 type = TransactionType.EXPENSE,
                 categoryId = categoryId,
                 note = note.trim(),
@@ -194,19 +166,9 @@ class TransactionRepository(
         return true
     }
 
-    /**
-     * A transfer belongs to no category, but the column is required, so it
-     * borrows the built-in "other" one — invisible either way, since transfers
-     * are shown with their own icon and left out of every category total.
-     */
     private suspend fun transferCategoryId(): Long? =
         categoryDao.getByKey("other_expense")?.id
             ?: categoryDao.observeByType(TransactionType.EXPENSE).first().firstOrNull()?.id
-
-    private companion object {
-        /** A product name longer than this is a description, not a name. */
-        const val ITEM_NAME_MAX = 60
-    }
 
     fun observeCategories(): Flow<List<CategoryEntity>> = categoryDao.observeAll()
 
@@ -215,7 +177,13 @@ class TransactionRepository(
 
     suspend fun getCategory(id: Long): CategoryEntity? = categoryDao.getById(id)
 
-    suspend fun addCategory(name: String, iconKey: String, colorArgb: Long, type: TransactionType): Long {
+    suspend fun addCategory(
+        name: String,
+        iconKey: String,
+        colorArgb: Long,
+        type: TransactionType,
+        iconUri: Uri? = null
+    ): Long {
         val position = categoryDao.maxPosition(type) + 1
         return categoryDao.insert(
             CategoryEntity(
@@ -224,18 +192,49 @@ class TransactionRepository(
                 iconKey = iconKey,
                 colorArgb = colorArgb,
                 type = type,
-                position = position
+                position = position,
+                iconPath = iconUri?.let { photoStore.saveFromUri(it, CATEGORY_ICONS) }
             )
         )
     }
 
     suspend fun updateCategory(category: CategoryEntity) = categoryDao.update(category)
 
-    /**
-     * Deletes a category. Existing transactions and recurring charges are
-     * moved to the built-in "other" category of the same type so nothing
-     * is lost.
-     */
+    suspend fun updateCategory(
+        id: Long,
+        name: String,
+        iconKey: String,
+        colorArgb: Long,
+        iconUri: Uri? = null,
+        clearIcon: Boolean = false
+    ) {
+        if (name.isBlank()) return
+        val existing = categoryDao.getById(id) ?: return
+        val saved = iconUri?.let { photoStore.saveFromUri(it, CATEGORY_ICONS) }
+        val iconPath = when {
+            saved != null -> saved
+            clearIcon -> null
+            else -> existing.iconPath
+        }
+
+        if (iconPath != existing.iconPath) photoStore.delete(existing.iconPath)
+        categoryDao.update(
+            existing.copy(
+                name = name.trim(),
+                iconKey = iconKey,
+                colorArgb = colorArgb,
+                iconPath = iconPath
+            )
+        )
+    }
+
+    suspend fun reorderCategories(ids: List<Long>) {
+        if (ids.isEmpty()) return
+
+        val base = categoryDao.minPosition(ids)
+        ids.forEachIndexed { index, id -> categoryDao.updatePosition(id, base + index) }
+    }
+
     suspend fun deleteCategory(category: CategoryEntity) {
         val fallbackKey =
             if (category.type == TransactionType.EXPENSE) "other_expense" else "other_income"
@@ -245,5 +244,11 @@ class TransactionRepository(
             recurringDao.reassignCategory(from = category.id, to = fallback.id)
         }
         categoryDao.deleteById(category.id)
+        photoStore.delete(category.iconPath)
+    }
+
+    private companion object {
+
+        const val CATEGORY_ICONS = "categories"
     }
 }

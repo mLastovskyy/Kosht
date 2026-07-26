@@ -1,17 +1,19 @@
 package by.mlastovsky.kosht.ui.wallet
 
+import androidx.annotation.StringRes
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
@@ -20,6 +22,7 @@ import androidx.compose.material.icons.rounded.Edit
 import androidx.compose.material.icons.rounded.Event
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.AssistChip
+import androidx.compose.material3.Checkbox
 import androidx.compose.material3.DatePicker
 import androidx.compose.material3.DatePickerDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -35,10 +38,13 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.rememberDatePickerState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
@@ -47,18 +53,24 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import by.mlastovsky.kosht.R
+import by.mlastovsky.kosht.data.db.AccountEntity
 import by.mlastovsky.kosht.data.db.CategoryEntity
 import by.mlastovsky.kosht.data.db.DebtEntity
+import by.mlastovsky.kosht.data.db.RecurringEntity
+import by.mlastovsky.kosht.data.db.SavingGoalEntity
 import by.mlastovsky.kosht.model.DebtDirection
 import by.mlastovsky.kosht.model.RecurringFrequency
 import by.mlastovsky.kosht.model.TransactionType
+import by.mlastovsky.kosht.ui.AccountVisuals
 import by.mlastovsky.kosht.ui.CategoryVisuals
+import by.mlastovsky.kosht.ui.components.CategoryActions
 import by.mlastovsky.kosht.ui.components.CategoryBadge
+import by.mlastovsky.kosht.ui.components.CategoryPickerRow
+import by.mlastovsky.kosht.ui.components.TextInput
 import by.mlastovsky.kosht.ui.relativeDate
 import by.mlastovsky.kosht.ui.settings.SettingsViewModel
 import by.mlastovsky.kosht.util.Money
 import java.time.LocalDate
-import by.mlastovsky.kosht.ui.components.TextInput
 
 @Composable
 private fun AmountField(
@@ -92,11 +104,6 @@ private fun CurrencyChips(
     }
 }
 
-/**
- * A debt, new or being corrected. One dialog for both: the fields are the same
- * five either way, and a debt written down wrong should be as easy to fix as it
- * was to add.
- */
 @Composable
 fun DebtDialog(
     initial: DebtEntity?,
@@ -200,19 +207,30 @@ private fun DirectionToggle(
 @Composable
 fun DebtActionsDialog(
     debt: DebtEntity,
-    onRepay: (amountMinor: Long) -> Unit,
-    onClose: () -> Unit,
+    accounts: List<AccountEntity>,
+    onRepay: (amountMinor: Long, note: String?, accountId: Long?) -> Unit,
+    onClose: (note: String?, accountId: Long?) -> Unit,
     onEdit: () -> Unit,
     onDelete: () -> Unit,
     onDismiss: () -> Unit
 ) {
     var repayText by remember { mutableStateOf("") }
+    var record by remember { mutableStateOf(true) }
+    var accountId by remember(accounts) { mutableStateOf(accounts.firstOrNull()?.id) }
     val repayMinor = Money.parseToMinor(repayText, debt.currencyCode) ?: 0L
+
+    val closedNote = stringResource(R.string.debt_note_closed, debt.personName)
+    val partNote = stringResource(R.string.debt_note_part, debt.personName)
+    fun noteFor(amountMinor: Long): String? = when {
+        !record -> null
+        amountMinor >= debt.amountMinor -> closedNote
+        else -> partNote
+    }
 
     AlertDialog(
         onDismissRequest = onDismiss,
         title = {
-            Row(verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
                 Text(
                     text = debt.personName,
                     maxLines = 1,
@@ -241,12 +259,35 @@ fun DebtActionsDialog(
                     )
                 }
                 AmountField(repayText, { repayText = it })
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(MaterialTheme.shapes.small)
+                        .clickable { record = !record }
+                ) {
+                    Checkbox(checked = record, onCheckedChange = { record = it })
+                    Text(
+                        text = stringResource(R.string.debt_record_history),
+                        style = MaterialTheme.typography.bodyMedium,
+                        modifier = Modifier.weight(1f)
+                    )
+                }
+                if (record && accounts.size > 1) {
+                    AccountChips(accounts, accountId) { accountId = it }
+                }
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     TextButton(
                         enabled = repayMinor > 0,
-                        onClick = { onRepay(repayMinor) }
+                        onClick = {
+                            onRepay(repayMinor, noteFor(repayMinor), accountId.takeIf { record })
+                        }
                     ) { Text(stringResource(R.string.debt_repay)) }
-                    TextButton(onClick = onClose) {
+                    TextButton(
+                        onClick = {
+                            onClose(noteFor(debt.amountMinor), accountId.takeIf { record })
+                        }
+                    ) {
                         Text(stringResource(R.string.debt_close))
                     }
                 }
@@ -266,35 +307,38 @@ fun DebtActionsDialog(
     )
 }
 
-/**
- * Setting money aside, or taking it back out. The amount can be in any
- * currency: what lands in the savings is the same sum in the currency they are
- * counted in — the goal's, or the app's — converted at the official rate and
- * left editable, because the bank's figure and the National Bank's rate rarely
- * agree to the last kopeck, and the one that actually left the account wins.
- */
 @Composable
 fun AddSavingDialog(
     withdraw: Boolean,
     defaultCurrency: String,
-    goals: List<by.mlastovsky.kosht.ui.wallet.GoalUi>,
+    goals: List<GoalUi>,
+    accounts: List<AccountEntity>,
     rateOf: (from: String, to: String) -> Double?,
-    onConfirm: (amountMinor: Long, currency: String, note: String, goalId: Long?) -> Unit,
+    onConfirm: (
+        amountMinor: Long,
+        currency: String,
+        note: String,
+        goalId: Long?,
+        deduct: Boolean,
+        accountId: Long?
+    ) -> Unit,
     onDismiss: () -> Unit
 ) {
     var amountText by remember { mutableStateOf("") }
     var currency by remember { mutableStateOf(defaultCurrency) }
     var note by remember { mutableStateOf("") }
     var goalId by remember { mutableStateOf<Long?>(null) }
-    // A goal counts its deposits up, so they all land in its own currency.
+
+    var deduct by remember { mutableStateOf(false) }
+    var accountId by remember(accounts) { mutableStateOf(accounts.firstOrNull()?.id) }
+
     val selectedGoal = goals.firstOrNull { it.goal.id == goalId }
     val savedIn = selectedGoal?.goal?.currencyCode ?: defaultCurrency
     val typedMinor = Money.parseToMinor(amountText, currency) ?: 0L
     val converting = currency != savedIn
     var convertedText by remember { mutableStateOf("") }
-    // Re-derived whenever the sum or either currency moves; the last word is
-    // still the person's, since they can type over it afterwards.
-    androidx.compose.runtime.LaunchedEffect(typedMinor, currency, savedIn) {
+
+    LaunchedEffect(typedMinor, currency, savedIn) {
         convertedText = if (!converting || typedMinor <= 0) {
             ""
         } else {
@@ -347,8 +391,7 @@ fun AddSavingDialog(
                     }
                 }
                 CurrencyChips(currency) { currency = it }
-                // Only when the two differ: otherwise there is nothing to
-                // convert and nothing to correct.
+
                 if (converting) {
                     OutlinedTextField(
                         value = convertedText,
@@ -367,6 +410,26 @@ fun AddSavingDialog(
                     keyboardOptions = TextInput.Sentence,
                     modifier = Modifier.fillMaxWidth()
                 )
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(MaterialTheme.shapes.small)
+                        .clickable { deduct = !deduct }
+                ) {
+                    Checkbox(checked = deduct, onCheckedChange = { deduct = it })
+                    Text(
+                        text = stringResource(
+                            if (withdraw) R.string.savings_return_account
+                            else R.string.savings_deduct_account
+                        ),
+                        style = MaterialTheme.typography.bodyMedium,
+                        modifier = Modifier.weight(1f)
+                    )
+                }
+                if (deduct && accounts.size > 1) {
+                    AccountChips(accounts, accountId) { accountId = it }
+                }
             }
         },
         confirmButton = {
@@ -377,7 +440,9 @@ fun AddSavingDialog(
                         if (withdraw) -amountMinor else amountMinor,
                         savedIn,
                         note,
-                        if (withdraw) null else goalId
+                        if (withdraw) null else goalId,
+                        deduct,
+                        accountId
                     )
                 }
             ) { Text(stringResource(R.string.action_add)) }
@@ -388,14 +453,9 @@ fun AddSavingDialog(
     )
 }
 
-/**
- * A savings goal, new or being changed. The name, the target and the currency
- * are all corrigible — a goal outlives the evening it was created on, and
- * "накопить на отпуск" turns out to be in euro after all.
- */
 @Composable
 fun GoalDialog(
-    initial: by.mlastovsky.kosht.data.db.SavingGoalEntity?,
+    initial: SavingGoalEntity?,
     defaultCurrency: String,
     onConfirm: (title: String, targetMinor: Long, currency: String) -> Unit,
     onDelete: (() -> Unit)?,
@@ -411,14 +471,14 @@ fun GoalDialog(
     AlertDialog(
         onDismissRequest = onDismiss,
         title = {
-            Row(verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
                 Text(
                     text = stringResource(
                         if (initial == null) R.string.goal_new else R.string.goal_edit
                     ),
                     modifier = Modifier.weight(1f)
                 )
-                // The trash lives where it does for a payment or an account.
+
                 if (onDelete != null) {
                     IconButton(onClick = onDelete) {
                         Icon(
@@ -442,7 +502,7 @@ fun GoalDialog(
                 )
                 AmountField(amountText, { amountText = it })
                 CurrencyChips(currency) { currency = it }
-                // Said out loud, because it moves money that is already there.
+
                 if (initial != null && currency != initial.currencyCode) {
                     Text(
                         text = stringResource(R.string.goal_currency_converts),
@@ -470,17 +530,12 @@ fun GoalDialog(
     )
 }
 
-/**
- * A new planned payment. It can be money going out or coming in — a salary is
- * as regular as a subscription — and with several accounts it says which one
- * the confirmed amount will move on.
- */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AddRecurringDialog(
     expenseCategories: List<CategoryEntity>,
     incomeCategories: List<CategoryEntity>,
-    accounts: List<by.mlastovsky.kosht.data.db.AccountEntity>,
+    accounts: List<AccountEntity>,
     currencyCode: String,
     onConfirm: (
         title: String,
@@ -492,38 +547,35 @@ fun AddRecurringDialog(
         type: TransactionType,
         accountId: Long?
     ) -> Unit,
+    categoryActions: CategoryActions,
     onDismiss: () -> Unit
 ) {
     var title by remember { mutableStateOf("") }
     var amountText by remember { mutableStateOf("") }
     var currency by remember { mutableStateOf(currencyCode) }
     var type by remember { mutableStateOf(TransactionType.EXPENSE) }
-    val categories = if (type == TransactionType.EXPENSE) {
-        expenseCategories
-    } else {
-        incomeCategories
-    }
+    val income = type == TransactionType.INCOME
+    val categories = if (income) incomeCategories else expenseCategories
     var categoryId by remember { mutableStateOf<Long?>(null) }
     var accountId by remember(accounts) { mutableStateOf(accounts.firstOrNull()?.id) }
     var firstDue by remember { mutableStateOf(LocalDate.now()) }
     var frequency by remember { mutableStateOf(RecurringFrequency.MONTHLY) }
     var showDatePicker by remember { mutableStateOf(false) }
     val amountMinor = Money.parseToMinor(amountText, currency) ?: 0L
-    // Switching between money out and money in switches the categories with
-    // it, so the chosen one always belongs to the list on screen.
+
     val effectiveCategoryId = categoryId?.takeIf { id -> categories.any { it.id == id } }
         ?: categories.firstOrNull()?.id
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text(stringResource(R.string.recurring_new)) },
+        title = { Text(stringResource(recurringTitleRes(income))) },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 RecurringTypeToggle(type) { type = it }
                 OutlinedTextField(
                     value = title,
                     onValueChange = { title = it.take(60) },
-                    placeholder = { Text(stringResource(R.string.recurring_title_hint)) },
+                    placeholder = { Text(stringResource(recurringNameRes(income))) },
                     singleLine = true,
                     keyboardOptions = TextInput.Sentence,
                     modifier = Modifier.fillMaxWidth()
@@ -531,7 +583,7 @@ fun AddRecurringDialog(
                 OutlinedTextField(
                     value = amountText,
                     onValueChange = { amountText = it.take(12) },
-                    placeholder = { Text(stringResource(R.string.amount_hint)) },
+                    placeholder = { Text(stringResource(recurringAmountRes(income))) },
                     singleLine = true,
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                     modifier = Modifier.fillMaxWidth()
@@ -547,7 +599,7 @@ fun AddRecurringDialog(
                     },
                     label = {
                         Text(
-                            stringResource(R.string.recurring_first_date) + ": " +
+                            stringResource(recurringDateRes(income)) + ": " +
                                 relativeDate(firstDue)
                         )
                     }
@@ -562,7 +614,13 @@ fun AddRecurringDialog(
                     }
                 }
                 CurrencyChips(currency) { currency = it }
-                CategoryRow(categories, effectiveCategoryId) { categoryId = it }
+                CategoryRow(
+                    categories = categories,
+                    selectedId = effectiveCategoryId,
+                    onSelect = { categoryId = it },
+                    type = type,
+                    actions = categoryActions
+                )
                 if (accounts.size > 1) {
                     Text(
                         stringResource(R.string.editor_account),
@@ -623,7 +681,6 @@ fun AddRecurringDialog(
     }
 }
 
-/** Money out or money in — what confirming this payment will record. */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun RecurringTypeToggle(
@@ -650,38 +707,43 @@ private fun RecurringTypeToggle(
 private fun CategoryRow(
     categories: List<CategoryEntity>,
     selectedId: Long?,
-    onSelect: (Long) -> Unit
+    onSelect: (Long) -> Unit,
+    type: TransactionType,
+    actions: CategoryActions
 ) {
-    LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-        items(categories, key = { it.id }) { category ->
-            Column(
-                horizontalAlignment = androidx.compose.ui.Alignment.CenterHorizontally,
-                modifier = Modifier
-                    .clip(MaterialTheme.shapes.medium)
-                    .clickable { onSelect(category.id) }
-                    .padding(4.dp)
-            ) {
-                CategoryBadge(
-                    iconKey = category.iconKey,
-                    color = Color(category.colorArgb),
-                    selected = category.id == selectedId,
-                    size = 40.dp,
-                    modifier = Modifier.clip(CircleShape)
-                )
-                Text(
-                    text = CategoryVisuals.displayName(category),
-                    style = MaterialTheme.typography.labelSmall,
-                    maxLines = 1
-                )
-            }
-        }
-    }
+    CategoryPickerRow(
+        categories = categories,
+        selectedId = selectedId,
+        onSelect = onSelect,
+        type = type,
+        actions = actions,
+        badgeSize = 40.dp
+    )
 }
 
-/** Which money source the amount moves on. */
+@StringRes
+private fun recurringTitleRes(income: Boolean): Int =
+    if (income) R.string.recurring_new_income else R.string.recurring_new
+
+@StringRes
+private fun recurringNameRes(income: Boolean): Int =
+    if (income) R.string.recurring_source_hint else R.string.recurring_title_hint
+
+@StringRes
+private fun recurringAmountRes(income: Boolean): Int =
+    if (income) R.string.recurring_amount_income else R.string.recurring_amount_expense
+
+@StringRes
+private fun recurringDateRes(income: Boolean): Int =
+    if (income) R.string.recurring_first_date_income else R.string.recurring_first_date
+
+@StringRes
+private fun recurringConvertedRes(income: Boolean): Int =
+    if (income) R.string.recurring_converted_income else R.string.recurring_converted
+
 @Composable
 private fun AccountChips(
-    accounts: List<by.mlastovsky.kosht.data.db.AccountEntity>,
+    accounts: List<AccountEntity>,
     selectedId: Long?,
     onSelect: (Long) -> Unit
 ) {
@@ -700,7 +762,7 @@ private fun AccountChips(
                 },
                 label = {
                     Text(
-                        by.mlastovsky.kosht.ui.AccountVisuals.displayName(account),
+                        AccountVisuals.displayName(account),
                         maxLines = 1
                     )
                 }
@@ -709,7 +771,6 @@ private fun AccountChips(
     }
 }
 
-/** New money source: name, icon, color. */
 @Composable
 fun AddAccountDialog(
     onConfirm: (name: String, iconKey: String, colorArgb: Long) -> Unit,
@@ -717,10 +778,10 @@ fun AddAccountDialog(
 ) {
     var name by remember { mutableStateOf("") }
     var iconKey by remember {
-        mutableStateOf(by.mlastovsky.kosht.ui.AccountVisuals.pickableIconKeys.first())
+        mutableStateOf(AccountVisuals.pickableIconKeys.first())
     }
     var colorArgb by remember {
-        androidx.compose.runtime.mutableLongStateOf(CategoryVisuals.pickableColors.first())
+        mutableLongStateOf(CategoryVisuals.pickableColors.first())
     }
 
     AlertDialog(
@@ -737,7 +798,7 @@ fun AddAccountDialog(
                     modifier = Modifier.fillMaxWidth()
                 )
                 LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    items(by.mlastovsky.kosht.ui.AccountVisuals.pickableIconKeys) { key ->
+                    items(AccountVisuals.pickableIconKeys) { key ->
                         CategoryBadge(
                             iconKey = key,
                             color = Color(colorArgb),
@@ -751,7 +812,7 @@ fun AddAccountDialog(
                 }
                 LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     items(CategoryVisuals.pickableColors) { color ->
-                        androidx.compose.foundation.layout.Box(
+                        Box(
                             modifier = Modifier
                                 .size(if (color == colorArgb) 40.dp else 32.dp)
                                 .clip(CircleShape)
@@ -774,14 +835,9 @@ fun AddAccountDialog(
     )
 }
 
-/**
- * Account details: the balance is always editable, the pencil (or a tap on
- * the name) reveals name/icon/color editing, and deletion hides behind the
- * trash icon — no explicit delete button.
- */
 @Composable
 fun AccountBalanceDialog(
-    account: by.mlastovsky.kosht.data.db.AccountEntity,
+    account: AccountEntity,
     currentBalanceMinor: Long,
     currencyCode: String,
     deletable: Boolean,
@@ -790,21 +846,21 @@ fun AccountBalanceDialog(
     onDelete: () -> Unit,
     onDismiss: () -> Unit
 ) {
-    val resolvedName = by.mlastovsky.kosht.ui.AccountVisuals.displayName(account)
+    val resolvedName = AccountVisuals.displayName(account)
     var balanceText by remember {
         mutableStateOf(Money.editableText(currentBalanceMinor, currencyCode))
     }
     var editMode by remember { mutableStateOf(false) }
     var name by remember { mutableStateOf(resolvedName) }
     var iconKey by remember { mutableStateOf(account.iconKey) }
-    var colorArgb by remember { androidx.compose.runtime.mutableLongStateOf(account.colorArgb) }
+    var colorArgb by remember { mutableLongStateOf(account.colorArgb) }
     val target = Money.parseToMinor(balanceText.replace("-", ""), currencyCode)
         ?.let { if (balanceText.startsWith("-")) -it else it }
 
     AlertDialog(
         onDismissRequest = onDismiss,
         title = {
-            Row(verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
                 Icon(
                     CategoryVisuals.icon(iconKey),
                     contentDescription = null,
@@ -826,8 +882,7 @@ fun AccountBalanceDialog(
                         tint = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
-                // Deleting stays behind the pencil: a plain tap on an
-                // account should never put a trash icon under the finger.
+
                 if (deletable && editMode) {
                     IconButton(onClick = onDelete) {
                         Icon(
@@ -851,7 +906,7 @@ fun AccountBalanceDialog(
                         modifier = Modifier.fillMaxWidth()
                     )
                     LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        items(by.mlastovsky.kosht.ui.AccountVisuals.pickableIconKeys) { key ->
+                        items(AccountVisuals.pickableIconKeys) { key ->
                             CategoryBadge(
                                 iconKey = key,
                                 color = Color(colorArgb),
@@ -865,7 +920,7 @@ fun AccountBalanceDialog(
                     }
                     LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         items(CategoryVisuals.pickableColors) { color ->
-                            androidx.compose.foundation.layout.Box(
+                            Box(
                                 modifier = Modifier
                                     .size(if (color == colorArgb) 40.dp else 32.dp)
                                     .clip(CircleShape)
@@ -912,17 +967,13 @@ fun AccountBalanceDialog(
     )
 }
 
-/**
- * Edit a planned payment: whether it is money out or in, its title, amount,
- * category, next date, frequency and the account it moves on.
- */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun EditRecurringDialog(
-    initial: by.mlastovsky.kosht.data.db.RecurringEntity,
+    initial: RecurringEntity,
     expenseCategories: List<CategoryEntity>,
     incomeCategories: List<CategoryEntity>,
-    accounts: List<by.mlastovsky.kosht.data.db.AccountEntity>,
+    accounts: List<AccountEntity>,
     onConfirm: (
         title: String,
         amountMinor: Long,
@@ -932,6 +983,7 @@ fun EditRecurringDialog(
         categoryId: Long,
         accountId: Long?
     ) -> Unit,
+    categoryActions: CategoryActions,
     onDismiss: () -> Unit
 ) {
     var title by remember { mutableStateOf(initial.title) }
@@ -947,11 +999,8 @@ fun EditRecurringDialog(
     }
     var showDatePicker by remember { mutableStateOf(false) }
     val amountMinor = Money.parseToMinor(amountText, initial.currencyCode) ?: 0L
-    val categories = if (type == TransactionType.EXPENSE) {
-        expenseCategories
-    } else {
-        incomeCategories
-    }
+    val income = type == TransactionType.INCOME
+    val categories = if (income) incomeCategories else expenseCategories
     val effectiveCategoryId = categoryId.takeIf { id -> categories.any { it.id == id } }
         ?: categories.firstOrNull()?.id
 
@@ -964,7 +1013,7 @@ fun EditRecurringDialog(
                 OutlinedTextField(
                     value = title,
                     onValueChange = { title = it.take(60) },
-                    label = { Text(stringResource(R.string.recurring_title_hint)) },
+                    label = { Text(stringResource(recurringNameRes(income))) },
                     singleLine = true,
                     keyboardOptions = TextInput.Sentence,
                     modifier = Modifier.fillMaxWidth()
@@ -972,7 +1021,7 @@ fun EditRecurringDialog(
                 OutlinedTextField(
                     value = amountText,
                     onValueChange = { amountText = it.take(12) },
-                    label = { Text(stringResource(R.string.amount_hint)) },
+                    label = { Text(stringResource(recurringAmountRes(income))) },
                     singleLine = true,
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                     modifier = Modifier.fillMaxWidth()
@@ -984,7 +1033,7 @@ fun EditRecurringDialog(
                     },
                     label = {
                         Text(
-                            stringResource(R.string.recurring_first_date) + ": " +
+                            stringResource(recurringDateRes(income)) + ": " +
                                 relativeDate(due)
                         )
                     }
@@ -998,7 +1047,13 @@ fun EditRecurringDialog(
                         )
                     }
                 }
-                CategoryRow(categories, effectiveCategoryId) { categoryId = it }
+                CategoryRow(
+                    categories = categories,
+                    selectedId = effectiveCategoryId,
+                    onSelect = { categoryId = it },
+                    type = type,
+                    actions = categoryActions
+                )
                 if (accounts.size > 1) {
                     Text(
                         stringResource(R.string.editor_account),
@@ -1068,12 +1123,6 @@ fun frequencyLabel(frequency: RecurringFrequency): String = stringResource(
     }
 )
 
-/**
- * Confirmation of a due payment: the amount is editable (this month's bill may
- * differ), a foreign-currency payment also exposes the rate, and with several
- * accounts the user picks which one it moves on — starting from the account the
- * plan itself names.
- */
 @Composable
 fun ConfirmRecurringDialog(
     title: String,
@@ -1081,7 +1130,7 @@ fun ConfirmRecurringDialog(
     currencyCode: String,
     appCurrencyCode: String,
     suggestedRate: Double?,
-    accounts: List<by.mlastovsky.kosht.data.db.AccountEntity>,
+    accounts: List<AccountEntity>,
     defaultAccountId: Long?,
     type: TransactionType,
     onConfirm: (amountMinor: Long, rate: Double, accountId: Long?) -> Unit,
@@ -1103,6 +1152,7 @@ fun ConfirmRecurringDialog(
     val amountMinor = Money.parseToMinor(amountText, currencyCode) ?: 0L
     val rate = if (sameCurrency) 1.0 else rateText.replace(',', '.').toDoubleOrNull() ?: 0.0
     val convertedMinor = if (rate > 0) Math.round(amountMinor * rate) else 0L
+    val income = type == TransactionType.INCOME
 
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -1112,16 +1162,19 @@ fun ConfirmRecurringDialog(
                 OutlinedTextField(
                     value = amountText,
                     onValueChange = { amountText = it.take(12) },
-                    label = { Text(stringResource(R.string.amount_hint) + " ($currencyCode)") },
+                    label = {
+                        Text(
+                            stringResource(recurringAmountRes(income)) + " ($currencyCode)"
+                        )
+                    },
                     singleLine = true,
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                     modifier = Modifier.fillMaxWidth()
                 )
-                // Which way the money goes, said outright: the same dialog
-                // now confirms a bill and a salary.
+
                 Text(
                     text = stringResource(
-                        if (type == TransactionType.INCOME) {
+                        if (income) {
                             R.string.recurring_confirm_income
                         } else {
                             R.string.recurring_confirm_expense
@@ -1158,7 +1211,7 @@ fun ConfirmRecurringDialog(
                 if (convertedMinor > 0) {
                     Text(
                         text = stringResource(
-                            R.string.recurring_converted,
+                            recurringConvertedRes(income),
                             Money.format(convertedMinor, appCurrencyCode)
                         ),
                         style = MaterialTheme.typography.titleMedium,

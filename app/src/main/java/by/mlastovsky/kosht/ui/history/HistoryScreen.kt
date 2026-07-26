@@ -32,11 +32,11 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.rememberDateRangePickerState
 import androidx.compose.material3.SwipeToDismissBox
 import androidx.compose.material3.SwipeToDismissBoxValue
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.material3.rememberDateRangePickerState
 import androidx.compose.material3.rememberSwipeToDismissBoxState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -46,26 +46,30 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalLocale
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import by.mlastovsky.kosht.R
+import by.mlastovsky.kosht.data.db.CategoryEntity
+import by.mlastovsky.kosht.data.db.TransactionEntity
 import by.mlastovsky.kosht.model.TransactionType
 import by.mlastovsky.kosht.ui.AppViewModelProvider
 import by.mlastovsky.kosht.ui.CategoryVisuals
 import by.mlastovsky.kosht.ui.components.CategoryBadge
 import by.mlastovsky.kosht.ui.components.EmptyState
 import by.mlastovsky.kosht.ui.components.MonthSelector
+import by.mlastovsky.kosht.ui.components.TextInput
 import by.mlastovsky.kosht.ui.components.TransactionRow
 import by.mlastovsky.kosht.ui.relativeDate
 import by.mlastovsky.kosht.ui.theme.KoshtTheme
+import by.mlastovsky.kosht.ui.transfer.TransferDialog
 import by.mlastovsky.kosht.util.Money
 import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneOffset
 import java.time.format.DateTimeFormatter
-import by.mlastovsky.kosht.ui.components.TextInput
 
 @Composable
 fun HistoryScreen(
@@ -75,9 +79,9 @@ fun HistoryScreen(
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     var showCategoryFilter by remember { mutableStateOf(false) }
     var showRangePicker by remember { mutableStateOf(false) }
-    // Transfers are corrected where they were made, not in the editor.
+
     var transferInAction by remember {
-        mutableStateOf<by.mlastovsky.kosht.data.db.TransactionEntity?>(null)
+        mutableStateOf<TransactionEntity?>(null)
     }
 
     Box(Modifier.fillMaxSize()) {
@@ -248,7 +252,7 @@ fun HistoryScreen(
     }
 
     transferInAction?.let { transfer ->
-        by.mlastovsky.kosht.ui.transfer.TransferDialog(
+        TransferDialog(
             initial = transfer,
             onDismiss = { transferInAction = null }
         )
@@ -290,7 +294,7 @@ fun HistoryScreen(
                 }
             }
         ) {
-            // Default title+headline wrap badly in a dialog — show the bare calendar.
+
             DateRangePicker(
                 state = rangeState,
                 showModeToggle = false,
@@ -307,7 +311,7 @@ private fun utcMillisToDate(millis: Long): LocalDate =
 
 @Composable
 private fun rangeLabel(start: LocalDate, end: LocalDate?): String {
-    val locale = androidx.compose.ui.platform.LocalLocale.current.platformLocale
+    val locale = LocalLocale.current.platformLocale
     val formatter = DateTimeFormatter.ofPattern("d MMM", locale)
     val effectiveEnd = end ?: start
     return if (start == effectiveEnd) {
@@ -319,7 +323,7 @@ private fun rangeLabel(start: LocalDate, end: LocalDate?): String {
 
 @Composable
 private fun CategoryFilterDialog(
-    categories: List<by.mlastovsky.kosht.data.db.CategoryEntity>,
+    categories: List<CategoryEntity>,
     onSelect: (Long?) -> Unit,
     onDismiss: () -> Unit
 ) {
@@ -348,7 +352,8 @@ private fun CategoryFilterDialog(
                         CategoryBadge(
                             iconKey = category.iconKey,
                             color = Color(category.colorArgb),
-                            size = 36.dp
+                            size = 36.dp,
+                            iconPath = category.iconPath
                         )
                         Text(
                             text = CategoryVisuals.displayName(category),
@@ -443,4 +448,3 @@ private fun DismissibleRow(
         content()
     }
 }
-

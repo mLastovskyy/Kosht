@@ -3,21 +3,30 @@ package by.mlastovsky.kosht.di
 import android.content.Context
 import by.mlastovsky.kosht.data.AccountRepository
 import by.mlastovsky.kosht.data.CurrencyChanger
+import by.mlastovsky.kosht.data.Housekeeping
 import by.mlastovsky.kosht.data.PhotoStore
 import by.mlastovsky.kosht.data.RatesRepository
 import by.mlastovsky.kosht.data.SettingsRepository
 import by.mlastovsky.kosht.data.TransactionRepository
+import by.mlastovsky.kosht.data.UpdateChecker
+import by.mlastovsky.kosht.data.UpdateInstaller
 import by.mlastovsky.kosht.data.WalletRepository
+import by.mlastovsky.kosht.data.awards.AwardTracker
+import by.mlastovsky.kosht.BuildConfig
 import by.mlastovsky.kosht.data.db.KoshtDatabase
+import by.mlastovsky.kosht.data.lock.AppLock
+import by.mlastovsky.kosht.data.lock.AppLockRepository
 import by.mlastovsky.kosht.data.receipt.ReceiptScanner
+import by.mlastovsky.kosht.data.sync.PhotoSync
+import by.mlastovsky.kosht.data.sync.SupabaseApi
+import by.mlastovsky.kosht.data.sync.SyncAccountRepository
+import by.mlastovsky.kosht.data.sync.SyncEngine
+import kotlinx.coroutines.CoroutineScope
 
-/**
- * Simple manual dependency container scoped to the application lifecycle.
- */
 class AppContainer(
     context: Context,
-    /** Lives as long as the process; what app-wide watchers run in. */
-    private val appScope: kotlinx.coroutines.CoroutineScope
+
+    private val appScope: CoroutineScope
 ) {
 
     private val appContext = context.applicationContext
@@ -29,7 +38,8 @@ class AppContainer(
             database.transactionDao(),
             database.categoryDao(),
             database.recurringDao(),
-            database.transactionItemDao()
+            database.transactionItemDao(),
+            photoStore
         )
     }
 
@@ -51,6 +61,7 @@ class AppContainer(
             database.savingDao(),
             database.recurringDao(),
             database.transactionDao(),
+            database.categoryDao(),
             database.goalDao(),
             database.challengeDao(),
             database.awardDao()
@@ -59,12 +70,8 @@ class AppContainer(
 
     val receiptScanner: ReceiptScanner by lazy { ReceiptScanner(appContext) }
 
-    /**
-     * Created eagerly: an award has to be earned the moment it is deserved,
-     * which cannot wait for a screen to ask for it.
-     */
-    val awardTracker: by.mlastovsky.kosht.data.awards.AwardTracker by lazy {
-        by.mlastovsky.kosht.data.awards.AwardTracker(
+    val awardTracker: AwardTracker by lazy {
+        AwardTracker(
             transactions = transactionRepository,
             wallet = walletRepository,
             rates = ratesRepository,
@@ -90,46 +97,40 @@ class AppContainer(
 
     val photoStore: PhotoStore by lazy { PhotoStore(appContext) }
 
-    val appLockRepository: by.mlastovsky.kosht.data.lock.AppLockRepository by lazy {
-        by.mlastovsky.kosht.data.lock.AppLockRepository(appContext)
+    val appLockRepository: AppLockRepository by lazy {
+        AppLockRepository(appContext)
     }
 
-    /**
-     * Eager, and outside the activity on purpose: whether the app is locked has
-     * to be known before the first frame, and must survive the activity being
-     * recreated — otherwise a language change would count as a way in.
-     */
-    val appLock: by.mlastovsky.kosht.data.lock.AppLock =
-        by.mlastovsky.kosht.data.lock.AppLock(appLockRepository, appScope)
+    val appLock: AppLock =
+        AppLock(appLockRepository, appScope)
 
-    /** Sweeps out attachments and tombstones nothing points at any more. */
-    val housekeeping: by.mlastovsky.kosht.data.Housekeeping by lazy {
-        by.mlastovsky.kosht.data.Housekeeping(database, photoStore, settingsRepository)
+    val housekeeping: Housekeeping by lazy {
+        Housekeeping(database, photoStore, settingsRepository)
     }
 
-    val updateChecker: by.mlastovsky.kosht.data.UpdateChecker by lazy {
-        by.mlastovsky.kosht.data.UpdateChecker()
+    val updateChecker: UpdateChecker by lazy {
+        UpdateChecker()
     }
 
-    val updateInstaller: by.mlastovsky.kosht.data.UpdateInstaller by lazy {
-        by.mlastovsky.kosht.data.UpdateInstaller(appContext)
+    val updateInstaller: UpdateInstaller by lazy {
+        UpdateInstaller(appContext)
     }
 
     val settingsRepository: SettingsRepository = SettingsRepository(context)
 
-    private val supabaseApi: by.mlastovsky.kosht.data.sync.SupabaseApi by lazy {
-        by.mlastovsky.kosht.data.sync.SupabaseApi(
-            baseUrl = by.mlastovsky.kosht.BuildConfig.SUPABASE_URL,
-            anonKey = by.mlastovsky.kosht.BuildConfig.SUPABASE_ANON_KEY
+    private val supabaseApi: SupabaseApi by lazy {
+        SupabaseApi(
+            baseUrl = BuildConfig.SUPABASE_URL,
+            anonKey = BuildConfig.SUPABASE_ANON_KEY
         )
     }
 
-    val syncAccountRepository: by.mlastovsky.kosht.data.sync.SyncAccountRepository by lazy {
-        by.mlastovsky.kosht.data.sync.SyncAccountRepository(appContext, supabaseApi)
+    val syncAccountRepository: SyncAccountRepository by lazy {
+        SyncAccountRepository(appContext, supabaseApi)
     }
 
-    private val photoSync: by.mlastovsky.kosht.data.sync.PhotoSync by lazy {
-        by.mlastovsky.kosht.data.sync.PhotoSync(
+    private val photoSync: PhotoSync by lazy {
+        PhotoSync(
             api = supabaseApi,
             settings = settingsRepository,
             transactions = database.transactionDao(),
@@ -137,8 +138,8 @@ class AppContainer(
         )
     }
 
-    val syncEngine: by.mlastovsky.kosht.data.sync.SyncEngine by lazy {
-        by.mlastovsky.kosht.data.sync.SyncEngine(
+    val syncEngine: SyncEngine by lazy {
+        SyncEngine(
             database,
             supabaseApi,
             syncAccountRepository,

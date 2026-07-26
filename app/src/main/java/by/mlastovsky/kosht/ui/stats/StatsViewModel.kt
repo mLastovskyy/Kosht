@@ -2,16 +2,22 @@ package by.mlastovsky.kosht.ui.stats
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import by.mlastovsky.kosht.data.AccountRepository
 import by.mlastovsky.kosht.data.SettingsRepository
 import by.mlastovsky.kosht.data.TransactionRepository
 import by.mlastovsky.kosht.data.UserProfile
 import by.mlastovsky.kosht.data.WalletRepository
-import androidx.lifecycle.viewModelScope
+import by.mlastovsky.kosht.data.db.AccountEntity
 import by.mlastovsky.kosht.data.db.CategoryEntity
+import by.mlastovsky.kosht.data.db.ItemInContext
+import by.mlastovsky.kosht.data.db.SavingEntity
 import by.mlastovsky.kosht.data.db.TransactionWithCategory
 import by.mlastovsky.kosht.model.ReportField
 import by.mlastovsky.kosht.model.TransactionType
 import by.mlastovsky.kosht.util.Dates
+import by.mlastovsky.kosht.util.ItemNames
+import java.time.LocalDate
+import java.time.YearMonth
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -24,8 +30,6 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-import java.time.LocalDate
-import java.time.YearMonth
 
 data class CategorySlice(
     val category: CategoryEntity,
@@ -33,36 +37,34 @@ data class CategorySlice(
     val share: Float
 )
 
-/** One product across the period on screen: how often, how many, how much. */
 data class ProductRow(
     val name: String,
-    /** In how many records it turned up. */
+
     val lines: Int,
-    /** Sum of the quantities, when the lines said any. */
+
     val quantity: Double?,
     val totalMinor: Long,
-    /** Share of what the listed products of its category cost, for the bar. */
+
     val share: Float
 )
 
 enum class ReportVerdict { GREAT, OK, BAD }
 
-/** The report window: current week, month, quarter or year (± shifts). */
 enum class ReportPeriod { WEEK, MONTH, QUARTER, YEAR }
 
 enum class ReportTip {
-    OVERSPEND,       // expenses exceed income
-    GROWTH,          // expenses grew a lot vs last month
-    TOP_HEAVY,       // one category dominates
-    START_SAVING,    // positive month but nothing set aside
-    KEEP_IT_UP       // spending went down
+    OVERSPEND,
+    GROWTH,
+    TOP_HEAVY,
+    START_SAVING,
+    KEEP_IT_UP
 }
 
 data class ReportUi(
     val verdict: ReportVerdict,
     val expenseMinor: Long,
     val prevExpenseMinor: Long,
-    /** Expenses change vs the previous period in percent; null if no base. */
+
     val deltaPercent: Int?,
     val incomeMinor: Long,
     val netMinor: Long,
@@ -81,24 +83,20 @@ data class StatsUiState(
     val type: TransactionType = TransactionType.EXPENSE,
     val totalMinor: Long = 0,
     val slices: List<CategorySlice> = emptyList(),
-    /** Sum per day of month, index 0 = first day. */
+
     val daily: List<Long> = emptyList(),
-    /** Transactions of the selected type grouped by day, for the calendar view. */
+
     val byDay: Map<LocalDate, List<TransactionWithCategory>> = emptyMap(),
     val report: ReportUi? = null,
     val reportPeriod: ReportPeriod = ReportPeriod.MONTH,
-    /** 0 = current period, −1 = previous one, and so on. */
+
     val reportShift: Int = 0,
-    /** Which metric rows the report shows. */
+
     val reportFields: Set<ReportField> = ReportField.entries.toSet(),
-    val accounts: List<by.mlastovsky.kosht.data.db.AccountEntity> = emptyList(),
+    val accounts: List<AccountEntity> = emptyList(),
     val accountFilter: Long? = null,
     val currencyCode: String = SettingsRepository.DEFAULT_CURRENCY,
-    /**
-     * Products behind each category, biggest spend first. A category with none
-     * is simply absent — that is what keeps the list of categories a list of
-     * categories until someone asks it for more.
-     */
+
     val productsByCategory: Map<Long, List<ProductRow>> = emptyMap()
 ) {
     val isCurrentMonth: Boolean
@@ -113,7 +111,7 @@ class StatsViewModel(
     repository: TransactionRepository,
     private val settingsRepository: SettingsRepository,
     walletRepository: WalletRepository,
-    accountRepository: by.mlastovsky.kosht.data.AccountRepository
+    accountRepository: AccountRepository
 ) : ViewModel() {
 
     private data class Selector(
@@ -125,7 +123,6 @@ class StatsViewModel(
 
     private val selector = MutableStateFlow(Selector())
 
-    /** The report window kind lives in Settings; only the shift is local. */
     private val reportPeriod = settingsRepository.settings
         .map { parseReportPeriod(it.reportPeriod) }
         .distinctUntilChanged()
@@ -138,8 +135,8 @@ class StatsViewModel(
 
     private data class PeriodData(
         val transactions: List<TransactionWithCategory>,
-        /** The product lines of the same month, when any were written down. */
-        val items: List<by.mlastovsky.kosht.data.db.ItemInContext>
+
+        val items: List<ItemInContext>
     )
 
     private val period = selector.flatMapLatest { s ->
@@ -167,17 +164,12 @@ class StatsViewModel(
         ).spendingOnly()
     }
 
-    /**
-     * Every chart, the calendar and the report answer a question about spending
-     * or earning, and a transfer between one's own accounts is neither — so
-     * none of them is ever handed one.
-     */
     private fun Flow<List<TransactionWithCategory>>.spendingOnly():
         Flow<List<TransactionWithCategory>> =
         map { list -> list.filter { !it.transaction.isTransfer } }
 
     init {
-        // Switching the window kind in Settings starts from the current one.
+
         viewModelScope.launch {
             reportPeriod.collect { selector.update { s -> s.copy(reportShift = 0) } }
         }
@@ -186,9 +178,9 @@ class StatsViewModel(
     private data class ReportContext(
         val current: List<TransactionWithCategory>,
         val prev: List<TransactionWithCategory>,
-        val savings: List<by.mlastovsky.kosht.data.db.SavingEntity>,
+        val savings: List<SavingEntity>,
         val profile: UserProfile,
-        val accounts: List<by.mlastovsky.kosht.data.db.AccountEntity>
+        val accounts: List<AccountEntity>
     )
 
     private val reportContext = combine(
@@ -229,21 +221,20 @@ class StatsViewModel(
             }
             .sortedByDescending { it.totalMinor }
 
-        // What was actually bought, when the records say so — kept per category,
-        // because that is where it is asked for: tap a category to see it.
-        // Grouped on the settled name, so one product is one row however it
-        // happened to be typed.
         val productsByCategory = periodData.items
+            .filter { it.type == s.type }
             .filter { s.accountId == null || (it.accountId ?: primaryId) == s.accountId }
             .groupBy { it.categoryId }
             .mapValues { (_, itemsOfCategory) ->
                 val categoryTotal = itemsOfCategory.sumOf { it.amountMinor }
                 itemsOfCategory
-                    .groupBy { it.name }
-                    .map { (name, lines) ->
+                    .groupBy { ItemNames.key(it.name) }
+                    .map { (_, lines) ->
                         val sum = lines.sumOf { it.amountMinor }
                         ProductRow(
-                            name = name,
+
+                            name = lines.groupingBy { it.name }.eachCount()
+                                .maxByOrNull { it.value }?.key.orEmpty(),
                             lines = lines.size,
                             quantity = lines.mapNotNull { it.quantity }
                                 .takeIf { it.isNotEmpty() }?.sum(),
@@ -296,7 +287,7 @@ class StatsViewModel(
         shift: Int,
         current: List<TransactionWithCategory>,
         prev: List<TransactionWithCategory>,
-        savings: List<by.mlastovsky.kosht.data.db.SavingEntity>,
+        savings: List<SavingEntity>,
         profile: UserProfile
     ): ReportUi {
         val (start, end) = reportBounds(period, shift)
@@ -314,7 +305,6 @@ class StatsViewModel(
         }
         val net = income - expense
 
-        // For a period still running, count only elapsed days.
         val today = LocalDate.now()
         val daysTotal = (end.toEpochDay() - start.toEpochDay() + 1).toInt()
         val daysElapsed = when {
@@ -400,7 +390,6 @@ class StatsViewModel(
         fun parseReportPeriod(name: String): ReportPeriod =
             ReportPeriod.entries.firstOrNull { it.name == name } ?: ReportPeriod.MONTH
 
-        /** Calendar bounds of the report window shifted by whole periods. */
         fun reportBounds(period: ReportPeriod, shift: Int): Pair<LocalDate, LocalDate> {
             val today = LocalDate.now()
             return when (period) {

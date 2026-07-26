@@ -25,6 +25,12 @@ interface CategoryDao {
     @Query("SELECT COALESCE(MAX(position), 0) FROM categories WHERE type = :type")
     suspend fun maxPosition(type: TransactionType): Int
 
+    @Query("SELECT COALESCE(MIN(position), 0) FROM categories WHERE id IN (:ids)")
+    suspend fun minPosition(ids: List<Long>): Int
+
+    @Query("UPDATE categories SET position = :position WHERE id = :id")
+    suspend fun updatePosition(id: Long, position: Int)
+
     @Insert
     suspend fun insert(category: CategoryEntity): Long
 

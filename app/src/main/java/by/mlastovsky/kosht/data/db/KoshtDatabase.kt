@@ -24,7 +24,7 @@ import by.mlastovsky.kosht.data.CategorySeed
         SyncTombstoneEntity::class,
         SyncCursorEntity::class
     ],
-    version = 16,
+    version = 17,
     exportSchema = false
 )
 abstract class KoshtDatabase : RoomDatabase() {
@@ -62,7 +62,7 @@ abstract class KoshtDatabase : RoomDatabase() {
                     MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6,
                     MIGRATION_6_7, MIGRATION_7_8, MIGRATION_8_9, MIGRATION_9_10,
                     MIGRATION_10_11, MIGRATION_11_12, MIGRATION_12_13, MIGRATION_13_14,
-                    MIGRATION_14_15, MIGRATION_15_16
+                    MIGRATION_14_15, MIGRATION_15_16, MIGRATION_16_17
                 )
                 .build()
 
@@ -162,8 +162,7 @@ abstract class KoshtDatabase : RoomDatabase() {
 
         private val MIGRATION_6_7 = object : Migration(6, 7) {
             override fun migrate(db: SupportSQLiteDatabase) {
-                // Recurring charges move from day-of-month to a concrete next
-                // due date + frequency. Existing rows become due today.
+
                 db.execSQL(
                     "CREATE TABLE recurring_new (" +
                         "id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, " +
@@ -226,11 +225,6 @@ abstract class KoshtDatabase : RoomDatabase() {
             }
         }
 
-        /**
-         * Sync columns for every table that travels between devices, plus the
-         * bookkeeping tables. Existing rows are handed an identity here; the
-         * triggers installed in [installSyncTriggers] take it from there.
-         */
         private val MIGRATION_10_11 = object : Migration(10, 11) {
             override fun migrate(db: SupportSQLiteDatabase) {
                 db.execSQL(
@@ -244,23 +238,19 @@ abstract class KoshtDatabase : RoomDatabase() {
                         "`pushedThrough` INTEGER NOT NULL, `lastSyncAt` INTEGER NOT NULL, " +
                         "PRIMARY KEY(`id`))"
                 )
-                // The tables that existed when sync arrived, spelled out rather
-                // than read off the enum: a table added by a later migration is
-                // not here yet, and altering it would fail this one.
+
                 syncTablesAtV11.forEach { entity ->
                     val table = entity.table
                     db.execSQL("ALTER TABLE `$table` ADD COLUMN `uid` TEXT NOT NULL DEFAULT ''")
                     db.execSQL(
                         "ALTER TABLE `$table` ADD COLUMN `updatedAt` INTEGER NOT NULL DEFAULT 0"
                     )
-                    // updatedAt stays 0: data that predates the account has
-                    // never been "edited", so a real edit from any device wins.
+
                     db.execSQL("UPDATE `$table` SET `uid` = ${backfillUid(entity)}")
                 }
             }
         }
 
-        /** Where a scanned QR led, and the copy of the page it led to. */
         private val MIGRATION_11_12 = object : Migration(11, 12) {
             override fun migrate(db: SupportSQLiteDatabase) {
                 db.execSQL("ALTER TABLE transactions ADD COLUMN receiptUrl TEXT")
@@ -268,24 +258,12 @@ abstract class KoshtDatabase : RoomDatabase() {
             }
         }
 
-        /**
-         * The object name a receipt photo was uploaded under, once the user
-         * has asked for photos to be synced. Null means "this photo has never
-         * left the phone", which is what every existing row is.
-         */
         private val MIGRATION_12_13 = object : Migration(12, 13) {
             override fun migrate(db: SupportSQLiteDatabase) {
                 db.execSQL("ALTER TABLE transactions ADD COLUMN photoKey TEXT")
             }
         }
 
-        /**
-         * Where a record came from and where money went: the scanner mark,
-         * transfers between the user's own accounts with what they cost, and
-         * planned payments that can now be income and name their account.
-         * Every existing row is an ordinary typed expense, which is exactly
-         * what these defaults say.
-         */
         private val MIGRATION_13_14 = object : Migration(13, 14) {
             override fun migrate(db: SupportSQLiteDatabase) {
                 db.execSQL(
@@ -303,12 +281,6 @@ abstract class KoshtDatabase : RoomDatabase() {
             }
         }
 
-        /**
-         * What a record was spent on, line by line — the optional product list
-         * behind an amount, and what the product statistics read. CASCADE, so a
-         * deleted record takes its lines with it; the undo offer carries them
-         * back (see DeletionEvents).
-         */
         private val MIGRATION_14_15 = object : Migration(14, 15) {
             override fun migrate(db: SupportSQLiteDatabase) {
                 db.execSQL(
@@ -335,6 +307,34 @@ abstract class KoshtDatabase : RoomDatabase() {
             }
         }
 
+        private val MIGRATION_16_17 = object : Migration(16, 17) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("ALTER TABLE categories ADD COLUMN iconPath TEXT")
+                CategorySeed.addedInV17.forEach { seed ->
+                    val exists = db.query(
+                        "SELECT COUNT(*) FROM categories WHERE `key` = ?",
+                        arrayOf<Any?>(seed.key)
+                    ).use { it.moveToFirst() && it.getInt(0) > 0 }
+                    if (exists) return@forEach
+                    db.execSQL(
+                        "INSERT INTO categories " +
+                            "(`key`, name, iconKey, colorArgb, type, position, uid, updatedAt) " +
+                            "VALUES (?, '', ?, ?, ?, " +
+                            "(SELECT COALESCE(MAX(position), 0) + 1 FROM categories " +
+                            "WHERE type = ?), ?, 0)",
+                        arrayOf<Any?>(
+                            seed.key,
+                            seed.iconKey,
+                            seed.colorArgb,
+                            seed.type.name,
+                            seed.type.name,
+                            SEED_UID_PREFIX + seed.key
+                        )
+                    )
+                }
+            }
+        }
+
         private val syncTablesAtV11 = listOf(
             SyncEntity.ACCOUNTS,
             SyncEntity.CATEGORIES,
@@ -347,16 +347,6 @@ abstract class KoshtDatabase : RoomDatabase() {
             SyncEntity.AWARDS
         )
 
-        /**
-         * An index on every `uid`, which is what the sync engine looks rows up
-         * by — `WHERE uid IN (...)` for a page of remote changes, once per
-         * table, per sync. Until now that was a full scan of each table.
-         *
-         * New identities are time-ordered from here on (see [NEW_UID]), so
-         * these indices grow at their right edge instead of scattering. The
-         * older random uids already in the tables stay valid: an index does not
-         * mind a mixed ordering, it only reads better when the new rows behave.
-         */
         private val MIGRATION_15_16 = object : Migration(15, 16) {
             override fun migrate(db: SupportSQLiteDatabase) {
                 SyncEntity.tables.forEach { entity ->
@@ -364,20 +354,12 @@ abstract class KoshtDatabase : RoomDatabase() {
                         "CREATE INDEX IF NOT EXISTS `index_${entity.table}_uid` " +
                             "ON `${entity.table}` (`uid`)"
                     )
-                    // The uid expression lives inside the insert trigger, and
-                    // [installSyncTriggers] creates triggers IF NOT EXISTS — so
-                    // an existing database would keep minting random identities
-                    // forever. Dropping them here is what lets the reinstall on
-                    // the next open pick up the time-ordered one.
+
                     db.execSQL("DROP TRIGGER IF EXISTS `${entity.table}_sync_insert`")
                 }
             }
         }
 
-        /**
-         * Built-in rows must land on the same identity on every device, or
-         * signing in on a second phone would duplicate every stock category.
-         */
         private fun backfillUid(entity: SyncEntity): String = when (entity) {
             SyncEntity.AWARDS -> "`key`"
             SyncEntity.CATEGORIES, SyncEntity.ACCOUNTS ->
@@ -387,11 +369,6 @@ abstract class KoshtDatabase : RoomDatabase() {
             else -> NEW_UID
         }
 
-        /**
-         * Keeping this in triggers rather than in every repository means a
-         * write anywhere in the app — including plain UPDATE queries and
-         * cascades — stays sync-correct without anyone remembering to stamp it.
-         */
         private fun installSyncTriggers(db: SupportSQLiteDatabase) {
             SyncEntity.tables.forEach { entity ->
                 val table = entity.table
@@ -403,8 +380,7 @@ abstract class KoshtDatabase : RoomDatabase() {
 
                     else -> NEW_UID
                 }
-                // Rows the sync engine writes already carry uid and updatedAt,
-                // which is precisely what keeps these guards from firing.
+
                 db.execSQL(
                     "CREATE TRIGGER IF NOT EXISTS `${table}_sync_insert` " +
                         "AFTER INSERT ON `$table` FOR EACH ROW WHEN NEW.`uid` = '' BEGIN " +
@@ -428,24 +404,6 @@ abstract class KoshtDatabase : RoomDatabase() {
             }
         }
 
-        /**
-         * A time-ordered identity: 48 bits of millisecond clock followed by 80
-         * random bits, hex-encoded — the UUIDv7 layout, without the dashes the
-         * rest of the app never used.
-         *
-         * Random-everywhere identities (what this was) scatter across the index
-         * on `uid`, so every insert lands on a different page and every lookup
-         * reads a cold one. Ordered by creation instead, new rows append to the
-         * right edge of the tree and a sync's worth of them shares pages.
-         *
-         * v7 rather than the v6 in the request: both are time-ordered, but v6
-         * carries the 1582 epoch of v1 for compatibility with identities this
-         * app never had, and SQLite has no clean way to compute it. v7 is the
-         * same win with the unix clock everything here already speaks.
-         *
-         * 80 random bits still make a collision within one millisecond a
-         * non-event across a person's two phones.
-         */
         private const val NEW_UID =
             "(printf('%012x', CAST(strftime('%s','now') AS INTEGER) * 1000 + " +
                 "CAST(strftime('%f','now') * 1000 AS INTEGER) % 1000) || " +
@@ -457,11 +415,6 @@ abstract class KoshtDatabase : RoomDatabase() {
             "(CAST(strftime('%s','now') AS INTEGER) * 1000 + " +
                 "CAST(strftime('%f','now') * 1000 AS INTEGER) % 1000)"
 
-        /**
-         * A single primary account keeps the UI exactly as before; account
-         * pickers appear only after the user adds more. [withSyncUid] is off
-         * for the pre-sync migration that predates the uid column.
-         */
         private fun seedAccounts(db: SupportSQLiteDatabase, withSyncUid: Boolean = false) {
             if (withSyncUid) {
                 db.execSQL(
@@ -479,8 +432,7 @@ abstract class KoshtDatabase : RoomDatabase() {
         private object SeedCallback : Callback() {
             override fun onCreate(db: SupportSQLiteDatabase) {
                 CategorySeed.all.forEachIndexed { index, seed ->
-                    // Seeded rows keep updatedAt at 0 on purpose: a second
-                    // device must not resurrect stock rows deleted elsewhere.
+
                     db.execSQL(
                         "INSERT INTO categories " +
                             "(`key`, name, iconKey, colorArgb, type, position, uid) " +
@@ -499,8 +451,7 @@ abstract class KoshtDatabase : RoomDatabase() {
             }
 
             override fun onOpen(db: SupportSQLiteDatabase) {
-                // Idempotent, so the triggers survive any future migration
-                // that rebuilds a table and silently drops them with it.
+
                 installSyncTriggers(db)
                 db.execSQL(
                     "INSERT OR IGNORE INTO `sync_cursor` " +

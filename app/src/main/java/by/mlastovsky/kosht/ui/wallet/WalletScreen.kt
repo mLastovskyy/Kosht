@@ -23,17 +23,18 @@ import androidx.compose.material.icons.rounded.Refresh
 import androidx.compose.material.icons.rounded.Remove
 import androidx.compose.material.icons.rounded.SwapHoriz
 import androidx.compose.material3.Button
-import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -41,6 +42,8 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -48,19 +51,23 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import by.mlastovsky.kosht.R
 import by.mlastovsky.kosht.data.RatesRepository
+import by.mlastovsky.kosht.data.db.AccountEntity
 import by.mlastovsky.kosht.data.db.DebtEntity
 import by.mlastovsky.kosht.data.db.RateEntity
 import by.mlastovsky.kosht.data.db.RecurringWithCategory
 import by.mlastovsky.kosht.data.db.SavingEntity
 import by.mlastovsky.kosht.model.DebtDirection
+import by.mlastovsky.kosht.model.TransactionType
+import by.mlastovsky.kosht.ui.AccountVisuals
 import by.mlastovsky.kosht.ui.AppViewModelProvider
 import by.mlastovsky.kosht.ui.components.AnimatedAmountText
+import by.mlastovsky.kosht.ui.components.CategoryActions
 import by.mlastovsky.kosht.ui.components.CategoryBadge
 import by.mlastovsky.kosht.ui.relativeDate
 import by.mlastovsky.kosht.ui.theme.KoshtTheme
+import by.mlastovsky.kosht.ui.transfer.TransferDialog
 import by.mlastovsky.kosht.util.Dates
 import by.mlastovsky.kosht.util.Money
-import androidx.compose.ui.graphics.Color
 
 @Composable
 fun WalletScreen(
@@ -69,6 +76,14 @@ fun WalletScreen(
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     var showAddDebt by remember { mutableStateOf(false) }
     var showAddRecurring by remember { mutableStateOf(false) }
+    val categoryActions = remember(viewModel) {
+        CategoryActions(
+            add = viewModel::addCategory,
+            reorder = viewModel::reorderCategories,
+            update = viewModel::updateCategory,
+            delete = viewModel::deleteCategory
+        )
+    }
     var savingDialogWithdraw by remember { mutableStateOf<Boolean?>(null) }
     var debtInAction by remember { mutableStateOf<DebtEntity?>(null) }
     var debtToEdit by remember { mutableStateOf<DebtEntity?>(null) }
@@ -79,13 +94,12 @@ fun WalletScreen(
     var showAddAccount by remember { mutableStateOf(false) }
     var showTransfer by remember { mutableStateOf(false) }
     var accountInAction by remember {
-        mutableStateOf<Pair<by.mlastovsky.kosht.data.db.AccountEntity, Long>?>(null)
+        mutableStateOf<Pair<AccountEntity, Long>?>(null)
     }
 
-    // Offline the stored rates stay on screen; say why they did not change.
-    val context = androidx.compose.ui.platform.LocalContext.current
+    val context = LocalContext.current
     val offlineMessage = stringResource(R.string.rates_offline)
-    androidx.compose.runtime.LaunchedEffect(Unit) {
+    LaunchedEffect(Unit) {
         viewModel.rateRefreshFailed.collect {
             android.widget.Toast
                 .makeText(context, offlineMessage, android.widget.Toast.LENGTH_LONG)
@@ -117,7 +131,6 @@ fun WalletScreen(
             }
         }
 
-        // --- Accounts (money sources) ---
         item(key = "accounts-header") {
             Row(
                 modifier = Modifier
@@ -131,8 +144,7 @@ fun WalletScreen(
                     modifier = Modifier.weight(1f)
                 )
                 if (state.multiAccount) {
-                    // Moving money makes sense only once there are two places
-                    // to move it between.
+
                     if (state.accountsWithBalances.size > 1) {
                         IconButton(onClick = { showTransfer = true }) {
                             Icon(
@@ -176,7 +188,7 @@ fun WalletScreen(
                         size = 40.dp
                     )
                     Text(
-                        text = by.mlastovsky.kosht.ui.AccountVisuals.displayName(account),
+                        text = AccountVisuals.displayName(account),
                         style = MaterialTheme.typography.bodyLarge,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,
@@ -191,7 +203,6 @@ fun WalletScreen(
             }
         }
 
-        // --- Due recurring charges ---
         val due = state.recurring.filter { it.recurring.id in state.dueRecurringIds }
         if (due.isNotEmpty()) {
             item(key = "due-header") {
@@ -206,7 +217,6 @@ fun WalletScreen(
             }
         }
 
-        // --- Recurring charges ---
         item(key = "recurring-header") {
             SectionHeaderRow(
                 title = stringResource(R.string.section_recurring),
@@ -228,7 +238,6 @@ fun WalletScreen(
             )
         }
 
-        // --- Debts ---
         item(key = "debts-header") {
             SectionHeaderRow(
                 title = stringResource(R.string.section_debts),
@@ -270,7 +279,6 @@ fun WalletScreen(
             )
         }
 
-        // --- Savings goals ---
         item(key = "goals-header") {
             SectionHeaderRow(
                 title = stringResource(R.string.goals_title),
@@ -290,7 +298,6 @@ fun WalletScreen(
             )
         }
 
-        // --- Savings ---
         item(key = "savings-header") {
             SectionHeaderRow(
                 title = stringResource(R.string.section_savings),
@@ -337,12 +344,13 @@ fun WalletScreen(
     debtInAction?.let { debt ->
         DebtActionsDialog(
             debt = debt,
-            onRepay = { amount ->
-                viewModel.repayDebt(debt, amount)
+            accounts = state.pickableAccounts,
+            onRepay = { amount, note, accountId ->
+                viewModel.repayDebt(debt, amount, note, accountId)
                 debtInAction = null
             },
-            onClose = {
-                viewModel.closeDebt(debt)
+            onClose = { note, accountId ->
+                viewModel.closeDebt(debt, note, accountId)
                 debtInAction = null
             },
             onEdit = {
@@ -370,13 +378,26 @@ fun WalletScreen(
     }
 
     savingDialogWithdraw?.let { withdraw ->
+
+        val savingsNote = stringResource(
+            if (withdraw) R.string.savings_withdraw else R.string.savings_deposit
+        )
         AddSavingDialog(
             withdraw = withdraw,
             defaultCurrency = state.currencyCode,
             goals = state.goals.filter { !it.achieved },
+            accounts = state.pickableAccounts,
             rateOf = viewModel::suggestedRate,
-            onConfirm = { amount, currency, note, goalId ->
-                viewModel.addSaving(amount, currency, note, goalId)
+            onConfirm = { amount, currency, note, goalId, deduct, accountId ->
+                viewModel.addSaving(
+                    amountMinor = amount,
+                    currencyCode = currency,
+                    note = note,
+                    goalId = goalId,
+
+                    deductNote = if (deduct) note.ifBlank { savingsNote } else null,
+                    accountId = accountId
+                )
                 savingDialogWithdraw = null
             },
             onDismiss = { savingDialogWithdraw = null }
@@ -444,7 +465,7 @@ fun WalletScreen(
     }
 
     if (showTransfer) {
-        by.mlastovsky.kosht.ui.transfer.TransferDialog(
+        TransferDialog(
             onDismiss = { showTransfer = false }
         )
     }
@@ -461,6 +482,7 @@ fun WalletScreen(
                 )
                 showAddRecurring = false
             },
+            categoryActions = categoryActions,
             onDismiss = { showAddRecurring = false }
         )
     }
@@ -477,6 +499,7 @@ fun WalletScreen(
                 )
                 recurringToEdit = null
             },
+            categoryActions = categoryActions,
             onDismiss = { recurringToEdit = null }
         )
     }
@@ -491,7 +514,7 @@ fun WalletScreen(
                 from = item.recurring.currencyCode,
                 to = state.currencyCode
             ),
-            // The picker shows up only with several accounts to choose from.
+
             accounts = state.pickableAccounts,
             defaultAccountId = item.recurring.accountId,
             type = item.recurring.type,
@@ -633,9 +656,8 @@ private fun EmptyHint(text: String) {
     )
 }
 
-/** "+120,00" for money coming in, "−120,00" for money going out. */
 private fun signedAmount(item: RecurringWithCategory): String {
-    val sign = if (item.recurring.type == by.mlastovsky.kosht.model.TransactionType.INCOME) {
+    val sign = if (item.recurring.type == TransactionType.INCOME) {
         "+"
     } else {
         "−"
@@ -666,7 +688,8 @@ private fun DueCard(
             CategoryBadge(
                 iconKey = item.category.iconKey,
                 color = Color(item.category.colorArgb),
-                size = 40.dp
+                size = 40.dp,
+                iconPath = item.category.iconPath
             )
             Column(Modifier.weight(1f)) {
                 Text(
@@ -708,7 +731,8 @@ private fun RecurringRow(
         CategoryBadge(
             iconKey = item.category.iconKey,
             color = Color(item.category.colorArgb),
-            size = 40.dp
+            size = 40.dp,
+            iconPath = item.category.iconPath
         )
         Column(Modifier.weight(1f)) {
             Text(
@@ -722,7 +746,7 @@ private fun RecurringRow(
                     " · " + frequencyLabel(item.recurring.frequency) +
                     " · " + signedAmount(item),
                 style = MaterialTheme.typography.bodyMedium,
-                color = if (item.recurring.type == by.mlastovsky.kosht.model.TransactionType.INCOME) {
+                color = if (item.recurring.type == TransactionType.INCOME) {
                     KoshtTheme.colors.income
                 } else {
                     MaterialTheme.colorScheme.onSurfaceVariant
@@ -857,8 +881,7 @@ private fun GoalCard(
             .padding(horizontal = 16.dp, vertical = 4.dp)
             .clip(MaterialTheme.shapes.large)
             .background(MaterialTheme.colorScheme.surfaceContainer)
-            // A tap opens the goal for changing — name, target, currency — and
-            // the trash moved in there with them.
+
             .clickable(onClick = onClick)
             .padding(horizontal = 16.dp, vertical = 12.dp)
     ) {
