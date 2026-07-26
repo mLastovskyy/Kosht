@@ -32,6 +32,12 @@ class AccountRepository(
 
     suspend fun updateAccount(account: AccountEntity) = accountDao.update(account)
 
+    suspend fun reorderAccounts(ids: List<Long>) {
+        if (ids.isEmpty()) return
+        val base = accountDao.minPosition(ids)
+        ids.forEachIndexed { index, id -> accountDao.updatePosition(id, base + index) }
+    }
+
     suspend fun addAccount(
         name: String,
         iconKey: String,

@@ -2,6 +2,7 @@ package by.mlastovsky.kosht.ui.wallet
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.detectDragGesturesAfterLongPress
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -14,6 +15,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Add
@@ -43,10 +45,13 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.zIndex
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import by.mlastovsky.kosht.R
@@ -61,6 +66,7 @@ import by.mlastovsky.kosht.model.TransactionType
 import by.mlastovsky.kosht.ui.AccountVisuals
 import by.mlastovsky.kosht.ui.AppViewModelProvider
 import by.mlastovsky.kosht.ui.components.AnimatedAmountText
+import by.mlastovsky.kosht.ui.components.rememberReorderList
 import by.mlastovsky.kosht.ui.components.CategoryActions
 import by.mlastovsky.kosht.ui.components.CategoryBadge
 import by.mlastovsky.kosht.ui.relativeDate
@@ -107,7 +113,24 @@ fun WalletScreen(
         }
     }
 
+    val listState = rememberLazyListState()
+    val accountOrder = rememberReorderList(listState) { key ->
+        (key as? String)?.removePrefix(ACCOUNT_KEY)?.takeIf { it != key }?.toLongOrNull()
+    }
+    val shownAccounts = remember(
+        state.accountsWithBalances,
+        accountOrder.held,
+        accountOrder.offset
+    ) {
+        accountOrder.arrange(state.accountsWithBalances) { it.first.id }
+    }
+    LaunchedEffect(state.accountsWithBalances, accountOrder.held) {
+        accountOrder.forget(state.accountsWithBalances.map { it.first.id })
+    }
+    LaunchedEffect(accountOrder.held) { accountOrder.followEdges() }
+
     LazyColumn(
+        state = listState,
         modifier = Modifier
             .fillMaxSize()
             .statusBarsPadding(),
@@ -170,13 +193,36 @@ fun WalletScreen(
         }
         if (state.multiAccount) {
             items(
-                state.accountsWithBalances,
-                key = { "acc-${it.first.id}" }
+                shownAccounts,
+                key = { ACCOUNT_KEY + it.first.id }
             ) { (account, balance) ->
+                val held = accountOrder.held == account.id
+                val ids = shownAccounts.map { it.first.id }
                 Row(
                     modifier = Modifier
-                        .animateItem()
+                        .zIndex(if (held) 1f else 0f)
+                        .then(if (held) Modifier else Modifier.animateItem())
+                        .graphicsLayer {
+                            if (!held) return@graphicsLayer
+                            translationY = accountOrder.offset
+                            scaleX = HELD_SCALE
+                            scaleY = HELD_SCALE
+                        }
+                        .background(MaterialTheme.colorScheme.background)
                         .clickable { accountInAction = account to balance }
+                        .pointerInput(account.id) {
+                            detectDragGesturesAfterLongPress(
+                                onDragStart = { accountOrder.start(account.id, ids) },
+                                onDrag = { change, amount ->
+                                    change.consume()
+                                    accountOrder.drag(amount.y, kotlin.math.abs(amount.y))
+                                },
+                                onDragEnd = {
+                                    accountOrder.release()?.let(viewModel::reorderAccounts)
+                                },
+                                onDragCancel = accountOrder::cancel
+                            )
+                        }
                         .fillMaxWidth()
                         .padding(horizontal = 16.dp, vertical = 8.dp),
                     verticalAlignment = Alignment.CenterVertically,
@@ -620,6 +666,10 @@ private fun RatesCard(
         }
     }
 }
+
+private const val ACCOUNT_KEY = "acc-"
+
+private const val HELD_SCALE = 1.03f
 
 @Composable
 private fun SectionHeader(text: String) {

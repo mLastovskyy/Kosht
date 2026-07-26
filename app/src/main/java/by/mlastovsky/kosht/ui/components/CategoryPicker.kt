@@ -19,6 +19,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
@@ -83,87 +84,25 @@ fun CategoryPickerRow(
     val onReorder = actions?.reorder
     val onEdit: ((CategoryEntity) -> Unit)? = actions?.let { { category -> editing = category } }
     val listState = rememberLazyListState()
-    val edgePx = with(LocalDensity.current) { AUTO_SCROLL_EDGE.toPx() }
+    val reorder = rememberReorderList(listState) { key -> key as? Long }
 
-    var order by remember { mutableStateOf<List<Long>?>(null) }
-    var dragging by remember { mutableStateOf<Long?>(null) }
-    var dragOffset by remember { mutableFloatStateOf(0f) }
-
-    var travelled by remember { mutableFloatStateOf(0f) }
-
-    val shown = remember(categories, order) {
-        val wanted = order
-        when {
-            wanted == null -> categories
-
-            wanted.size != categories.size || categories.any { it.id !in wanted } -> categories
-            else -> categories.sortedBy { wanted.indexOf(it.id) }
-        }
+    val shown = remember(categories, reorder.held, reorder.offset) {
+        reorder.arrange(categories) { it.id }
     }
     val shownIds by rememberUpdatedState(shown.map { it.id })
 
-    LaunchedEffect(categories, dragging) {
-        if (dragging == null && order != null && categories.map { it.id } == order) order = null
+    LaunchedEffect(categories, reorder.held) {
+        reorder.forget(categories.map { it.id })
     }
 
     LaunchedEffect(shown, selectedId) {
-        if (dragging != null) return@LaunchedEffect
+        if (reorder.held != null) return@LaunchedEffect
         val index = shown.indexOfFirst { it.id == selectedId }
         val onScreen = listState.layoutInfo.visibleItemsInfo.any { it.key == selectedId }
         if (index >= 0 && !onScreen) listState.scrollToItem(index)
     }
 
-    fun settle() {
-        val id = dragging ?: return
-        val current = order ?: return
-        val info = listState.layoutInfo
-        val held = info.visibleItemsInfo.firstOrNull { it.key == id } ?: return
-        val center = held.offset + held.size / 2f + dragOffset
-        val neighbours = info.visibleItemsInfo.filter { it.key is Long && it.key != id }
-
-        val over = if (dragOffset > 0f) {
-            neighbours.lastOrNull { it.offset > held.offset && center >= it.offset + it.size / 2f }
-        } else {
-            neighbours.firstOrNull { it.offset < held.offset && center <= it.offset + it.size / 2f }
-        } ?: return
-        val from = current.indexOf(id)
-        val to = current.indexOf(over.key as Long)
-        if (from < 0 || to < 0 || from == to) return
-        order = current.toMutableList().apply { add(to, removeAt(from)) }
-
-        dragOffset += held.offset - over.offset
-        view.performHapticFeedback(HapticFeedbackConstants.CLOCK_TICK)
-    }
-
-    fun clampToRow(id: Long) {
-        val info = listState.layoutInfo
-        val held = info.visibleItemsInfo.firstOrNull { it.key == id } ?: return
-        val min = (info.viewportStartOffset - held.offset).toFloat()
-        val max = (info.viewportEndOffset - held.size - held.offset).toFloat()
-        if (min <= max) dragOffset = dragOffset.coerceIn(min, max)
-    }
-
-    LaunchedEffect(dragging) {
-        if (dragging == null) return@LaunchedEffect
-        while (true) {
-            val info = listState.layoutInfo
-            val held = info.visibleItemsInfo.firstOrNull { it.key == dragging }
-            if (held != null) {
-                val start = held.offset + dragOffset
-                val end = start + held.size
-                val step = when {
-                    end > info.viewportEndOffset - edgePx -> AUTO_SCROLL_STEP
-                    start < info.viewportStartOffset + edgePx -> -AUTO_SCROLL_STEP
-                    else -> 0f
-                }
-                if (step != 0f) {
-                    dragOffset += listState.scrollBy(step)
-                    settle()
-                }
-            }
-            withFrameNanos { }
-        }
-    }
+    LaunchedEffect(reorder.held) { reorder.followEdges() }
 
     LazyRow(
         state = listState,
@@ -173,7 +112,7 @@ fun CategoryPickerRow(
     ) {
         leading?.invoke(this)
         items(shown, key = { it.id }) { category ->
-            val held = dragging == category.id
+            val held = reorder.held == category.id
             val selected = category.id == selectedId
             val reveal = rememberFullTextReveal()
             val scale by animateFloatAsState(
@@ -191,7 +130,7 @@ fun CategoryPickerRow(
                     .then(if (held) Modifier else Modifier.animateItem())
                     .graphicsLayer {
                         if (!held) return@graphicsLayer
-                        translationX = dragOffset
+                        translationX = reorder.offset
                         scaleX = HELD_SCALE
                         scaleY = HELD_SCALE
                     }
@@ -206,44 +145,24 @@ fun CategoryPickerRow(
                         } else {
                             Modifier.pointerInput(category.id) {
                                 detectDragGesturesAfterLongPress(
-                                    onDragStart = {
-                                        dragging = category.id
-                                        dragOffset = 0f
-                                        travelled = 0f
-                                        order = if (onReorder == null) null else shownIds
-                                        view.performHapticFeedback(
-                                            HapticFeedbackConstants.LONG_PRESS
-                                        )
-                                    },
+                                    onDragStart = { reorder.start(category.id, shownIds) },
                                     onDrag = { change, amount ->
                                         change.consume()
-                                        travelled += kotlin.math.abs(amount.x) +
-                                            kotlin.math.abs(amount.y)
-                                        if (onReorder == null) return@detectDragGesturesAfterLongPress
-                                        dragOffset += amount.x
-                                        clampToRow(category.id)
-                                        settle()
+                                        reorder.drag(
+                                            amount = if (onReorder == null) 0f else amount.x,
+                                            distance = kotlin.math.abs(amount.x) +
+                                                kotlin.math.abs(amount.y)
+                                        )
                                     },
                                     onDragEnd = {
-                                        val settled = order
-                                        val moved = travelled > MOVE_SLOP
-                                        dragging = null
-                                        dragOffset = 0f
-
-                                        when {
-                                            !moved -> {
-                                                order = null
-                                                onEdit?.invoke(category)
-                                            }
-
-                                            settled != null -> onReorder?.invoke(settled)
+                                        val settled = reorder.release()
+                                        if (settled == null) {
+                                            onEdit?.invoke(category)
+                                        } else {
+                                            onReorder?.invoke(settled)
                                         }
                                     },
-                                    onDragCancel = {
-                                        dragging = null
-                                        dragOffset = 0f
-                                        order = null
-                                    }
+                                    onDragCancel = reorder::cancel
                                 )
                             }
                         }
@@ -366,7 +285,7 @@ private fun CategoryTile(
         fontWeight = if (selected) FontWeight.Bold else FontWeight.Normal,
         reveal = reveal,
         revealOnClick = false,
-        modifier = Modifier.fillMaxWidth()
+        modifier = Modifier.widthIn(max = LABEL_MAX_WIDTH)
     )
 }
 
@@ -378,7 +297,7 @@ private fun TileLabel(text: String, selected: Boolean) {
         fontWeight = if (selected) FontWeight.Bold else FontWeight.Normal,
         maxLines = 1,
         overflow = TextOverflow.Ellipsis,
-        modifier = Modifier.fillMaxWidth()
+        modifier = Modifier.widthIn(max = LABEL_MAX_WIDTH)
     )
 }
 
@@ -500,5 +419,8 @@ private const val HELD_SCALE = 1.06f
 private const val MOVE_SLOP = 24f
 
 private val TILE_WIDTH = 76.dp
-private val AUTO_SCROLL_EDGE = 32.dp
+
+// The label has to stay inside its own tile, padding and all, or two of them
+// meet in the middle and read as one word.
+private val LABEL_MAX_WIDTH = TILE_WIDTH - 12.dp
 private const val AUTO_SCROLL_STEP = 12f

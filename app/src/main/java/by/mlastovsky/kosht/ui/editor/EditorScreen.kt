@@ -40,6 +40,7 @@ import androidx.compose.material.icons.automirrored.rounded.Backspace
 import androidx.compose.material.icons.automirrored.rounded.ReceiptLong
 import androidx.compose.material.icons.rounded.AddAPhoto
 import androidx.compose.material.icons.rounded.Calculate
+import androidx.compose.material.icons.rounded.Check
 import androidx.compose.material.icons.rounded.Close
 import androidx.compose.material.icons.rounded.DeleteOutline
 import androidx.compose.material.icons.rounded.DocumentScanner
@@ -53,6 +54,7 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.DatePicker
 import androidx.compose.material3.DatePickerDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FilledTonalIconButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
@@ -97,6 +99,7 @@ import androidx.core.content.FileProvider
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import by.mlastovsky.kosht.R
+import by.mlastovsky.kosht.data.db.AccountEntity
 import by.mlastovsky.kosht.ui.components.AccountBadge
 import by.mlastovsky.kosht.model.TransactionType
 import by.mlastovsky.kosht.ui.AccountVisuals
@@ -313,9 +316,10 @@ fun EditorScreen(
                             )
                         },
                         label = {
-                            TruncatedText(
+                            Text(
                                 text = AccountVisuals.displayName(account),
-                                style = MaterialTheme.typography.labelLarge,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis,
                                 modifier = Modifier.widthIn(max = CHIP_LABEL_MAX_WIDTH)
                             )
                         }
@@ -346,69 +350,56 @@ fun EditorScreen(
                     )
                 }
 
-                AssistChip(
-                    onClick = { showScanSource = true },
-                    enabled = !state.scanning,
-                    leadingIcon = {
-                        Icon(
-                            Icons.Rounded.DocumentScanner,
-                            contentDescription = null,
-                            Modifier.size(18.dp)
-                        )
-                    },
-                    label = { Text(stringResource(R.string.editor_scan_receipt), maxLines = 1) }
-                )
+            }
 
-                if (state.receiptUrl != null || state.receiptDocPath != null) {
-                    AssistChip(
-                        onClick = { showEReceipt = true },
-                        leadingIcon = {
-                            Icon(
-                                Icons.AutoMirrored.Rounded.ReceiptLong,
-                                contentDescription = null,
-                                Modifier.size(18.dp)
-                            )
-                        },
-                        label = { Text(stringResource(R.string.ereceipt_open), maxLines = 1) }
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(start = 16.dp, end = 16.dp, bottom = 4.dp),
+                horizontalArrangement = Arrangement.spacedBy(12.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                FilledTonalIconButton(
+                    onClick = { showScanSource = true },
+                    enabled = !state.scanning
+                ) {
+                    Icon(
+                        Icons.Rounded.DocumentScanner,
+                        contentDescription = stringResource(R.string.editor_scan_receipt)
                     )
                 }
 
                 val thumbnail = rememberBitmapFromPath(state.photoPath, maxDimension = 128)
-                AssistChip(
+                FilledTonalIconButton(
                     onClick = {
                         if (state.photoPath == null) showAttachSource = true else showPhotoView = true
-                    },
-                    leadingIcon = {
-                        if (thumbnail != null) {
-                            Image(
-                                bitmap = thumbnail,
-                                contentDescription = null,
-                                contentScale = ContentScale.Crop,
-                                modifier = Modifier
-                                    .size(18.dp)
-                                    .clip(MaterialTheme.shapes.extraSmall)
-                            )
-                        } else {
-                            Icon(
-                                Icons.Rounded.AddAPhoto,
-                                contentDescription = null,
-                                Modifier.size(18.dp)
-                            )
-                        }
-                    },
-                    label = {
-                        Text(
-                            text = stringResource(
-                                if (state.photoPath == null) {
-                                    R.string.attach_photo
-                                } else {
-                                    R.string.photo_receipt
-                                }
-                            ),
-                            maxLines = 1
+                    }
+                ) {
+                    if (thumbnail != null) {
+                        Image(
+                            bitmap = thumbnail,
+                            contentDescription = stringResource(R.string.photo_receipt),
+                            contentScale = ContentScale.Crop,
+                            modifier = Modifier
+                                .size(28.dp)
+                                .clip(MaterialTheme.shapes.small)
+                        )
+                    } else {
+                        Icon(
+                            Icons.Rounded.AddAPhoto,
+                            contentDescription = stringResource(R.string.attach_photo)
                         )
                     }
-                )
+                }
+
+                if (state.receiptUrl != null || state.receiptDocPath != null) {
+                    FilledTonalIconButton(onClick = { showEReceipt = true }) {
+                        Icon(
+                            Icons.AutoMirrored.Rounded.ReceiptLong,
+                            contentDescription = stringResource(R.string.ereceipt_open)
+                        )
+                    }
+                }
             }
 
             AnimatedVisibility(visible = state.debtCategory) {
@@ -562,39 +553,15 @@ fun EditorScreen(
     }
 
     if (showAccountPicker) {
-        AlertDialog(
-            onDismissRequest = { showAccountPicker = false },
-            title = { Text(stringResource(R.string.editor_account)) },
-            text = {
-                Column {
-                    state.accounts.forEach { account ->
-                        ListItem(
-                            headlineContent = {
-                                Text(AccountVisuals.displayName(account))
-                            },
-                            leadingContent = {
-                                AccountBadge(
-                                    iconKey = account.iconKey,
-                                    color = Color(account.colorArgb),
-                                    iconPath = account.iconPath
-                                )
-                            },
-                            colors = ListItemDefaults.colors(
-                                containerColor = Color.Transparent
-                            ),
-                            modifier = Modifier.clickable {
-                                viewModel.selectAccount(account.id)
-                                showAccountPicker = false
-                            }
-                        )
-                    }
-                }
+        AccountSheet(
+            accounts = state.accounts,
+            selectedId = state.accountId,
+            type = state.type,
+            onSelect = { id ->
+                viewModel.selectAccount(id)
+                showAccountPicker = false
             },
-            confirmButton = {
-                TextButton(onClick = { showAccountPicker = false }) {
-                    Text(stringResource(R.string.action_cancel))
-                }
-            }
+            onDismiss = { showAccountPicker = false }
         )
     }
 
@@ -650,6 +617,75 @@ private fun newCameraUri(context: android.content.Context): Uri {
     val dir = File(context.cacheDir, "receipts").apply { mkdirs() }
     val file = File(dir, "receipt_${System.currentTimeMillis()}.jpg")
     return FileProvider.getUriForFile(context, context.packageName + ".fileprovider", file)
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun AccountSheet(
+    accounts: List<AccountEntity>,
+    selectedId: Long?,
+    type: TransactionType,
+    onSelect: (Long) -> Unit,
+    onDismiss: () -> Unit
+) {
+    ModalBottomSheet(onDismissRequest = onDismiss) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .navigationBarsPadding()
+                .padding(start = 24.dp, end = 24.dp, bottom = 24.dp)
+        ) {
+            Text(
+                text = stringResource(
+                    if (type == TransactionType.INCOME) {
+                        R.string.account_pick_income
+                    } else {
+                        R.string.account_pick_expense
+                    }
+                ),
+                style = MaterialTheme.typography.titleLarge
+            )
+            Spacer(Modifier.height(6.dp))
+            Text(
+                text = stringResource(R.string.account_pick_hint),
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            Spacer(Modifier.height(12.dp))
+            accounts.forEach { account ->
+                val chosen = account.id == selectedId
+                ListItem(
+                    headlineContent = {
+                        Text(
+                            text = AccountVisuals.displayName(account),
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                    },
+                    leadingContent = {
+                        AccountBadge(
+                            iconKey = account.iconKey,
+                            color = Color(account.colorArgb),
+                            iconPath = account.iconPath
+                        )
+                    },
+                    trailingContent = {
+                        if (chosen) {
+                            Icon(
+                                Icons.Rounded.Check,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.primary
+                            )
+                        }
+                    },
+                    colors = ListItemDefaults.colors(containerColor = Color.Transparent),
+                    modifier = Modifier
+                        .clip(MaterialTheme.shapes.medium)
+                        .clickable { onSelect(account.id) }
+                )
+            }
+        }
+    }
 }
 
 @Composable

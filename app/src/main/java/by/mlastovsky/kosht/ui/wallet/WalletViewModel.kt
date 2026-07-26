@@ -306,6 +306,10 @@ class WalletViewModel(
         }
     }
 
+    fun reorderAccounts(ids: List<Long>) {
+        viewModelScope.launch { accountRepository.reorderAccounts(ids) }
+    }
+
     fun deleteAccount(account: AccountEntity) {
         viewModelScope.launch { accountRepository.deleteAccount(account) }
     }

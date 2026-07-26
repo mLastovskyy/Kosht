@@ -17,6 +17,7 @@ import androidx.compose.material.icons.automirrored.rounded.ArrowBack
 import androidx.compose.material.icons.automirrored.rounded.ReceiptLong
 import androidx.compose.material.icons.rounded.AccountBalanceWallet
 import androidx.compose.material.icons.rounded.Add
+import androidx.compose.material.icons.rounded.Bolt
 import androidx.compose.material.icons.rounded.Calculate
 import androidx.compose.material.icons.rounded.CloudSync
 import androidx.compose.material.icons.rounded.CreditCard
@@ -57,6 +58,11 @@ private data class GuideSection(
 private val sections = listOf(
     GuideSection(Icons.Rounded.Home, R.string.guide_home_title, R.string.guide_home_body),
     GuideSection(Icons.Rounded.Add, R.string.guide_editor_title, R.string.guide_editor_body),
+    GuideSection(
+        Icons.Rounded.Bolt,
+        R.string.guide_actions_title,
+        R.string.guide_actions_body
+    ),
     GuideSection(
         Icons.Rounded.DocumentScanner,
         R.string.guide_scan_title,

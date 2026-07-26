@@ -20,6 +20,12 @@ interface AccountDao {
     @Query("SELECT COALESCE(MAX(position), 0) FROM accounts")
     suspend fun maxPosition(): Int
 
+    @Query("SELECT COALESCE(MIN(position), 0) FROM accounts WHERE id IN (:ids)")
+    suspend fun minPosition(ids: List<Long>): Int
+
+    @Query("UPDATE accounts SET position = :position WHERE id = :id")
+    suspend fun updatePosition(id: Long, position: Int)
+
     @Query("SELECT COUNT(*) FROM accounts")
     suspend fun count(): Int
 
