@@ -120,10 +120,15 @@ Write-Host "Code lifetime: $($config.mailer_otp_exp) s"
 if (-not $PSCmdlet.ShouldProcess($endpoint, 'PATCH auth config')) { return }
 
 $body = $config | ConvertTo-Json -Depth 4
-$headers = @{ Authorization = "Bearer $Token"; 'Content-Type' = 'application/json' }
+# Windows PowerShell hands a string body to the server in its own encoding,
+# which turns every Cyrillic letter of the subject and the template into a
+# question mark. Bytes leave no room for interpretation.
+$bytes = [System.Text.Encoding]::UTF8.GetBytes($body)
+$headers = @{ Authorization = "Bearer $Token" }
 
 try {
-    $response = Invoke-RestMethod -Method Patch -Uri $endpoint -Headers $headers -Body $body
+    $response = Invoke-RestMethod -Method Patch -Uri $endpoint -Headers $headers `
+        -ContentType 'application/json; charset=utf-8' -Body $bytes
     Write-Host ''
     Write-Host 'Applied. Supabase now sends from:' -ForegroundColor Green
     Write-Host "  $($response.smtp_sender_name) <$($response.smtp_admin_email)>"
