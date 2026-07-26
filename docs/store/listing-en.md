@@ -11,14 +11,14 @@ Kosht — Expense Tracker
 ## Short description (80 chars max)
 
 ```
-Offline personal finance: spending, accounts, live FX, receipt scan. No ads.
+Offline personal finance: spending, accounts, live FX and receipt scanning.
 ```
 
 ## Full description (4000 chars max)
 
 ```
 Kosht is a personal finance tracker you will actually keep using. Everything works
-offline and stays on your phone: no accounts, no subscriptions, no ads.
+offline and stays on your phone: no accounts, no subscriptions, no cloud.
 
 ⚡ Log spending in seconds
 The calculator opens the moment you add a record: type "12.50+3.90", hit Apply, and
@@ -76,12 +76,12 @@ National Bank rates and, when you tap it, for an update check.
 First public release of Kosht: spending with a built-in calculator, offline receipt
 scanning, multiple accounts, statistics with a configurable week/month/quarter/year
 report, National Bank rates, debts, goals and savings, recurring payments you confirm
-yourself, 18 awards and quiet notifications. All offline, no ads, no accounts.
+yourself, 18 awards and quiet notifications. All offline, no accounts.
 ```
 
 ## Category and tags
 
 - Category: **Finance**
 - Tags: budget, expenses, finance, money tracker, savings
-- Content rating: Everyone / 3+ (no user content, no ads, no purchases)
+- Content rating: Everyone / 3+ (no user content, no purchases)
 - Data safety: **no data collected, no data shared**

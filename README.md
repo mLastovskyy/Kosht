@@ -2,7 +2,7 @@
 
 **Track spending in seconds. See where your money goes. Actually save.**
 
-Kosht is a beautifully crafted personal finance app for Android that turns money tracking from a chore into a habit you'll enjoy. No accounts, no subscriptions, no ads — your data never leaves your phone.
+Kosht is a beautifully crafted personal finance app for Android that turns money tracking from a chore into a habit you'll enjoy. No accounts, no subscriptions, no cloud — your data never leaves your phone.
 
 ---
 
