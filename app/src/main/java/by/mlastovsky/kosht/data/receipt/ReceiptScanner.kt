@@ -4,7 +4,7 @@ import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.net.Uri
-import androidx.core.graphics.scale
+import by.mlastovsky.kosht.data.receipt.ml.LineModel
 import com.googlecode.tesseract.android.TessBaseAPI
 import java.io.File
 import kotlinx.coroutines.Dispatchers
@@ -23,10 +23,14 @@ class ReceiptScanner(
     private val eReceipts: EReceiptFetcher = EReceiptFetcher(context)
 ) {
 
+    private val model: LineModel? by lazy {
+        runCatching { context.assets.open(LineModel.ASSET).use(LineModel::read) }.getOrNull()
+    }
+
     suspend fun scan(uri: Uri): ScannedReceipt? = withContext(Dispatchers.Default) {
         val bitmap = decodeDownscaled(uri, MAX_DIMENSION) ?: return@withContext null
         QrReader.decode(bitmap)?.let { payload ->
-            eReceipts.resolve(payload)?.let { receipt ->
+            eReceipts.resolve(payload, model)?.let { receipt ->
                 return@withContext ScannedReceipt(
                     parsed = receipt.parsed,
                     sourceUrl = receipt.sourceUrl,
@@ -35,66 +39,67 @@ class ReceiptScanner(
             }
         }
 
-        val lines = recognize(prepared(bitmap)).ifEmpty { recognize(bitmap) }
+        val lines = bestReading(bitmap)
         if (lines.isEmpty()) return@withContext null
-        ReceiptParser.parse(lines)
+        ReceiptParser.parse(lines, model)
             .takeIf { it.amountMinor != null }
             ?.let { ScannedReceipt(it) }
     }
 
-    private fun prepared(source: Bitmap): Bitmap = runCatching {
-        val scale = (MIN_DIMENSION.toFloat() / minOf(source.width, source.height))
-            .coerceIn(1f, MAX_UPSCALE)
-        val width = (source.width * scale).toInt()
-        val height = (source.height * scale).toInt()
-        val pixels = IntArray(source.width * source.height)
-        source.getPixels(pixels, 0, source.width, 0, 0, source.width, source.height)
+    private data class Reading(val lines: List<ReceiptLine>, val score: Int)
 
-        val grey = IntArray(pixels.size)
-        var darkest = 255
-        var lightest = 0
-        for (i in pixels.indices) {
-            val pixel = pixels[i]
-
-            val value = (
-                ((pixel shr 16 and 0xFF) * 299 +
-                    (pixel shr 8 and 0xFF) * 587 +
-                    (pixel and 0xFF) * 114) / 1000
-                ).coerceIn(0, 255)
-            grey[i] = value
-            if (value < darkest) darkest = value
-            if (value > lightest) lightest = value
+    /**
+     * Every attempt costs seconds, so they run cheapest first and stop as soon
+     * as one comes back with figures it is sure about.
+     */
+    private fun bestReading(bitmap: Bitmap): List<ReceiptLine> {
+        var best = Reading(emptyList(), Int.MIN_VALUE)
+        attempts(bitmap).forEach { attempt ->
+            val reading = read(attempt.image, attempt.pageMode)
+            if (reading.score > best.score) best = reading
+            if (reading.score >= GOOD_ENOUGH) return best.lines
         }
+        return best.lines
+    }
 
-        val span = lightest - darkest
-        if (span < MIN_SPAN) return@runCatching source
-        for (i in grey.indices) {
-            val stretched = (grey[i] - darkest) * 255 / span
-            pixels[i] = 0xFF shl 24 or (stretched shl 16) or (stretched shl 8) or stretched
-        }
-        val stretched = Bitmap.createBitmap(
-            pixels,
-            source.width,
-            source.height,
-            Bitmap.Config.ARGB_8888
-        )
-        if (scale <= 1f) stretched else stretched.scale(width, height)
-    }.getOrDefault(source)
+    private data class Attempt(val image: Bitmap, val pageMode: Int)
 
-    private fun recognize(bitmap: Bitmap): List<ReceiptLine> {
-        val dataDir = ensureTrainedData() ?: return emptyList()
+    private fun attempts(bitmap: Bitmap): Sequence<Attempt> = sequence {
+        val binarised = ImagePrep.binarised(bitmap)
+        yield(Attempt(binarised, TessBaseAPI.PageSegMode.PSM_AUTO))
+        yield(Attempt(binarised, TessBaseAPI.PageSegMode.PSM_SINGLE_BLOCK))
+        yield(Attempt(ImagePrep.stretched(bitmap), TessBaseAPI.PageSegMode.PSM_AUTO))
+        yield(Attempt(bitmap, TessBaseAPI.PageSegMode.PSM_AUTO))
+    }
+
+    private fun read(bitmap: Bitmap, pageMode: Int): Reading {
+        val dataDir = ensureTrainedData() ?: return Reading(emptyList(), Int.MIN_VALUE)
         val tess = TessBaseAPI()
         return try {
-            if (!tess.init(dataDir.absolutePath, LANGUAGE)) return emptyList()
+            if (!tess.init(dataDir.absolutePath, LANGUAGE)) {
+                return Reading(emptyList(), Int.MIN_VALUE)
+            }
+            tess.pageSegMode = pageMode
+            tess.setVariable("preserve_interword_spaces", "1")
             tess.setImage(bitmap)
 
             val plain = tess.utF8Text.orEmpty()
-            measuredLines(tess).ifEmpty { ReceiptLine.of(plain) }
+            val lines = measuredLines(tess).ifEmpty { ReceiptLine.of(plain) }
+                .map { it.copy(text = it.text.trim()) }
+                .filter { it.text.isNotEmpty() }
+            Reading(lines, score(lines, tess.meanConfidence()))
         } catch (e: Exception) {
-            emptyList()
+            Reading(emptyList(), Int.MIN_VALUE)
         } finally {
             tess.recycle()
         }
+    }
+
+    private fun score(lines: List<ReceiptLine>, confidence: Int): Int {
+        if (lines.isEmpty()) return Int.MIN_VALUE
+        val amounts = lines.count { AMOUNT.containsMatchIn(it.text) }
+        val letters = lines.sumOf { line -> line.text.count { it.isLetter() } }
+        return confidence + amounts * AMOUNT_WEIGHT + (letters / 40).coerceAtMost(20)
     }
 
     private fun measuredLines(tess: TessBaseAPI): List<ReceiptLine> = runCatching {
@@ -153,12 +158,12 @@ class ReceiptScanner(
 
     private companion object {
         const val LANGUAGE = "rus"
-        const val MAX_DIMENSION = 2200
+        const val MAX_DIMENSION = 2600
 
-        const val MIN_DIMENSION = 1000
+        val AMOUNT = Regex("(?<!\\d)\\d{1,9}[.,]\\d{2}(?!\\d)")
 
-        const val MAX_UPSCALE = 2f
+        const val AMOUNT_WEIGHT = 6
 
-        const val MIN_SPAN = 32
+        const val GOOD_ENOUGH = 110
     }
 }

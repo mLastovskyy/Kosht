@@ -1,5 +1,8 @@
 package by.mlastovsky.kosht.data.receipt
 
+import by.mlastovsky.kosht.data.receipt.ml.LineFeatures
+import by.mlastovsky.kosht.data.receipt.ml.LineKind
+import by.mlastovsky.kosht.data.receipt.ml.LineModel
 import by.mlastovsky.kosht.util.Notes
 import java.time.LocalDate
 
@@ -96,21 +99,67 @@ object ReceiptParser {
 
     private const val HEADER_LINES = 12
 
-    fun parse(text: String): ParsedReceipt = parse(ReceiptLine.of(text))
+    fun parse(text: String, model: LineModel? = null): ParsedReceipt =
+        parse(ReceiptLine.of(text), model)
 
-    fun parse(lines: List<ReceiptLine>): ParsedReceipt {
+    fun parse(lines: List<ReceiptLine>, model: LineModel? = null): ParsedReceipt {
         val cleaned = OcrDigits.repair(lines)
             .map { it.copy(text = it.text.trim()) }
             .filter { it.text.isNotEmpty() }
         val texts = cleaned.map { it.text }
-        val total = findTotal(texts)
+        val judged = model?.let { Judged(cleaned, it) }
+        val total = findTotal(texts) ?: judged?.total() ?: fallbackTotal(texts)
         return ParsedReceipt(
             amountMinor = total,
             date = findDate(texts.joinToString("\n")),
-            merchant = findMerchant(cleaned),
-            items = reconciled(findItems(texts), total)
+            merchant = findMerchant(cleaned, judged),
+            items = reconciled(kept(findItems(texts), judged), total)
         )
     }
+
+    private class Judged(private val lines: List<ReceiptLine>, private val model: LineModel) {
+
+        private val chances = lines.mapIndexed { index, line ->
+            model.chances(
+                LineFeatures.of(line.text, line.emphasis, index, lines.size)
+            )
+        }
+
+        fun chance(kind: LineKind, index: Int): Float =
+            chances.getOrNull(index)?.get(kind) ?: 0f
+
+        fun total(): Long? = lines.indices
+            .filter { index ->
+                val lower = lines[index].text.lowercase()
+                notTheTotal.none { lower.contains(it) } &&
+                    amountRegex.containsMatchIn(lines[index].text)
+            }
+            .maxByOrNull { chance(LineKind.TOTAL, it) }
+            ?.takeIf { chance(LineKind.TOTAL, it) >= MIN_TOTAL_CHANCE }
+            ?.let { index -> amountRegex.findAll(lines[index].text).lastOrNull()?.toMinor() }
+
+        fun merchant(): String? = lines.indices
+            .take(HEADER_LINES)
+            .maxByOrNull { chance(LineKind.MERCHANT, it) }
+            ?.takeIf { chance(LineKind.MERCHANT, it) >= MIN_MERCHANT_CHANCE }
+            ?.let { index -> quotedName(lines[index].text) ?: lines[index].text }
+            ?.let { normalize(it.replace(legalForms, "")) }
+
+        fun looksBought(index: Int): Boolean =
+            chance(LineKind.ITEM, index) >= MIN_ITEM_CHANCE ||
+                chance(LineKind.OTHER, index) < chance(LineKind.ITEM, index)
+    }
+
+    private fun kept(found: List<FoundItem>, judged: Judged?): List<ParsedItem> {
+        if (judged == null) return found.map { it.item }
+        return found.filter { judged.looksBought(it.index) }.map { it.item }
+    }
+
+    private const val MIN_TOTAL_CHANCE = 0.4f
+
+    private const val MIN_MERCHANT_CHANCE = 0.5f
+
+    private const val MIN_ITEM_CHANCE = 0.25f
 
     private fun reconciled(items: List<ParsedItem>, total: Long?): List<ParsedItem> {
         if (total == null || total <= 0 || items.isEmpty()) return items
@@ -124,7 +173,7 @@ object ReceiptParser {
         for (group in totalKeywords) {
             keywordTotal(lines, group)?.let { return it }
         }
-        return fallbackTotal(lines)
+        return null
     }
 
     private fun keywordTotal(lines: List<String>, keywords: List<String>): Long? {
@@ -165,12 +214,14 @@ object ReceiptParser {
         return whole.toLong() * 100 + groupValues[2].toLong()
     }
 
-    private fun findItems(lines: List<String>): List<ParsedItem> {
+    private data class FoundItem(val item: ParsedItem, val index: Int)
+
+    private fun findItems(lines: List<String>): List<FoundItem> {
         val end = lines.indexOfFirst { line ->
             val lower = line.lowercase()
             totalKeywords.take(2).any { group -> group.any { lower.contains(it) } }
         }.takeIf { it >= 0 } ?: lines.size
-        val items = mutableListOf<ParsedItem>()
+        val items = mutableListOf<FoundItem>()
         var index = 0
         while (index < end && items.size < MAX_ITEMS) {
             val line = lines[index]
@@ -180,7 +231,7 @@ object ReceiptParser {
             }
             val sameLine = itemOnOneLine(line)
             if (sameLine != null) {
-                items += sameLine
+                items += FoundItem(sameLine, index)
                 index++
                 continue
             }
@@ -188,7 +239,7 @@ object ReceiptParser {
             val next = lines.getOrNull(index + 1)
             val split = next?.takeIf { !skipAsItem(it) }?.let { itemFromPair(line, it) }
             if (split != null) {
-                items += split
+                items += FoundItem(split, index)
                 index += 2
                 continue
             }
@@ -275,8 +326,8 @@ object ReceiptParser {
             .firstOrNull { it <= today && it >= today.minusYears(1) }
     }
 
-    private fun findMerchant(lines: List<ReceiptLine>): String? =
-        knownChain(lines.map { it.text }) ?: bestNamedLine(lines)
+    private fun findMerchant(lines: List<ReceiptLine>, judged: Judged?): String? =
+        knownChain(lines.map { it.text }) ?: judged?.merchant() ?: bestNamedLine(lines)
 
     private fun knownChain(lines: List<String>): String? {
 

@@ -1,6 +1,7 @@
 package by.mlastovsky.kosht.data.receipt
 
 import android.content.Context
+import by.mlastovsky.kosht.data.receipt.ml.LineModel
 import java.io.File
 import java.net.HttpURLConnection
 import java.net.URL
@@ -17,18 +18,19 @@ data class EReceipt(
 
 class EReceiptFetcher(private val context: Context) {
 
-    suspend fun resolve(rawQr: String): EReceipt? = withContext(Dispatchers.IO) {
-        when (val payload = ReceiptQr.classify(rawQr)) {
-            null -> null
+    suspend fun resolve(rawQr: String, model: LineModel? = null): EReceipt? =
+        withContext(Dispatchers.IO) {
+            when (val payload = ReceiptQr.classify(rawQr)) {
+                null -> null
 
-            is QrPayload.Fields -> ReceiptQr.fromFields(payload.values)
-                ?.let { EReceipt(it, sourceUrl = null, documentPath = null) }
+                is QrPayload.Fields -> ReceiptQr.fromFields(payload.values)
+                    ?.let { EReceipt(it, sourceUrl = null, documentPath = null) }
 
-            is QrPayload.Link -> fetchLink(payload.url)
+                is QrPayload.Link -> fetchLink(payload.url, model)
+            }
         }
-    }
 
-    private fun fetchLink(url: String): EReceipt? {
+    private fun fetchLink(url: String, model: LineModel?): EReceipt? {
         val document = download(url) ?: return null
         val lines = when {
             document.looksBinary -> emptyList()
@@ -38,7 +40,7 @@ class EReceiptFetcher(private val context: Context) {
 
             else -> ReceiptLine.of(document.text)
         }
-        val parsed = ReceiptParser.parse(lines)
+        val parsed = ReceiptParser.parse(lines, model)
         val offered = offeredDocument(document, url)
         val documentPath = offered?.savedPath ?: document.savedPath
         if (offered != null) document.savedPath?.let { File(it).delete() }
