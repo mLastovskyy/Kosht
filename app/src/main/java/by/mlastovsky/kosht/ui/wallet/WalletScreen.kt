@@ -78,6 +78,17 @@ fun WalletScreen(
         mutableStateOf<Pair<by.mlastovsky.kosht.data.db.AccountEntity, Long>?>(null)
     }
 
+    // Offline the stored rates stay on screen; say why they did not change.
+    val context = androidx.compose.ui.platform.LocalContext.current
+    val offlineMessage = stringResource(R.string.rates_offline)
+    androidx.compose.runtime.LaunchedEffect(Unit) {
+        viewModel.rateRefreshFailed.collect {
+            android.widget.Toast
+                .makeText(context, offlineMessage, android.widget.Toast.LENGTH_LONG)
+                .show()
+        }
+    }
+
     LazyColumn(
         modifier = Modifier
             .fillMaxSize()

@@ -18,6 +18,7 @@ import by.mlastovsky.kosht.model.TransactionType
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
@@ -70,16 +71,27 @@ class WalletViewModel(
 
     private val refreshingRates = MutableStateFlow(false)
 
+    private val _rateRefreshFailed = kotlinx.coroutines.flow.MutableSharedFlow<Unit>()
+
+    /** Emitted when a manual refresh could not reach the rates server. */
+    val rateRefreshFailed: kotlinx.coroutines.flow.SharedFlow<Unit> =
+        _rateRefreshFailed.asSharedFlow()
+
     init {
         viewModelScope.launch { ratesRepository.refreshIfStale() }
     }
 
+    /**
+     * Manual refresh. Offline it keeps the rates from the last successful
+     * check and reports the failure so the UI can say so.
+     */
     fun refreshRates() {
         if (refreshingRates.value) return
         viewModelScope.launch {
             refreshingRates.value = true
-            runCatching { ratesRepository.refresh() }
+            val result = runCatching { ratesRepository.refresh() }
             refreshingRates.value = false
+            if (result.isFailure) _rateRefreshFailed.emit(Unit)
         }
     }
 
