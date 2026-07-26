@@ -37,4 +37,14 @@ interface GoalDao {
 
     @Query("DELETE FROM saving_goals WHERE id = :id")
     suspend fun deleteById(id: Long)
+
+    @Query("SELECT DISTINCT currencyCode FROM saving_goals")
+    suspend fun currencies(): List<String>
+
+    /** Restates targets priced in [from] as [to]; see CurrencyChanger. */
+    @Query(
+        "UPDATE saving_goals SET targetMinor = CAST(ROUND(targetMinor * :factor) AS INTEGER), " +
+            "currencyCode = :to WHERE currencyCode = :from"
+    )
+    suspend fun convert(from: String, to: String, factor: Double)
 }

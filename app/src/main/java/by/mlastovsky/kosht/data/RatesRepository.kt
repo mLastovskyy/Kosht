@@ -71,5 +71,37 @@ class RatesRepository(private val rateDao: RateDao) {
             if (rate.scale <= 0) return null
             return (amountMinor.toDouble() * rate.rate / rate.scale).roundToLong()
         }
+
+        /**
+         * Converts between any two currencies through BYN, which is the only
+         * pair the National Bank publishes. Null when either side is unknown,
+         * so a missing rate leaves the amount alone rather than zeroing it.
+         */
+        fun convertMinor(
+            amountMinor: Long,
+            from: String,
+            to: String,
+            rates: Map<String, RateEntity>
+        ): Long? {
+            if (from == to) return amountMinor
+            val byn = toBynMinor(amountMinor, from, rates) ?: return null
+            if (to == "BYN") return byn
+            val target = rates[to] ?: return null
+            if (target.scale <= 0 || target.rate <= 0.0) return null
+            return (byn.toDouble() * target.scale / target.rate).roundToLong()
+        }
+
+        /**
+         * How much one unit of [from] is worth in [to] — the multiplier the
+         * bulk SQL rescales use. Null when the pair cannot be priced.
+         */
+        fun factor(from: String, to: String, rates: Map<String, RateEntity>): Double? {
+            if (from == to) return 1.0
+            val source = rates[from] ?: return null
+            val target = rates[to] ?: return null
+            if (source.scale <= 0 || target.scale <= 0) return null
+            if (source.rate <= 0.0 || target.rate <= 0.0) return null
+            return (source.rate / source.scale) / (target.rate / target.scale)
+        }
     }
 }

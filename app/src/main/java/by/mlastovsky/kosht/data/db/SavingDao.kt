@@ -30,4 +30,14 @@ interface SavingDao {
 
     @Query("DELETE FROM savings WHERE id = :id")
     suspend fun deleteById(id: Long)
+
+    @Query("SELECT DISTINCT currencyCode FROM savings")
+    suspend fun currencies(): List<String>
+
+    /** Restates everything set aside in [from] as [to]; see CurrencyChanger. */
+    @Query(
+        "UPDATE savings SET amountMinor = CAST(ROUND(amountMinor * :factor) AS INTEGER), " +
+            "currencyCode = :to WHERE currencyCode = :from"
+    )
+    suspend fun convert(from: String, to: String, factor: Double)
 }

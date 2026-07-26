@@ -23,4 +23,18 @@ interface DebtDao {
 
     @Query("DELETE FROM debts WHERE id = :id")
     suspend fun deleteById(id: Long)
+
+    /** Debts settled in full — the ones that earned an award. */
+    @Query("SELECT COUNT(*) FROM debts WHERE closedAt IS NOT NULL")
+    fun observeClosedCount(): Flow<Int>
+
+    @Query("SELECT DISTINCT currencyCode FROM debts")
+    suspend fun currencies(): List<String>
+
+    /** Restates what is owed in [from] as [to]; see CurrencyChanger. */
+    @Query(
+        "UPDATE debts SET amountMinor = CAST(ROUND(amountMinor * :factor) AS INTEGER), " +
+            "currencyCode = :to WHERE currencyCode = :from"
+    )
+    suspend fun convert(from: String, to: String, factor: Double)
 }

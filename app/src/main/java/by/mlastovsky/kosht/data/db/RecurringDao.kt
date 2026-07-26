@@ -28,4 +28,14 @@ interface RecurringDao {
 
     @Query("UPDATE recurring SET categoryId = :to WHERE categoryId = :from")
     suspend fun reassignCategory(from: Long, to: Long)
+
+    @Query("SELECT DISTINCT currencyCode FROM recurring")
+    suspend fun currencies(): List<String>
+
+    /** Restates charges defined in [from] as [to]; see CurrencyChanger. */
+    @Query(
+        "UPDATE recurring SET amountMinor = CAST(ROUND(amountMinor * :factor) AS INTEGER), " +
+            "currencyCode = :to WHERE currencyCode = :from"
+    )
+    suspend fun convert(from: String, to: String, factor: Double)
 }
