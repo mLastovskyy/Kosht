@@ -2,6 +2,7 @@ package by.mlastovsky.kosht.data.db
 
 import androidx.room.Embedded
 import androidx.room.Entity
+import androidx.room.Index
 import androidx.room.PrimaryKey
 import by.mlastovsky.kosht.model.TransactionType
 
@@ -12,7 +13,7 @@ import by.mlastovsky.kosht.model.TransactionType
  * from localized string resources; user-created categories have [key] = null and
  * store the display name directly in [name].
  */
-@Entity(tableName = "categories")
+@Entity(tableName = "categories", indices = [Index("uid")])
 data class CategoryEntity(
     @PrimaryKey(autoGenerate = true)
     val id: Long = 0,

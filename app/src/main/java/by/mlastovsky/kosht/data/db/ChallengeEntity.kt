@@ -2,6 +2,7 @@ package by.mlastovsky.kosht.data.db
 
 import androidx.room.Embedded
 import androidx.room.Entity
+import androidx.room.Index
 import androidx.room.PrimaryKey
 import by.mlastovsky.kosht.model.ChallengeType
 
@@ -9,7 +10,7 @@ import by.mlastovsky.kosht.model.ChallengeType
  * A user-configured challenge. Progress and outcome are always computed from
  * live data, never stored.
  */
-@Entity(tableName = "challenges")
+@Entity(tableName = "challenges", indices = [Index("uid")])
 data class ChallengeEntity(
     @PrimaryKey(autoGenerate = true)
     val id: Long = 0,

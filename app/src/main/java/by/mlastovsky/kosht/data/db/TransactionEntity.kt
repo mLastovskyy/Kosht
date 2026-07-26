@@ -29,7 +29,8 @@ import by.mlastovsky.kosht.model.TransactionType
     ],
     indices = [
         Index("categoryId"),
-        Index("timestamp")
+        Index("timestamp"),
+        Index("uid")
     ]
 )
 data class TransactionEntity(

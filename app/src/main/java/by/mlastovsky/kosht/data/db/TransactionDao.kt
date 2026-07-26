@@ -157,6 +157,16 @@ interface TransactionDao {
     @Query("SELECT * FROM transactions WHERE photoKey IS NOT NULL")
     suspend fun photosUploaded(): List<TransactionEntity>
 
+    /**
+     * Every file path any record still points at — photos and saved electronic
+     * receipts alike. What is not in here is not referenced by anything.
+     */
+    @Query(
+        "SELECT photoPath FROM transactions WHERE photoPath IS NOT NULL " +
+            "UNION SELECT receiptDocPath FROM transactions WHERE receiptDocPath IS NOT NULL"
+    )
+    suspend fun referencedFiles(): List<String>
+
     @Query("UPDATE transactions SET photoKey = :key WHERE id = :id")
     suspend fun setPhotoKey(id: Long, key: String?)
 

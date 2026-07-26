@@ -48,11 +48,16 @@ object ReceiptParser {
     )
 
     /**
-     * Amounts only: two decimals, thousands optionally spaced. The guards on
-     * both sides are what keep 26.07.2026 from being read as 26 rubles 07.
+     * Amounts only: two decimals, thousands optionally spaced.
+     *
+     * The guards on both sides are what keep 26.07.2026 from being read as 26
+     * roubles 07 — but they have to let through the way a real slip prints its
+     * total: `К ОПЛАТЕ:........4,24`. So a separator in front disqualifies the
+     * figure only when a digit stands before it, which is what being *inside* a
+     * longer number actually looks like.
      */
     private val amountRegex = Regex(
-        """(?<![\d.,/\-:])(\d{1,3}(?:[  ]\d{3})+|\d{1,9})[.,](\d{2})(?![\d.,/\-:])"""
+        """(?<!\d)(?<!\d[.,/\-:])(\d{1,3}(?:[  ]\d{3})+|\d{1,9})[.,](\d{2})(?![\d.,/\-:])"""
     )
 
     private val dateRegex = Regex("""\b(\d{2})[./-](\d{2})[./-](\d{2,4})\b""")

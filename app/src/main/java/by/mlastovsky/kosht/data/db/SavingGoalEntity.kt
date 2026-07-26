@@ -2,13 +2,14 @@ package by.mlastovsky.kosht.data.db
 
 import androidx.room.Embedded
 import androidx.room.Entity
+import androidx.room.Index
 import androidx.room.PrimaryKey
 
 /**
  * A savings goal ("накопить на..."). Deposits linked via SavingEntity.goalId
  * count toward [targetMinor]; the goal locks its own currency.
  */
-@Entity(tableName = "saving_goals")
+@Entity(tableName = "saving_goals", indices = [Index("uid")])
 data class SavingGoalEntity(
     @PrimaryKey(autoGenerate = true)
     val id: Long = 0,

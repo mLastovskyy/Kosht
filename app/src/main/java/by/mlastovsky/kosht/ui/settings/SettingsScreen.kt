@@ -1094,12 +1094,22 @@ private fun UpdateProgressDialog(
                 Text(text)
                 androidx.compose.foundation.layout.Spacer(Modifier.padding(top = 12.dp))
                 if (percent >= 0) {
+                    // Glides to each new figure instead of jumping: a download
+                    // reports in bursts, and a bar that twitches looks stuck.
+                    val progress by androidx.compose.animation.core.animateFloatAsState(
+                        targetValue = (percent / 100f).coerceIn(0f, 1f),
+                        animationSpec = androidx.compose.animation.core.tween(400),
+                        label = "updateProgress"
+                    )
                     LinearProgressIndicator(
-                        progress = { percent / 100f },
+                        progress = { progress },
+                        // No stop dot at the end of the track: it reads as a
+                        // leftover speck rather than as part of the bar.
+                        drawStopIndicator = {},
                         modifier = Modifier.fillMaxWidth()
                     )
                     Text(
-                        text = "$percent%",
+                        text = "${(progress * 100).toInt()}%",
                         style = MaterialTheme.typography.bodySmall,
                         modifier = Modifier.padding(top = 8.dp)
                     )

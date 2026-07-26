@@ -2,6 +2,7 @@ package by.mlastovsky.kosht.data.db
 
 import androidx.room.Embedded
 import androidx.room.Entity
+import androidx.room.Index
 import androidx.room.PrimaryKey
 import by.mlastovsky.kosht.model.DebtDirection
 
@@ -9,7 +10,7 @@ import by.mlastovsky.kosht.model.DebtDirection
  * A debt being tracked. [amountMinor] is the remaining amount; the debt is
  * closed when [closedAt] is set.
  */
-@Entity(tableName = "debts")
+@Entity(tableName = "debts", indices = [Index("uid")])
 data class DebtEntity(
     @PrimaryKey(autoGenerate = true)
     val id: Long = 0,

@@ -90,6 +90,11 @@ class AppContainer(
 
     val photoStore: PhotoStore by lazy { PhotoStore(appContext) }
 
+    /** Sweeps out attachments and tombstones nothing points at any more. */
+    val housekeeping: by.mlastovsky.kosht.data.Housekeeping by lazy {
+        by.mlastovsky.kosht.data.Housekeeping(database, photoStore, settingsRepository)
+    }
+
     val updateChecker: by.mlastovsky.kosht.data.UpdateChecker by lazy {
         by.mlastovsky.kosht.data.UpdateChecker()
     }

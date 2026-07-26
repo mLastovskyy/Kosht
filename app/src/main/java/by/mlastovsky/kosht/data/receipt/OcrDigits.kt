@@ -43,7 +43,7 @@ object OcrDigits {
      * part of something longer, and this only ever repairs a whole one.
      */
     private val amountish = Regex(
-        "(?<![\\p{L}\\d.,/\\-:])([\\dOoОоQDlI|іӏЗзASsбGTBВgq]{1,9})" +
+        "(?<![\\p{L}\\d])(?<![\\d][.,/\\-:])([\\dOoОоQDlI|іӏЗзASsбGTBВgq]{1,9})" +
             "[.,]([\\dOoОоQDlI|іӏЗзASsбGTBВgq]{2})(?![\\p{L}\\d.,/\\-:])"
     )
 

@@ -26,6 +26,11 @@ class KoshtApp : Application() {
             container.ratesRepository.refreshIfStale()
         }
         applicationScope.launch {
+            // Once per launch, quietly: files whose record is gone and
+            // deletions every device already knows about.
+            container.housekeeping.run()
+        }
+        applicationScope.launch {
             // Touching it starts the watching; from here on an award is earned
             // the moment it is deserved, whichever screen happens to be open.
             container.awardTracker.unlocked.collect { key ->

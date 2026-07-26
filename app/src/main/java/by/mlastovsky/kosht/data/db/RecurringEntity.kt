@@ -26,7 +26,7 @@ import java.time.LocalDate
             onDelete = ForeignKey.RESTRICT
         )
     ],
-    indices = [Index("categoryId")]
+    indices = [Index("categoryId"), Index("uid")]
 )
 data class RecurringEntity(
     @PrimaryKey(autoGenerate = true)
