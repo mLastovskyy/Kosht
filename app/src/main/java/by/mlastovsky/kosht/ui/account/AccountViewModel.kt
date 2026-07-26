@@ -85,7 +85,8 @@ sealed interface SyncReport {
 
 class AccountViewModel(
     private val accounts: SyncAccountRepository,
-    private val syncEngine: SyncEngine
+    private val syncEngine: SyncEngine,
+    private val settings: by.mlastovsky.kosht.data.SettingsRepository
 ) : ViewModel() {
 
     val account: StateFlow<AccountState?> = accounts.state
@@ -346,8 +347,31 @@ class AccountViewModel(
         }
     }
 
+    /**
+     * Switching photo sync on records the consent behind it; switching it off
+     * deletes the uploaded copies before the switch is even reported as done,
+     * because a withdrawn consent that leaves the files behind is not one.
+     */
+    fun setPhotoSync(enabled: Boolean, onPurged: (Boolean) -> Unit = {}) {
+        viewModelScope.launch {
+            if (enabled) {
+                settings.setSyncPhotos(true)
+                accounts.setPhotoConsent(true)
+            } else {
+                accounts.setPhotoConsent(false)
+                val purged = syncEngine.purgePhotos()
+                settings.setSyncPhotos(false)
+                onPurged(purged)
+            }
+        }
+    }
+
     fun deleteAccount(onDone: (Boolean) -> Unit) {
         viewModelScope.launch {
+            // Deleting the account cascades through the database, but objects
+            // in storage are not rows: they have to be asked to go, and this
+            // is the last moment there is a session to ask with.
+            syncEngine.purgePhotos()
             val deleted = accounts.deleteAccount()
             if (deleted) syncEngine.resetCursor()
             onDone(deleted)

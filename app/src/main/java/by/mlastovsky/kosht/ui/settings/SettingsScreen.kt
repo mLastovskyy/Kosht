@@ -22,15 +22,16 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.Article
 import androidx.compose.material.icons.automirrored.rounded.HelpOutline
 import androidx.compose.material.icons.automirrored.rounded.Logout
+import androidx.compose.material.icons.automirrored.rounded.MenuBook
 import androidx.compose.material.icons.rounded.DeleteForever
 import androidx.compose.material.icons.rounded.Download
 import androidx.compose.material.icons.rounded.EmojiEvents
-import androidx.compose.material.icons.rounded.MenuBook
 import androidx.compose.material.icons.rounded.MarkEmailRead
 import androidx.compose.material.icons.rounded.PrivacyTip
 import androidx.compose.material.icons.rounded.AccountBalanceWallet
 import androidx.compose.material.icons.rounded.CloudDone
 import androidx.compose.material.icons.rounded.CloudOff
+import androidx.compose.material.icons.rounded.CloudQueue
 import androidx.compose.material.icons.rounded.CloudSync
 import androidx.compose.material.icons.rounded.PersonAddAlt
 import androidx.compose.material.icons.rounded.Sync
@@ -47,6 +48,7 @@ import androidx.compose.material.icons.rounded.Language
 import androidx.compose.material.icons.rounded.NotificationsActive
 import androidx.compose.material.icons.rounded.Palette
 import androidx.compose.material.icons.rounded.Payments
+import androidx.compose.material.icons.rounded.PhotoLibrary
 import androidx.compose.material.icons.rounded.Repeat
 import androidx.compose.material.icons.rounded.Speed
 import androidx.compose.material.icons.rounded.Summarize
@@ -55,6 +57,7 @@ import androidx.compose.material3.Checkbox
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.ListItem
 import androidx.compose.material3.ListItemDefaults
@@ -381,7 +384,7 @@ fun SettingsScreen(
 
         if (accountViewModel.isConfigured) {
             SectionHeader(stringResource(R.string.account_title))
-            SettingsCard { AccountSettings(accountViewModel) }
+            SettingsCard { AccountSettings(accountViewModel, current.syncPhotos) }
         }
 
         SectionHeader(stringResource(R.string.settings_about))
@@ -411,7 +414,7 @@ fun SettingsScreen(
         )
         DocumentRow(
             titleRes = R.string.guide_pdf_title,
-            icon = Icons.Rounded.MenuBook,
+            icon = Icons.AutoMirrored.Rounded.MenuBook,
             asset = "manual.pdf",
             fileName = "kosht-manual.pdf"
         )
@@ -696,7 +699,10 @@ private fun DailyBudgetDialog(
  * looking for that under "documents" is looking in the wrong place.
  */
 @Composable
-private fun AccountSettings(viewModel: by.mlastovsky.kosht.ui.account.AccountViewModel) {
+private fun AccountSettings(
+    viewModel: by.mlastovsky.kosht.ui.account.AccountViewModel,
+    photoSync: Boolean
+) {
     val context = LocalContext.current
     val account by viewModel.account.collectAsStateWithLifecycle()
     val lastSyncAt by viewModel.lastSyncAt.collectAsStateWithLifecycle()
@@ -705,6 +711,7 @@ private fun AccountSettings(viewModel: by.mlastovsky.kosht.ui.account.AccountVie
     var showDetails by remember { mutableStateOf(false) }
     var confirmSignOut by remember { mutableStateOf(false) }
     var confirmDelete by remember { mutableStateOf(false) }
+    val purgedMessage = stringResource(R.string.account_photos_purged)
 
     val doneMessage = stringResource(R.string.account_sync_done)
     val offlineMessage = stringResource(R.string.account_sync_offline)
@@ -731,6 +738,17 @@ private fun AccountSettings(viewModel: by.mlastovsky.kosht.ui.account.AccountVie
         }
     }
 
+    // Turning it off deletes the uploaded copies before reporting back.
+    fun togglePhotoSync(enabled: Boolean) {
+        viewModel.setPhotoSync(enabled) { purged ->
+            if (purged) {
+                android.widget.Toast
+                    .makeText(context, purgedMessage, android.widget.Toast.LENGTH_LONG)
+                    .show()
+            }
+        }
+    }
+
     val current = account
     if (current == null || !current.signedIn) {
         ListItem(
@@ -751,8 +769,10 @@ private fun AccountSettings(viewModel: by.mlastovsky.kosht.ui.account.AccountVie
             modifier = Modifier.clickable { viewModel.startSignUp() }
         )
     } else {
-        // A long address and a long date both have to be cut to one line, so
-        // tapping the row says the whole thing properly.
+        // One row does the work of two: it reads as status, the icon on the
+        // right syncs, and tapping the row spells out what a single line has
+        // to cut short. The icon is also the progress indicator — a spinner
+        // exactly where the button was, rather than somewhere else on screen.
         ListItem(
             headlineContent = {
                 Text(
@@ -763,25 +783,40 @@ private fun AccountSettings(viewModel: by.mlastovsky.kosht.ui.account.AccountVie
             },
             supportingContent = {
                 Text(
-                    text = by.mlastovsky.kosht.ui.account.lastSyncLabel(lastSyncAt),
+                    text = if (syncing) {
+                        stringResource(R.string.account_syncing)
+                    } else {
+                        by.mlastovsky.kosht.ui.account.lastSyncLabel(lastSyncAt)
+                    },
                     maxLines = 1,
                     overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
                 )
             },
-            leadingContent = { Icon(Icons.Rounded.CloudDone, contentDescription = null) },
-            colors = transparentListColors(),
-            modifier = Modifier.clickable { showDetails = true }
-        )
-        ListItem(
-            headlineContent = { Text(stringResource(R.string.account_sync_now)) },
-            leadingContent = { Icon(Icons.Rounded.Sync, contentDescription = null) },
+            leadingContent = {
+                Icon(
+                    imageVector = if (lastSyncAt > 0) {
+                        Icons.Rounded.CloudDone
+                    } else {
+                        Icons.Rounded.CloudQueue
+                    },
+                    contentDescription = null
+                )
+            },
             trailingContent = {
                 if (syncing) {
-                    CircularProgressIndicator(Modifier.size(20.dp), strokeWidth = 2.dp)
+                    CircularProgressIndicator(Modifier.size(22.dp), strokeWidth = 2.dp)
+                } else {
+                    IconButton(onClick = viewModel::syncNow) {
+                        Icon(
+                            imageVector = Icons.Rounded.Sync,
+                            contentDescription = stringResource(R.string.account_sync_now),
+                            tint = MaterialTheme.colorScheme.primary
+                        )
+                    }
                 }
             },
             colors = transparentListColors(),
-            modifier = Modifier.clickable(enabled = !syncing, onClick = viewModel::syncNow)
+            modifier = Modifier.clickable { showDetails = true }
         )
         ListItem(
             headlineContent = { Text(stringResource(R.string.account_auto_sync)) },
@@ -792,6 +827,21 @@ private fun AccountSettings(viewModel: by.mlastovsky.kosht.ui.account.AccountVie
             },
             colors = transparentListColors(),
             modifier = Modifier.clickable { viewModel.setAutoSync(!current.autoSync) }
+        )
+        // The images say more about a person than the sums do, so this one is
+        // off until asked for, and switching it off takes the copies with it.
+        ListItem(
+            headlineContent = { Text(stringResource(R.string.account_sync_photos)) },
+            supportingContent = { Text(stringResource(R.string.account_sync_photos_hint)) },
+            leadingContent = { Icon(Icons.Rounded.PhotoLibrary, contentDescription = null) },
+            trailingContent = {
+                Switch(
+                    checked = photoSync,
+                    onCheckedChange = { enabled -> togglePhotoSync(enabled) }
+                )
+            },
+            colors = transparentListColors(),
+            modifier = Modifier.clickable { togglePhotoSync(!photoSync) }
         )
         ListItem(
             headlineContent = { Text(stringResource(R.string.account_sign_out)) },

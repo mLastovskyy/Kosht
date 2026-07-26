@@ -121,6 +121,29 @@ interface TransactionDao {
     @Query("UPDATE transactions SET categoryId = :to WHERE categoryId = :from")
     suspend fun reassignCategory(from: Long, to: Long)
 
+    // ---- Receipt photos in the cloud, when the user has asked for it -------
+
+    /** Photos taken here that the cloud has not been given yet. */
+    @Query("SELECT * FROM transactions WHERE photoPath IS NOT NULL AND photoKey IS NULL")
+    suspend fun photosToUpload(): List<TransactionEntity>
+
+    /** Photos another device uploaded and this one does not have a copy of. */
+    @Query("SELECT * FROM transactions WHERE photoKey IS NOT NULL AND photoPath IS NULL")
+    suspend fun photosToDownload(): List<TransactionEntity>
+
+    @Query("SELECT * FROM transactions WHERE photoKey IS NOT NULL")
+    suspend fun photosUploaded(): List<TransactionEntity>
+
+    @Query("UPDATE transactions SET photoKey = :key WHERE id = :id")
+    suspend fun setPhotoKey(id: Long, key: String?)
+
+    @Query("UPDATE transactions SET photoPath = :path WHERE id = :id")
+    suspend fun setPhotoPath(id: Long, path: String?)
+
+    /** Withdrawing consent: forget every key, the objects go with them. */
+    @Query("UPDATE transactions SET photoKey = NULL WHERE photoKey IS NOT NULL")
+    suspend fun clearPhotoKeys()
+
     /** Rescales every amount when the app currency changes. */
     @Query("UPDATE transactions SET amountMinor = CAST(ROUND(amountMinor * :factor) AS INTEGER)")
     suspend fun rescaleAmounts(factor: Double)

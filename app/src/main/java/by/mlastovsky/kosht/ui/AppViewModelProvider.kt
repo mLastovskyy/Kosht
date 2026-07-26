@@ -58,7 +58,8 @@ object AppViewModelProvider {
         initializer {
             by.mlastovsky.kosht.ui.account.AccountViewModel(
                 app().container.syncAccountRepository,
-                app().container.syncEngine
+                app().container.syncEngine,
+                app().container.settingsRepository
             )
         }
         initializer {
@@ -71,6 +72,12 @@ object AppViewModelProvider {
         }
         initializer {
             by.mlastovsky.kosht.ui.awards.AwardsViewModel(app().container.awardTracker)
+        }
+        initializer {
+            by.mlastovsky.kosht.ui.components.UndoDeleteViewModel(
+                app().container.transactionRepository,
+                app().container.photoStore
+            )
         }
         initializer {
             WalletViewModel(

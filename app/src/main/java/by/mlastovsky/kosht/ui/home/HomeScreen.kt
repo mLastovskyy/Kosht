@@ -86,6 +86,7 @@ fun HomeScreen(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     val displayName = profile.displayName("")
+                    val streakShown = state.loaded && state.showStreak && state.streakDays > 0
                     Text(
                         text = when {
                             !state.showGreeting -> ""
@@ -93,15 +94,20 @@ fun HomeScreen(
                             else -> stringResource(R.string.home_greeting, displayName)
                         },
                         style = MaterialTheme.typography.titleLarge,
-                        maxLines = 1,
+                        // A long name wraps rather than ending in dots: the
+                        // greeting is the one place the app says your name.
+                        maxLines = 2,
                         overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
                         modifier = Modifier.weight(1f)
                     )
-                    if (state.loaded && state.showStreak && state.streakDays > 0) {
+                    // The flame and the cup lead to the same screen, so only
+                    // one of them is ever on it — and the flame, which also
+                    // carries the count, wins whenever there is a streak.
+                    if (streakShown) {
                         Row(
                             verticalAlignment = Alignment.CenterVertically,
                             modifier = Modifier
-                                .padding(end = 8.dp)
+                                .padding(start = 8.dp)
                                 .clip(CircleShape)
                                 .background(MaterialTheme.colorScheme.surfaceContainerHigh)
                                 .clickable(onClick = onAchievementsClick)
@@ -109,7 +115,7 @@ fun HomeScreen(
                         ) {
                             Icon(
                                 Icons.Rounded.LocalFireDepartment,
-                                contentDescription = null,
+                                contentDescription = stringResource(R.string.achievements_title),
                                 tint = Color(0xFFFF7A00),
                                 modifier = Modifier.size(18.dp)
                             )
@@ -118,13 +124,14 @@ fun HomeScreen(
                                 style = MaterialTheme.typography.labelLarge
                             )
                         }
-                    }
-                    IconButton(onClick = onAchievementsClick) {
-                        Icon(
-                            Icons.Rounded.EmojiEvents,
-                            contentDescription = stringResource(R.string.achievements_title),
-                            tint = MaterialTheme.colorScheme.primary
-                        )
+                    } else {
+                        IconButton(onClick = onAchievementsClick) {
+                            Icon(
+                                Icons.Rounded.EmojiEvents,
+                                contentDescription = stringResource(R.string.achievements_title),
+                                tint = MaterialTheme.colorScheme.primary
+                            )
+                        }
                     }
                     Avatar(
                         photoPath = profile.photoPath,

@@ -1,5 +1,7 @@
 package by.mlastovsky.kosht.data.sync
 
+import by.mlastovsky.kosht.data.AppSettings
+import by.mlastovsky.kosht.data.SyncedSettings
 import by.mlastovsky.kosht.data.db.AccountEntity
 import by.mlastovsky.kosht.data.db.AwardEntity
 import by.mlastovsky.kosht.data.db.CategoryEntity
@@ -15,7 +17,9 @@ import by.mlastovsky.kosht.data.db.UidRef
 import by.mlastovsky.kosht.model.ChallengeType
 import by.mlastovsky.kosht.model.DebtDirection
 import by.mlastovsky.kosht.model.RecurringFrequency
+import by.mlastovsky.kosht.model.ThemeMode
 import by.mlastovsky.kosht.model.TransactionType
+import org.json.JSONArray
 import org.json.JSONObject
 
 /** One record as the cloud stores it. */
@@ -61,9 +65,10 @@ class UidIndex(
  * Field names match the Room entities so the stored JSON stays readable, e.g.
  * `select payload->>'amountMinor' from sync_rows where entity='transactions'`.
  *
- * Receipt photos are deliberately absent: only a local file path is stored,
- * which would be meaningless on another device. Amounts, dates and notes
- * travel; the image stays where it was taken.
+ * A photo's local path never travels -- it would be meaningless on another
+ * device. The image itself stays on the phone unless the user switches photo
+ * sync on, in which case the payload carries the name of the uploaded object
+ * and the file goes to storage rather than into this row.
  */
 object SyncPayloads {
 
@@ -79,6 +84,9 @@ object SyncPayloads {
             .put("accountUid", index.accountUid(row.accountId))
             .put("bynMinor", row.bynMinor)
             .put("receiptUrl", row.receiptUrl)
+            // Where the photo was uploaded, when the user asked for that. The
+            // local path still never travels -- only the object's name does.
+            .put("photoKey", row.photoKey)
     }
 
     fun toTransaction(
@@ -103,6 +111,7 @@ object SyncPayloads {
             receiptUrl = json.stringOrNull("receiptUrl"),
             // The link travels, the downloaded copy does not.
             receiptDocPath = local?.receiptDocPath,
+            photoKey = json.stringOrNull("photoKey") ?: local?.photoKey,
             sync = meta
         )
     }
@@ -274,6 +283,89 @@ object SyncPayloads {
         unlockedAt = json.getLong("unlockedAt"),
         sync = meta
     )
+
+    /**
+     * The settings row. Unlike the others it has no local id and no uid of its
+     * own — there is exactly one per account, under [SETTINGS_UID].
+     */
+    fun of(row: SyncedSettings): JSONObject = JSONObject()
+        .put("currencyCode", row.settings.currencyCode)
+        .put("themeMode", row.settings.themeMode.name)
+        .put("dynamicColors", row.settings.dynamicColors)
+        .put("notifyDailyReminder", row.settings.notifyDailyReminder)
+        .put("notifyRecurringDue", row.settings.notifyRecurringDue)
+        .put("notifyWeeklySummary", row.settings.notifyWeeklySummary)
+        .put("notifyAwards", row.settings.notifyAwards)
+        .put("dailyBudgetMinor", row.settings.dailyBudgetMinor)
+        .put("showGreeting", row.settings.showGreeting)
+        .put("showStreak", row.settings.showStreak)
+        .put("showRates", row.settings.showRates)
+        .put("convertOnCurrencyChange", row.settings.convertOnCurrencyChange)
+        .put("multiAccount", row.settings.multiAccount)
+        .put("reportFields", JSONArray(row.settings.reportFields.sorted()))
+        .put("reportPeriod", row.settings.reportPeriod)
+        .put("autoCalculator", row.settings.autoCalculator)
+        .put("syncPhotos", row.settings.syncPhotos)
+        .put("profileName", row.profileName)
+        .put("profileNickname", row.profileNickname)
+        .put("profileEmoji", row.profileEmoji)
+
+    /**
+     * [fallback] supplies anything an older or newer version of the app did
+     * not send, so one unknown field never resets a screenful of preferences.
+     */
+    fun toSettings(
+        json: JSONObject,
+        updatedAt: Long,
+        fallback: SyncedSettings
+    ): SyncedSettings {
+        val defaults = fallback.settings
+        return SyncedSettings(
+            updatedAt = updatedAt,
+            settings = AppSettings(
+                currencyCode = json.stringOrNull("currencyCode") ?: defaults.currencyCode,
+                themeMode = json.stringOrNull("themeMode")
+                    ?.let { runCatching { ThemeMode.valueOf(it) }.getOrNull() }
+                    ?: defaults.themeMode,
+                dynamicColors = json.optBoolean("dynamicColors", defaults.dynamicColors),
+                notifyDailyReminder = json.optBoolean(
+                    "notifyDailyReminder",
+                    defaults.notifyDailyReminder
+                ),
+                notifyRecurringDue = json.optBoolean(
+                    "notifyRecurringDue",
+                    defaults.notifyRecurringDue
+                ),
+                notifyWeeklySummary = json.optBoolean(
+                    "notifyWeeklySummary",
+                    defaults.notifyWeeklySummary
+                ),
+                notifyAwards = json.optBoolean("notifyAwards", defaults.notifyAwards),
+                dailyBudgetMinor = json.longOrNull("dailyBudgetMinor")
+                    ?: defaults.dailyBudgetMinor,
+                showGreeting = json.optBoolean("showGreeting", defaults.showGreeting),
+                showStreak = json.optBoolean("showStreak", defaults.showStreak),
+                showRates = json.optBoolean("showRates", defaults.showRates),
+                convertOnCurrencyChange = json.optBoolean(
+                    "convertOnCurrencyChange",
+                    defaults.convertOnCurrencyChange
+                ),
+                multiAccount = json.optBoolean("multiAccount", defaults.multiAccount),
+                reportFields = json.optJSONArray("reportFields")
+                    ?.let { array -> (0 until array.length()).map { array.getString(it) }.toSet() }
+                    ?: defaults.reportFields,
+                reportPeriod = json.stringOrNull("reportPeriod") ?: defaults.reportPeriod,
+                autoCalculator = json.optBoolean("autoCalculator", defaults.autoCalculator),
+                syncPhotos = json.optBoolean("syncPhotos", defaults.syncPhotos)
+            ),
+            profileName = json.stringOrNull("profileName").orEmpty(),
+            profileNickname = json.stringOrNull("profileNickname").orEmpty(),
+            profileEmoji = json.stringOrNull("profileEmoji")
+        )
+    }
+
+    /** One settings row per account, so its identity is a constant. */
+    const val SETTINGS_UID = "settings"
 }
 
 private fun JSONObject.stringOrNull(key: String): String? =

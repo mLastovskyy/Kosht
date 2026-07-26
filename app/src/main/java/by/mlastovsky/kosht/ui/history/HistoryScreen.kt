@@ -33,10 +33,6 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.rememberDateRangePickerState
-import androidx.compose.material3.SnackbarDuration
-import androidx.compose.material3.SnackbarHost
-import androidx.compose.material3.SnackbarHostState
-import androidx.compose.material3.SnackbarResult
 import androidx.compose.material3.SwipeToDismissBox
 import androidx.compose.material3.SwipeToDismissBoxValue
 import androidx.compose.material3.Text
@@ -46,7 +42,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -66,7 +61,6 @@ import by.mlastovsky.kosht.ui.components.TransactionRow
 import by.mlastovsky.kosht.ui.relativeDate
 import by.mlastovsky.kosht.ui.theme.KoshtTheme
 import by.mlastovsky.kosht.util.Money
-import kotlinx.coroutines.launch
 import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneOffset
@@ -79,10 +73,6 @@ fun HistoryScreen(
     viewModel: HistoryViewModel = viewModel(factory = AppViewModelProvider.Factory)
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
-    val snackbarHostState = remember { SnackbarHostState() }
-    val scope = rememberCoroutineScope()
-    val deletedMessage = stringResource(R.string.transaction_deleted)
-    val undoLabel = stringResource(R.string.undo)
     var showCategoryFilter by remember { mutableStateOf(false) }
     var showRangePicker by remember { mutableStateOf(false) }
 
@@ -230,19 +220,7 @@ fun HistoryScreen(
                         items(group.items, key = { it.transaction.id }) { item ->
                             DismissibleRow(
                                 modifier = Modifier.animateItem(),
-                                onDismiss = {
-                                    viewModel.delete(item)
-                                    scope.launch {
-                                        val result = snackbarHostState.showSnackbar(
-                                            message = deletedMessage,
-                                            actionLabel = undoLabel,
-                                            duration = SnackbarDuration.Short
-                                        )
-                                        if (result == SnackbarResult.ActionPerformed) {
-                                            viewModel.restore(item.transaction)
-                                        }
-                                    }
-                                }
+                                onDismiss = { viewModel.delete(item) }
                             ) {
                                 TransactionRow(
                                     item = item,
@@ -256,13 +234,6 @@ fun HistoryScreen(
                 }
             }
         }
-
-        SnackbarHost(
-            hostState = snackbarHostState,
-            modifier = Modifier
-                .align(Alignment.BottomCenter)
-                .padding(bottom = 8.dp)
-        )
     }
 
     if (showCategoryFilter) {

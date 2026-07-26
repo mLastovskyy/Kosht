@@ -37,8 +37,14 @@ data class SyncTombstoneEntity(
     val deletedAt: Long
 )
 
-/** Sync engine's view of one local table. */
-enum class SyncEntity(val table: String) {
+/**
+ * Sync engine's view of one kind of record.
+ *
+ * All but one are Room tables, which is why [local] exists: preferences live
+ * in DataStore, so there is nothing for the uid triggers to be installed on,
+ * but they still travel as an ordinary row in the cloud table.
+ */
+enum class SyncEntity(val table: String, val local: Boolean = true) {
     // Order matters on apply: rows others point at come first.
     ACCOUNTS("accounts"),
     CATEGORIES("categories"),
@@ -48,10 +54,16 @@ enum class SyncEntity(val table: String) {
     SAVINGS("savings"),
     CHALLENGES("challenges"),
     DEBTS("debts"),
-    AWARDS("awards");
+    AWARDS("awards"),
+
+    /** One row per account, holding the app's settings and the profile. */
+    SETTINGS("settings", local = false);
 
     companion object {
         fun of(table: String): SyncEntity? = entries.firstOrNull { it.table == table }
+
+        /** The ones backed by a table, i.e. everything the triggers apply to. */
+        val tables: List<SyncEntity> get() = entries.filter { it.local }
     }
 }
 

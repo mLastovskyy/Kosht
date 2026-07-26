@@ -27,6 +27,17 @@ class PhotoStore(private val context: Context) {
             }.getOrNull()
         }
 
+    /** Stores bytes that already are a JPEG, e.g. one fetched from the cloud. */
+    suspend fun save(bytes: ByteArray, subdir: String = "receipts"): String? =
+        withContext(Dispatchers.IO) {
+            runCatching {
+                val dir = File(context.filesDir, subdir).apply { mkdirs() }
+                val file = File(dir, "photo_${System.currentTimeMillis()}.jpg")
+                file.writeBytes(bytes)
+                file.absolutePath
+            }.getOrNull()
+        }
+
     fun delete(path: String?) {
         if (path.isNullOrBlank()) return
         runCatching {

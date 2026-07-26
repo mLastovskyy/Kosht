@@ -1,13 +1,18 @@
 package by.mlastovsky.kosht
 
+import by.mlastovsky.kosht.data.AppSettings
+import by.mlastovsky.kosht.data.SyncedSettings
 import by.mlastovsky.kosht.data.db.SyncMeta
 import by.mlastovsky.kosht.data.db.TransactionEntity
 import by.mlastovsky.kosht.data.db.UidRef
 import by.mlastovsky.kosht.data.sync.SyncPayloads
 import by.mlastovsky.kosht.data.sync.UidIndex
+import by.mlastovsky.kosht.model.ThemeMode
 import by.mlastovsky.kosht.model.TransactionType
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
+import org.junit.Assert.assertTrue
 import org.junit.Test
 
 /**
@@ -93,5 +98,88 @@ class SyncPayloadsTest {
     fun `a row whose category has not arrived yet is not sent`() {
         val orphan = local.copy(categoryId = 999)
         assertNull(SyncPayloads.of(orphan, here))
+    }
+
+    // ---- Settings ---------------------------------------------------------
+
+    private val defaults = AppSettings(
+        currencyCode = "BYN",
+        themeMode = ThemeMode.SYSTEM,
+        dynamicColors = false,
+        notifyDailyReminder = false,
+        notifyRecurringDue = true,
+        notifyWeeklySummary = false,
+        notifyAwards = true,
+        dailyBudgetMinor = 0,
+        showGreeting = true,
+        showStreak = true,
+        showRates = true,
+        convertOnCurrencyChange = true,
+        multiAccount = false,
+        reportFields = setOf("SPENT", "INCOME"),
+        reportPeriod = "MONTH",
+        autoCalculator = true,
+        syncPhotos = false
+    )
+
+    private val untouched = SyncedSettings(
+        updatedAt = 0,
+        settings = defaults,
+        profileName = "",
+        profileNickname = "",
+        profileEmoji = null
+    )
+
+    @Test
+    fun `settings survive the round trip to the other phone`() {
+        val mine = SyncedSettings(
+            updatedAt = 500,
+            settings = defaults.copy(
+                currencyCode = "USD",
+                themeMode = ThemeMode.DARK,
+                dynamicColors = true,
+                notifyRecurringDue = false,
+                dailyBudgetMinor = 4500,
+                showGreeting = false,
+                multiAccount = true,
+                reportFields = setOf("NET", "AVG_DAY", "FREE_DAYS"),
+                reportPeriod = "WEEK",
+                autoCalculator = false,
+                syncPhotos = true
+            ),
+            profileName = "Максим",
+            profileNickname = "mLastovskyy",
+            profileEmoji = "emoji:🦊"
+        )
+
+        val arrived = SyncPayloads.toSettings(SyncPayloads.of(mine), 500, untouched)
+
+        assertEquals(mine.settings, arrived.settings)
+        assertEquals("Максим", arrived.profileName)
+        assertEquals("mLastovskyy", arrived.profileNickname)
+        assertEquals("emoji:🦊", arrived.profileEmoji)
+        assertEquals(500L, arrived.updatedAt)
+    }
+
+    @Test
+    fun `a field the other version never sent keeps its local value`() {
+        val partial = SyncPayloads.of(untouched.copy(settings = defaults))
+        partial.remove("notifyAwards")
+        partial.remove("reportPeriod")
+
+        val mine = untouched.copy(
+            settings = defaults.copy(notifyAwards = false, reportPeriod = "YEAR")
+        )
+        val arrived = SyncPayloads.toSettings(partial, 900, mine)
+
+        // Missing is not the same as "switch it off".
+        assertFalse(arrived.settings.notifyAwards)
+        assertEquals("YEAR", arrived.settings.reportPeriod)
+    }
+
+    @Test
+    fun `a photo avatar is not offered to the other device`() {
+        val photo = untouched.copy(profileEmoji = null)
+        assertTrue(SyncPayloads.of(photo).isNull("profileEmoji"))
     }
 }

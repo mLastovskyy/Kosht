@@ -139,7 +139,12 @@ class HistoryViewModel(
     fun setQuery(query: String) = filters.update { it.copy(query = query.take(60)) }
 
     fun delete(item: TransactionWithCategory) {
-        viewModelScope.launch { repository.deleteTransaction(item.transaction) }
+        viewModelScope.launch {
+            repository.deleteTransaction(item.transaction)
+            // The offer to undo it, and the cleanup of its files if nobody
+            // does, are handled in one place for the whole app.
+            by.mlastovsky.kosht.data.DeletionEvents.report(item.transaction)
+        }
     }
 
     /** Re-inserts a just-deleted transaction with its original id. */

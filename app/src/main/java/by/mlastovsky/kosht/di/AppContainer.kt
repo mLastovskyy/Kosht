@@ -105,7 +105,22 @@ class AppContainer(
         by.mlastovsky.kosht.data.sync.SyncAccountRepository(appContext, supabaseApi)
     }
 
+    private val photoSync: by.mlastovsky.kosht.data.sync.PhotoSync by lazy {
+        by.mlastovsky.kosht.data.sync.PhotoSync(
+            api = supabaseApi,
+            settings = settingsRepository,
+            transactions = database.transactionDao(),
+            photos = photoStore
+        )
+    }
+
     val syncEngine: by.mlastovsky.kosht.data.sync.SyncEngine by lazy {
-        by.mlastovsky.kosht.data.sync.SyncEngine(database, supabaseApi, syncAccountRepository)
+        by.mlastovsky.kosht.data.sync.SyncEngine(
+            database,
+            supabaseApi,
+            syncAccountRepository,
+            settingsRepository,
+            photoSync
+        )
     }
 }

@@ -40,7 +40,9 @@ sealed interface SyncOutcome {
 class SyncEngine(
     private val database: KoshtDatabase,
     private val api: SupabaseApi,
-    private val account: SyncAccountRepository
+    private val account: SyncAccountRepository,
+    private val settings: by.mlastovsky.kosht.data.SettingsRepository,
+    private val photos: PhotoSync
 ) {
 
     private val dao = database.syncDao()
@@ -60,6 +62,9 @@ class SyncEngine(
                 val cursor = dao.cursor() ?: SyncCursorEntity()
                 val pushed = push(session, cursor.pushedThrough)
                 val pulled = pull(session, cursor.pulledThrough)
+                // After the figures, and never at their expense: a photo that
+                // does not make it leaves everything else properly synced.
+                runCatching { photos.exchange(session) }
                 dao.saveCursor(
                     pulled = maxOf(cursor.pulledThrough, pulled.through),
                     // Deliberately not raised to the remote watermark: a local
@@ -78,6 +83,16 @@ class SyncEngine(
 
     /** Forgets both watermarks so the next sync exchanges everything again. */
     suspend fun resetCursor() = dao.resetCursor()
+
+    /**
+     * Deletes every receipt photo this account has in the cloud. Called when
+     * photo sync is switched off: a consent withdrawn has to take the files
+     * with it, and the originals are on the phone regardless.
+     */
+    suspend fun purgePhotos(): Boolean {
+        val session = account.validAccessToken() ?: return false
+        return runCatching { photos.purge(session) }.isSuccess
+    }
 
     // ---- Push -------------------------------------------------------------
 
@@ -115,6 +130,18 @@ class SyncEngine(
         dao.awardsChanged(since).forEach {
             rows += row(SyncEntity.AWARDS, it.sync, SyncPayloads.of(it))
         }
+        // Preferences are not a table and have no trigger, so they carry their
+        // own stamp and there is exactly one row of them per account.
+        val prefs = settings.syncSnapshot()
+        if (prefs.updatedAt > since) {
+            rows += SyncRow(
+                entity = SyncEntity.SETTINGS,
+                uid = SyncPayloads.SETTINGS_UID,
+                updatedAt = prefs.updatedAt,
+                deleted = false,
+                payload = SyncPayloads.of(prefs)
+            )
+        }
 
         val live = rows.filterNotNull()
         val tombstones = dao.tombstones().mapNotNull { stone ->
@@ -130,6 +157,14 @@ class SyncEngine(
             val array = JSONArray()
             batch.forEach { array.put(it.toRemote(session.userId)) }
             api.push(session.accessToken, array)
+        }
+        // The tombstone is the last thing that knows a record existed, so the
+        // photo it had is deleted while that knowledge is still here.
+        runCatching {
+            photos.deleteFor(
+                session = session,
+                uids = tombstones.filter { it.entity == SyncEntity.TRANSACTIONS }.map { it.uid }
+            )
         }
         // Only once the server has them is it safe to forget the deletes.
         tombstones.forEach { dao.dropTombstone(it.entity.table, it.uid) }
@@ -167,7 +202,11 @@ class SyncEngine(
             val page = api.pull(session.accessToken, cursor, PULL_PAGE)
             val rows = page.toSyncRows()
             if (rows.isEmpty()) break
-            val result = apply(rows)
+            // Preferences live outside the database, so they are applied
+            // outside its transaction.
+            val (prefs, records) = rows.partition { it.entity == SyncEntity.SETTINGS }
+            applySettings(prefs)
+            val result = apply(records)
             applied += result.applied
             skipped += result.skipped
             val newest = rows.maxOf { it.updatedAt }
@@ -189,6 +228,18 @@ class SyncEngine(
             deleted = json.optBoolean("deleted"),
             payload = json.optJSONObject("payload") ?: JSONObject()
         )
+    }
+
+    /**
+     * Settings from another device, applied only when they are newer than what
+     * this one last changed. A tombstone for them is meaningless: there is one
+     * row per account and it is never deleted, only overwritten.
+     */
+    private suspend fun applySettings(rows: List<SyncRow>) {
+        val newest = rows.filterNot { it.deleted }.maxByOrNull { it.updatedAt } ?: return
+        val local = settings.syncSnapshot()
+        if (newest.updatedAt <= local.updatedAt) return
+        settings.applySynced(SyncPayloads.toSettings(newest.payload, newest.updatedAt, local))
     }
 
     // ---- Merge ------------------------------------------------------------

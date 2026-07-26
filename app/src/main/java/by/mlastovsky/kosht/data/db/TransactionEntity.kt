@@ -50,6 +50,12 @@ data class TransactionEntity(
     val receiptUrl: String? = null,
     /** Offline copy of that receipt. Like the photo, it stays on this device. */
     val receiptDocPath: String? = null,
+    /**
+     * Object name the photo was uploaded under, set only once the user has
+     * switched photo sync on. Null means the image has never left the phone —
+     * which is every record until somebody asks otherwise.
+     */
+    val photoKey: String? = null,
     @Embedded
     val sync: SyncMeta = SyncMeta()
 )

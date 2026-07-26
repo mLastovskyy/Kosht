@@ -75,8 +75,9 @@ Signing up is an email, a six-digit code that Kosht mails you (good for five min
 - **Per-record merge.** Two phones edited offline both keep their work; "newest wins" only ever applies within one and the same record.
 - **Deletions travel too**, so something you removed on one device does not come back from the other.
 - **Offline is the normal case.** Keep adding records with no connection — everything goes up the moment the internet returns.
-- **Settings → Account** shows the address, when it last synced, a manual *Sync now* and the automatic switch. Signing out leaves every record on the phone.
-- Receipt photos stay on the device: amounts, dates and notes travel, images do not.
+- **Settings → Account** is one row: the address, when it last synced, and a sync button that turns into a spinner while it works. Tap the row for the full address, the exact time and the state of automatic sync.
+- **Your settings travel too** — currency, theme, interface and notification switches, the daily budget, the report you built and your name and nickname, so a second phone looks and behaves like the first. The interface language stays with the device.
+- **Receipt photos stay on the device unless you say otherwise.** Switching *Sync receipt photos* on is a consent of its own, recorded as one: the images then live in a private bucket in your own folder, which no other account can read, write or delete. Switching it off deletes the uploaded copies and keeps the originals here.
 
 ### 📊 Statistics three ways
 - **Charts** — an animated category donut and daily spending bars

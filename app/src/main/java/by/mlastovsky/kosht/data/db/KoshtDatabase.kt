@@ -23,7 +23,7 @@ import by.mlastovsky.kosht.data.CategorySeed
         SyncTombstoneEntity::class,
         SyncCursorEntity::class
     ],
-    version = 12,
+    version = 13,
     exportSchema = false
 )
 abstract class KoshtDatabase : RoomDatabase() {
@@ -58,7 +58,7 @@ abstract class KoshtDatabase : RoomDatabase() {
                 .addMigrations(
                     MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6,
                     MIGRATION_6_7, MIGRATION_7_8, MIGRATION_8_9, MIGRATION_9_10,
-                    MIGRATION_10_11, MIGRATION_11_12
+                    MIGRATION_10_11, MIGRATION_11_12, MIGRATION_12_13
                 )
                 .build()
 
@@ -240,7 +240,7 @@ abstract class KoshtDatabase : RoomDatabase() {
                         "`pushedThrough` INTEGER NOT NULL, `lastSyncAt` INTEGER NOT NULL, " +
                         "PRIMARY KEY(`id`))"
                 )
-                SyncEntity.entries.forEach { entity ->
+                SyncEntity.tables.forEach { entity ->
                     val table = entity.table
                     db.execSQL("ALTER TABLE `$table` ADD COLUMN `uid` TEXT NOT NULL DEFAULT ''")
                     db.execSQL(
@@ -258,6 +258,17 @@ abstract class KoshtDatabase : RoomDatabase() {
             override fun migrate(db: SupportSQLiteDatabase) {
                 db.execSQL("ALTER TABLE transactions ADD COLUMN receiptUrl TEXT")
                 db.execSQL("ALTER TABLE transactions ADD COLUMN receiptDocPath TEXT")
+            }
+        }
+
+        /**
+         * The object name a receipt photo was uploaded under, once the user
+         * has asked for photos to be synced. Null means "this photo has never
+         * left the phone", which is what every existing row is.
+         */
+        private val MIGRATION_12_13 = object : Migration(12, 13) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("ALTER TABLE transactions ADD COLUMN photoKey TEXT")
             }
         }
 
@@ -280,7 +291,7 @@ abstract class KoshtDatabase : RoomDatabase() {
          * cascades — stays sync-correct without anyone remembering to stamp it.
          */
         private fun installSyncTriggers(db: SupportSQLiteDatabase) {
-            SyncEntity.entries.forEach { entity ->
+            SyncEntity.tables.forEach { entity ->
                 val table = entity.table
                 val uid = when (entity) {
                     SyncEntity.AWARDS -> "NEW.`key`"

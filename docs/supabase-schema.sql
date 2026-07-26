@@ -23,8 +23,20 @@ create table if not exists public.sync_rows (
     constraint sync_rows_entity_known check (
         entity in (
             'accounts', 'categories', 'saving_goals', 'transactions',
-            'recurring', 'savings', 'challenges', 'debts', 'awards'
+            'recurring', 'savings', 'challenges', 'debts', 'awards',
+            -- Not a table: the app's preferences and profile, one row per
+            -- account, so a second phone looks and behaves like the first.
+            'settings'
         )
+    )
+);
+
+-- Older projects were created before 'settings' existed as an entity.
+alter table public.sync_rows drop constraint if exists sync_rows_entity_known;
+alter table public.sync_rows add constraint sync_rows_entity_known check (
+    entity in (
+        'accounts', 'categories', 'saving_goals', 'transactions',
+        'recurring', 'savings', 'challenges', 'debts', 'awards', 'settings'
     )
 );
 
@@ -45,6 +57,59 @@ create policy sync_rows_owner on public.sync_rows
     to authenticated
     using (user_id = auth.uid())
     with check (user_id = auth.uid());
+
+-- ---------------------------------------------------------------------------
+-- Receipt photos, and only for those who asked.
+--
+-- The app never uploads an image unless "sync receipt photos" has been
+-- switched on, which is recorded in the consent ledger below. The bucket is
+-- private, and an object's first path segment is its owner's id, which is what
+-- the policies check -- the same arrangement row level security gives the
+-- data. A JPEG cap keeps the bucket from becoming general-purpose storage.
+-- ---------------------------------------------------------------------------
+
+insert into storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
+values ('receipts', 'receipts', false, 5242880, array['image/jpeg'])
+on conflict (id) do update
+    set public = false,
+        file_size_limit = 5242880,
+        allowed_mime_types = array['image/jpeg'];
+
+drop policy if exists receipts_owner_read on storage.objects;
+create policy receipts_owner_read on storage.objects
+    for select to authenticated
+    using (
+        bucket_id = 'receipts'
+        and (storage.foldername(name))[1] = auth.uid()::text
+    );
+
+drop policy if exists receipts_owner_write on storage.objects;
+create policy receipts_owner_write on storage.objects
+    for insert to authenticated
+    with check (
+        bucket_id = 'receipts'
+        and (storage.foldername(name))[1] = auth.uid()::text
+    );
+
+drop policy if exists receipts_owner_update on storage.objects;
+create policy receipts_owner_update on storage.objects
+    for update to authenticated
+    using (
+        bucket_id = 'receipts'
+        and (storage.foldername(name))[1] = auth.uid()::text
+    )
+    with check (
+        bucket_id = 'receipts'
+        and (storage.foldername(name))[1] = auth.uid()::text
+    );
+
+drop policy if exists receipts_owner_delete on storage.objects;
+create policy receipts_owner_delete on storage.objects
+    for delete to authenticated
+    using (
+        bucket_id = 'receipts'
+        and (storage.foldername(name))[1] = auth.uid()::text
+    );
 
 -- Is this address already taken?
 --

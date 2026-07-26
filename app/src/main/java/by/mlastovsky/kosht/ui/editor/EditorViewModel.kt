@@ -452,9 +452,11 @@ class EditorViewModel(
     fun delete(onDone: () -> Unit) {
         val original = draft.value.original ?: return
         viewModelScope.launch {
-            photoStore.delete(original.photoPath)
-            photoStore.delete(original.receiptDocPath)
             repository.deleteTransaction(original)
+            // The photo and the downloaded receipt are deleted only once the
+            // undo offer has passed -- restoring a record whose picture is
+            // already gone would put it back pointing at nothing.
+            by.mlastovsky.kosht.data.DeletionEvents.report(original)
             onDone()
         }
     }

@@ -142,6 +142,22 @@ class SyncAccountRepository(
         return api.currentConsent(session, CONSENT_MARKETING)
     }
 
+    /**
+     * Uploading receipt photos is a separate consent, recorded in the same
+     * append-only ledger: the images say far more about a person than the sums
+     * do, and switching it on has to be as provable as accepting the terms.
+     */
+    suspend fun setPhotoConsent(granted: Boolean): Boolean {
+        val session = validAccessToken() ?: return false
+        return api.recordConsent(
+            session = session,
+            kind = CONSENT_PHOTOS,
+            granted = granted,
+            policyVersion = POLICY_VERSION,
+            source = "settings"
+        )
+    }
+
     /** Erases the cloud copy and forgets the session on this device. */
     suspend fun deleteAccount(): Boolean {
         val session = validAccessToken() ?: return false
@@ -178,9 +194,10 @@ class SyncAccountRepository(
     companion object {
         const val CONSENT_TERMS = "privacy_policy"
         const val CONSENT_MARKETING = "marketing_email"
+        const val CONSENT_PHOTOS = "receipt_photos"
 
         /** Bump together with the documents, so old agreements stay dated. */
-        const val POLICY_VERSION = "1.0"
+        const val POLICY_VERSION = "1.1"
     }
 
     private suspend fun clear() {

@@ -73,8 +73,15 @@ fun KoshtRoot(
     val isMainTab = MainTabs.any { it.route == currentRoute }
     val showFab = currentRoute == Routes.HOME || currentRoute == Routes.HISTORY
 
+    // One host for the whole app: the Scaffold that owns the add button is the
+    // only thing that can keep a snackbar out from under it.
+    val snackbarHostState = androidx.compose.runtime.remember {
+        androidx.compose.material3.SnackbarHostState()
+    }
+
     Scaffold(
         containerColor = MaterialTheme.colorScheme.background,
+        snackbarHost = { androidx.compose.material3.SnackbarHost(snackbarHostState) },
         bottomBar = {
             AnimatedVisibility(
                 visible = isMainTab,
@@ -184,6 +191,9 @@ fun KoshtRoot(
 
     // Above every screen, because an award is earned on whichever one is open.
     by.mlastovsky.kosht.ui.awards.AwardCelebration()
+
+    // Same reason: a record can be deleted from History or from the editor.
+    by.mlastovsky.kosht.ui.components.UndoDeleteSnackbar(snackbarHostState)
 }
 
 /**

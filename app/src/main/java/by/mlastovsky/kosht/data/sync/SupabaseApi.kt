@@ -253,6 +253,75 @@ class SupabaseApi(
         }
     }
 
+    // ---- Receipt photos ---------------------------------------------------
+
+    /**
+     * Storage for receipt photos, used only when the user has switched photo
+     * sync on. Objects live under `<user id>/<record uid>.jpg`, and the bucket
+     * policies allow an account to touch nothing but its own folder — the same
+     * arrangement row level security gives the data.
+     *
+     * Every call answers with a plain boolean or null: a photo that fails to
+     * travel is a photo that stays where it is, never a failed sync.
+     */
+    suspend fun uploadPhoto(
+        session: SupabaseSession,
+        path: String,
+        bytes: ByteArray
+    ): Boolean = withContext(Dispatchers.IO) {
+        runCatching {
+            sendBytes(
+                url = "$baseUrl/storage/v1/object/$PHOTO_BUCKET/$path",
+                method = "POST",
+                token = session.accessToken,
+                body = bytes,
+                contentType = "image/jpeg",
+                // Re-uploading the same record must replace, not fail.
+                extraHeaders = mapOf("x-upsert" to "true")
+            )
+            true
+        }.getOrDefault(false)
+    }
+
+    suspend fun downloadPhoto(session: SupabaseSession, path: String): ByteArray? =
+        withContext(Dispatchers.IO) {
+            runCatching {
+                readBytes("$baseUrl/storage/v1/object/$PHOTO_BUCKET/$path", session.accessToken)
+            }.getOrNull()
+        }
+
+    suspend fun deletePhoto(session: SupabaseSession, path: String): Boolean =
+        withContext(Dispatchers.IO) {
+            runCatching {
+                send(
+                    url = "$baseUrl/storage/v1/object/$PHOTO_BUCKET/$path",
+                    method = "DELETE",
+                    token = session.accessToken,
+                    body = null
+                )
+                true
+            }.getOrDefault(false)
+        }
+
+    /** Object names in the account's own folder, for cleaning up after itself. */
+    suspend fun listPhotos(session: SupabaseSession): List<String> = withContext(Dispatchers.IO) {
+        runCatching {
+            val body = JSONObject()
+                .put("prefix", "")
+                .put("limit", PHOTO_LIST_LIMIT)
+            val response = send(
+                url = "$baseUrl/storage/v1/object/list/$PHOTO_BUCKET/${session.userId}",
+                method = "POST",
+                token = session.accessToken,
+                body = body.toString()
+            )
+            val array = JSONArray(response)
+            (0 until array.length()).mapNotNull { index ->
+                array.optJSONObject(index)?.optString("name")?.takeIf { it.isNotBlank() }
+            }
+        }.getOrDefault(emptyList())
+    }
+
     /** Wipes the account's cloud copy; used when the user disconnects. */
     suspend fun deleteAll(accessToken: String, userId: String) {
         withContext(Dispatchers.IO) {
@@ -338,10 +407,70 @@ class SupabaseApi(
         }
     }
 
+    /** Same plumbing as [send], for bodies that are bytes rather than text. */
+    private fun sendBytes(
+        url: String,
+        method: String,
+        token: String?,
+        body: ByteArray,
+        contentType: String,
+        extraHeaders: Map<String, String> = emptyMap()
+    ): String {
+        val connection = (URL(url).openConnection() as HttpURLConnection).apply {
+            requestMethod = method
+            connectTimeout = 15_000
+            readTimeout = 60_000
+            doOutput = true
+            setRequestProperty("apikey", anonKey)
+            setRequestProperty("Authorization", "Bearer ${token ?: anonKey}")
+            setRequestProperty("Content-Type", contentType)
+            // Photos are a few hundred kilobytes; streaming keeps them out of
+            // a second in-memory copy.
+            setFixedLengthStreamingMode(body.size)
+            extraHeaders.forEach(::setRequestProperty)
+        }
+        return try {
+            connection.outputStream.use { it.write(body) }
+            val code = connection.responseCode
+            if (code !in 200..299) {
+                throw HttpFailure(code, connection.errorStream?.readText().orEmpty())
+            }
+            connection.inputStream.readText()
+        } finally {
+            connection.disconnect()
+        }
+    }
+
+    private fun readBytes(url: String, token: String): ByteArray {
+        val connection = (URL(url).openConnection() as HttpURLConnection).apply {
+            requestMethod = "GET"
+            connectTimeout = 15_000
+            readTimeout = 60_000
+            setRequestProperty("apikey", anonKey)
+            setRequestProperty("Authorization", "Bearer $token")
+        }
+        return try {
+            val code = connection.responseCode
+            if (code !in 200..299) {
+                throw HttpFailure(code, connection.errorStream?.readText().orEmpty())
+            }
+            connection.inputStream.use { it.readBytes() }
+        } finally {
+            connection.disconnect()
+        }
+    }
+
     private fun java.io.InputStream.readText(): String =
         bufferedReader().use { it.readText() }
 
     /** Signals a stale access token, which the engine answers with a refresh. */
     fun isUnauthorized(error: Throwable): Boolean =
         error is HttpFailure && (error.code == 401 || error.code == 403)
+
+    private companion object {
+        const val PHOTO_BUCKET = "receipts"
+
+        /** A personal archive of receipts does not run to five figures. */
+        const val PHOTO_LIST_LIMIT = 5000
+    }
 }

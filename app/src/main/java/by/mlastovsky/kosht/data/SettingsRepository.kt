@@ -16,6 +16,7 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 
 private val Context.dataStore: DataStore<Preferences> by preferencesDataStore(name = "settings")
@@ -43,7 +44,24 @@ data class AppSettings(
     /** Name of the [by.mlastovsky.kosht.ui.stats.ReportPeriod] the report covers. */
     val reportPeriod: String,
     /** Open the calculator automatically when adding a new record. */
-    val autoCalculator: Boolean
+    val autoCalculator: Boolean,
+    /**
+     * Upload receipt photos to the account as well as the figures. Off unless
+     * asked for: the images are the most revealing thing the app holds, and
+     * the privacy policy treats switching this on as a consent of its own.
+     */
+    val syncPhotos: Boolean
+)
+
+/** The settings and profile as they travel between a person's devices. */
+data class SyncedSettings(
+    /** Epoch millis of the last change on the device it came from. */
+    val updatedAt: Long,
+    val settings: AppSettings,
+    val profileName: String,
+    val profileNickname: String,
+    /** Built-in avatar, e.g. "emoji:🦊"; null when a photo or nothing is set. */
+    val profileEmoji: String?
 )
 
 data class UserProfile(
@@ -91,42 +109,65 @@ class SettingsRepository(private val context: Context) {
         val reportFields = stringSetPreferencesKey("report_fields")
         val reportPeriod = stringPreferencesKey("report_period")
         val autoCalculator = booleanPreferencesKey("auto_calculator")
+        val syncPhotos = booleanPreferencesKey("sync_photos")
+
+        /**
+         * When any of the settings above last changed, epoch millis. Room's
+         * tables get this from triggers; DataStore has no such thing, so every
+         * setter goes through [bumped] and stamps it here.
+         */
+        val updatedAt = longPreferencesKey("settings_updated_at")
+    }
+
+    /**
+     * Writes preferences and records when it happened, which is what lets the
+     * newer side win when two devices have both been fiddling with settings.
+     */
+    private suspend fun bumped(block: (androidx.datastore.preferences.core.MutablePreferences) -> Unit) {
+        context.dataStore.edit { prefs ->
+            block(prefs)
+            prefs[Keys.updatedAt] = System.currentTimeMillis()
+        }
     }
 
     suspend fun setReportFields(fields: Set<String>) {
-        context.dataStore.edit { it[Keys.reportFields] = fields }
+        bumped { it[Keys.reportFields] = fields }
     }
 
     suspend fun setReportPeriod(period: String) {
-        context.dataStore.edit { it[Keys.reportPeriod] = period }
+        bumped { it[Keys.reportPeriod] = period }
     }
 
     suspend fun setAutoCalculator(value: Boolean) {
-        context.dataStore.edit { it[Keys.autoCalculator] = value }
+        bumped { it[Keys.autoCalculator] = value }
+    }
+
+    suspend fun setSyncPhotos(value: Boolean) {
+        bumped { it[Keys.syncPhotos] = value }
     }
 
     suspend fun setMultiAccount(value: Boolean) {
-        context.dataStore.edit { it[Keys.multiAccount] = value }
+        bumped { it[Keys.multiAccount] = value }
     }
 
     suspend fun setConvertOnCurrencyChange(value: Boolean) {
-        context.dataStore.edit { it[Keys.convertOnCurrencyChange] = value }
+        bumped { it[Keys.convertOnCurrencyChange] = value }
     }
 
     suspend fun setShowGreeting(value: Boolean) {
-        context.dataStore.edit { it[Keys.showGreeting] = value }
+        bumped { it[Keys.showGreeting] = value }
     }
 
     suspend fun setShowStreak(value: Boolean) {
-        context.dataStore.edit { it[Keys.showStreak] = value }
+        bumped { it[Keys.showStreak] = value }
     }
 
     suspend fun setShowRates(value: Boolean) {
-        context.dataStore.edit { it[Keys.showRates] = value }
+        bumped { it[Keys.showRates] = value }
     }
 
     suspend fun setDailyBudgetMinor(value: Long) {
-        context.dataStore.edit { it[Keys.dailyBudgetMinor] = value.coerceAtLeast(0) }
+        bumped { it[Keys.dailyBudgetMinor] = value.coerceAtLeast(0) }
     }
 
     val profile: Flow<UserProfile> = context.dataStore.data.map { prefs ->
@@ -138,14 +179,14 @@ class SettingsRepository(private val context: Context) {
     }
 
     suspend fun setProfile(name: String, nickname: String) {
-        context.dataStore.edit {
+        bumped {
             it[Keys.profileName] = name.trim().take(40)
             it[Keys.profileNickname] = nickname.trim().take(24)
         }
     }
 
     suspend fun setProfilePhoto(path: String?) {
-        context.dataStore.edit { it[Keys.profilePhotoPath] = path.orEmpty() }
+        bumped { it[Keys.profilePhotoPath] = path.orEmpty() }
     }
 
     val settings: Flow<AppSettings> = context.dataStore.data.map { prefs ->
@@ -169,36 +210,37 @@ class SettingsRepository(private val context: Context) {
             reportFields = prefs[Keys.reportFields]
                 ?: by.mlastovsky.kosht.model.ReportField.entries.map { it.name }.toSet(),
             reportPeriod = prefs[Keys.reportPeriod] ?: DEFAULT_REPORT_PERIOD,
-            autoCalculator = prefs[Keys.autoCalculator] ?: true
+            autoCalculator = prefs[Keys.autoCalculator] ?: true,
+            syncPhotos = prefs[Keys.syncPhotos] ?: false
         )
     }
 
     suspend fun setNotifyDailyReminder(enabled: Boolean) {
-        context.dataStore.edit { it[Keys.notifyDailyReminder] = enabled }
+        bumped { it[Keys.notifyDailyReminder] = enabled }
     }
 
     suspend fun setNotifyRecurringDue(enabled: Boolean) {
-        context.dataStore.edit { it[Keys.notifyRecurringDue] = enabled }
+        bumped { it[Keys.notifyRecurringDue] = enabled }
     }
 
     suspend fun setNotifyWeeklySummary(enabled: Boolean) {
-        context.dataStore.edit { it[Keys.notifyWeeklySummary] = enabled }
+        bumped { it[Keys.notifyWeeklySummary] = enabled }
     }
 
     suspend fun setNotifyAwards(enabled: Boolean) {
-        context.dataStore.edit { it[Keys.notifyAwards] = enabled }
+        bumped { it[Keys.notifyAwards] = enabled }
     }
 
     suspend fun setCurrencyCode(code: String) {
-        context.dataStore.edit { it[Keys.currencyCode] = code }
+        bumped { it[Keys.currencyCode] = code }
     }
 
     suspend fun setThemeMode(mode: ThemeMode) {
-        context.dataStore.edit { it[Keys.themeMode] = mode.name }
+        bumped { it[Keys.themeMode] = mode.name }
     }
 
     suspend fun setDynamicColors(enabled: Boolean) {
-        context.dataStore.edit { it[Keys.dynamicColors] = enabled }
+        bumped { it[Keys.dynamicColors] = enabled }
     }
 
     private val _language = MutableStateFlow(LocaleHelper.getLanguage(context))
@@ -209,6 +251,71 @@ class SettingsRepository(private val context: Context) {
     fun setLanguage(language: AppLanguage) {
         LocaleHelper.setLanguage(context, language)
         _language.value = language
+    }
+
+
+    /**
+     * Everything about the app that belongs to the person rather than to the
+     * phone, as one value the sync engine can carry.
+     *
+     * The language is deliberately absent: it follows the device, and having a
+     * second phone silently switch its interface language would be a surprise
+     * rather than a convenience. A profile photo is absent for the same reason
+     * receipt photos are — a file path means nothing elsewhere — but a
+     * built-in emoji avatar is just text, so it travels.
+     */
+    suspend fun syncSnapshot(): SyncedSettings {
+        val prefs = context.dataStore.data.first()
+        val current = settings.first()
+        val user = profile.first()
+        return SyncedSettings(
+            updatedAt = prefs[Keys.updatedAt] ?: 0L,
+            settings = current,
+            profileName = user.name,
+            profileNickname = user.nickname,
+            profileEmoji = user.photoPath?.takeIf {
+                it.startsWith(by.mlastovsky.kosht.ui.components.EMOJI_AVATAR_PREFIX)
+            }
+        )
+    }
+
+    /**
+     * Applies settings that arrived from another device, keeping the remote
+     * stamp so this device does not immediately claim the change as its own.
+     */
+    suspend fun applySynced(remote: SyncedSettings) {
+        val incoming = remote.settings
+        context.dataStore.edit { prefs ->
+            prefs[Keys.currencyCode] = incoming.currencyCode
+            prefs[Keys.themeMode] = incoming.themeMode.name
+            prefs[Keys.dynamicColors] = incoming.dynamicColors
+            prefs[Keys.notifyDailyReminder] = incoming.notifyDailyReminder
+            prefs[Keys.notifyRecurringDue] = incoming.notifyRecurringDue
+            prefs[Keys.notifyWeeklySummary] = incoming.notifyWeeklySummary
+            prefs[Keys.notifyAwards] = incoming.notifyAwards
+            prefs[Keys.dailyBudgetMinor] = incoming.dailyBudgetMinor
+            prefs[Keys.showGreeting] = incoming.showGreeting
+            prefs[Keys.showStreak] = incoming.showStreak
+            prefs[Keys.showRates] = incoming.showRates
+            prefs[Keys.convertOnCurrencyChange] = incoming.convertOnCurrencyChange
+            prefs[Keys.multiAccount] = incoming.multiAccount
+            prefs[Keys.reportFields] = incoming.reportFields
+            prefs[Keys.reportPeriod] = incoming.reportPeriod
+            prefs[Keys.autoCalculator] = incoming.autoCalculator
+            prefs[Keys.syncPhotos] = incoming.syncPhotos
+            prefs[Keys.profileName] = remote.profileName
+            prefs[Keys.profileNickname] = remote.profileNickname
+            // A photo on the other phone is not a photo on this one, so only
+            // an emoji avatar is taken -- and only over another emoji, never
+            // over a picture this device actually has.
+            val localPhoto = prefs[Keys.profilePhotoPath].orEmpty()
+            val localIsPicture = localPhoto.isNotBlank() &&
+                !localPhoto.startsWith(by.mlastovsky.kosht.ui.components.EMOJI_AVATAR_PREFIX)
+            if (remote.profileEmoji != null && !localIsPicture) {
+                prefs[Keys.profilePhotoPath] = remote.profileEmoji
+            }
+            prefs[Keys.updatedAt] = remote.updatedAt
+        }
     }
 
     companion object {
