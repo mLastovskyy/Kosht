@@ -359,6 +359,9 @@ fun WalletScreen(
                 viewModel.setAccountBalance(account, target)
                 accountInAction = null
             },
+            onUpdateAppearance = { name, iconKey, colorArgb, renamed ->
+                viewModel.updateAccountAppearance(account, name, iconKey, colorArgb, renamed)
+            },
             onDelete = {
                 viewModel.deleteAccount(account)
                 accountInAction = null

@@ -31,6 +31,12 @@ class AccountRepository(
         accountDao.setAdjustment(account.id, targetMinor - txSum)
     }
 
+    /**
+     * Updates the appearance of an account. A rename drops the built-in
+     * [AccountEntity.key] so the custom name wins over localization.
+     */
+    suspend fun updateAccount(account: AccountEntity) = accountDao.update(account)
+
     suspend fun addAccount(name: String, iconKey: String, colorArgb: Long): Long =
         accountDao.insert(
             AccountEntity(

@@ -5,14 +5,18 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.DeleteOutline
+import androidx.compose.material.icons.rounded.Edit
 import androidx.compose.material.icons.rounded.Event
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.AssistChip
@@ -21,6 +25,7 @@ import androidx.compose.material3.DatePickerDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.SegmentedButton
@@ -39,6 +44,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import by.mlastovsky.kosht.R
 import by.mlastovsky.kosht.data.db.CategoryEntity
@@ -553,7 +559,11 @@ fun AddAccountDialog(
     )
 }
 
-/** Shows an account's balance; lets the user set the real one or delete. */
+/**
+ * Account details: the balance is always editable, the pencil (or a tap on
+ * the name) reveals name/icon/color editing, and deletion hides behind the
+ * trash icon — no explicit delete button.
+ */
 @Composable
 fun AccountBalanceDialog(
     account: by.mlastovsky.kosht.data.db.AccountEntity,
@@ -561,23 +571,97 @@ fun AccountBalanceDialog(
     currencyCode: String,
     deletable: Boolean,
     onSetBalance: (targetMinor: Long) -> Unit,
+    onUpdateAppearance: (name: String, iconKey: String, colorArgb: Long, renamed: Boolean) -> Unit,
     onDelete: () -> Unit,
     onDismiss: () -> Unit
 ) {
+    val resolvedName = by.mlastovsky.kosht.ui.AccountVisuals.displayName(account)
     var balanceText by remember {
         mutableStateOf(
             Money.format(currentBalanceMinor, currencyCode)
                 .filter { it.isDigit() || it == ',' || it == '-' }
         )
     }
+    var editMode by remember { mutableStateOf(false) }
+    var name by remember { mutableStateOf(resolvedName) }
+    var iconKey by remember { mutableStateOf(account.iconKey) }
+    var colorArgb by remember { androidx.compose.runtime.mutableLongStateOf(account.colorArgb) }
     val target = Money.parseToMinor(balanceText.replace("-", ""), currencyCode)
         ?.let { if (balanceText.startsWith("-")) -it else it }
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text(by.mlastovsky.kosht.ui.AccountVisuals.displayName(account)) },
+        title = {
+            Row(verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
+                Icon(
+                    CategoryVisuals.icon(iconKey),
+                    contentDescription = null,
+                    tint = Color(colorArgb)
+                )
+                Spacer(Modifier.width(10.dp))
+                Text(
+                    text = name,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier
+                        .weight(1f)
+                        .clickable { editMode = true }
+                )
+                IconButton(onClick = { editMode = !editMode }) {
+                    Icon(
+                        Icons.Rounded.Edit,
+                        contentDescription = stringResource(R.string.account_edit),
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+                // Deleting stays behind the pencil: a plain tap on an
+                // account should never put a trash icon under the finger.
+                if (deletable && editMode) {
+                    IconButton(onClick = onDelete) {
+                        Icon(
+                            Icons.Rounded.DeleteOutline,
+                            contentDescription = stringResource(R.string.editor_delete),
+                            tint = MaterialTheme.colorScheme.error
+                        )
+                    }
+                }
+            }
+        },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                if (editMode) {
+                    OutlinedTextField(
+                        value = name,
+                        onValueChange = { name = it.take(30) },
+                        label = { Text(stringResource(R.string.category_name_hint)) },
+                        singleLine = true,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                    LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        items(by.mlastovsky.kosht.ui.AccountVisuals.pickableIconKeys) { key ->
+                            CategoryBadge(
+                                iconKey = key,
+                                color = Color(colorArgb),
+                                selected = key == iconKey,
+                                size = 40.dp,
+                                modifier = Modifier
+                                    .clip(CircleShape)
+                                    .clickable { iconKey = key }
+                            )
+                        }
+                    }
+                    LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        items(CategoryVisuals.pickableColors) { color ->
+                            androidx.compose.foundation.layout.Box(
+                                modifier = Modifier
+                                    .size(if (color == colorArgb) 40.dp else 32.dp)
+                                    .clip(CircleShape)
+                                    .background(Color(color))
+                                    .clickable { colorArgb = color }
+                            )
+                        }
+                    }
+                }
                 OutlinedTextField(
                     value = balanceText,
                     onValueChange = { balanceText = it.take(13) },
@@ -595,23 +679,21 @@ fun AccountBalanceDialog(
         },
         confirmButton = {
             TextButton(
-                enabled = target != null,
-                onClick = { onSetBalance(target!!) }
+                enabled = target != null && name.isNotBlank(),
+                onClick = {
+                    val trimmed = name.trim()
+                    val appearanceChanged = trimmed != resolvedName ||
+                        iconKey != account.iconKey || colorArgb != account.colorArgb
+                    if (appearanceChanged) {
+                        onUpdateAppearance(trimmed, iconKey, colorArgb, trimmed != resolvedName)
+                    }
+                    onSetBalance(target!!)
+                }
             ) { Text(stringResource(R.string.editor_save)) }
         },
         dismissButton = {
-            Row {
-                if (deletable) {
-                    TextButton(onClick = onDelete) {
-                        Text(
-                            stringResource(R.string.editor_delete),
-                            color = MaterialTheme.colorScheme.error
-                        )
-                    }
-                }
-                TextButton(onClick = onDismiss) {
-                    Text(stringResource(R.string.action_cancel))
-                }
+            TextButton(onClick = onDismiss) {
+                Text(stringResource(R.string.action_cancel))
             }
         }
     )

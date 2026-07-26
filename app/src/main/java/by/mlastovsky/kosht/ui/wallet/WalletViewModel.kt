@@ -222,6 +222,30 @@ class WalletViewModel(
         viewModelScope.launch { accountRepository.setAccountBalance(account, targetMinor) }
     }
 
+    /**
+     * Changes how an account looks. A rename drops the built-in key so the
+     * custom name wins over the localized one.
+     */
+    fun updateAccountAppearance(
+        account: by.mlastovsky.kosht.data.db.AccountEntity,
+        name: String,
+        iconKey: String,
+        colorArgb: Long,
+        renamed: Boolean
+    ) {
+        if (name.isBlank()) return
+        viewModelScope.launch {
+            accountRepository.updateAccount(
+                account.copy(
+                    name = name.trim(),
+                    iconKey = iconKey,
+                    colorArgb = colorArgb,
+                    key = if (renamed) null else account.key
+                )
+            )
+        }
+    }
+
     fun addSaving(amountMinor: Long, currencyCode: String, note: String, goalId: Long? = null) {
         if (amountMinor == 0L) return
         viewModelScope.launch {
