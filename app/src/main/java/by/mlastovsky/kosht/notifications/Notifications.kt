@@ -7,7 +7,9 @@ import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
+import android.media.AudioAttributes
 import android.os.Build
+import android.provider.Settings
 import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
 import androidx.core.content.ContextCompat
@@ -16,16 +18,18 @@ import by.mlastovsky.kosht.R
 
 object Notifications {
 
-    const val CHANNEL_REMINDERS = "reminders"
+    // Every channel carries a "_v3" (or later) id for one reason: a channel's
+    // importance and sound are fixed once Android has created it, so making a
+    // previously silent reminder audible takes a new channel rather than an
+    // edit. The old ids are deleted below so the settings screen stays tidy.
+    const val CHANNEL_REMINDERS = "reminders_v3"
+    const val CHANNEL_RECURRING = "recurring_v3"
+    const val CHANNEL_SUMMARY = "summary_v3"
+    const val CHANNEL_AWARDS = "awards_v3"
 
-    // v2: the original channel was created with IMPORTANCE_HIGH and its
-    // importance can no longer be lowered in code — a new id is the only
-    // way to drop the heads-up popup for existing installs.
-    const val CHANNEL_RECURRING = "recurring_v2"
-    const val CHANNEL_SUMMARY = "summary"
-    const val CHANNEL_AWARDS = "awards"
-
-    private const val CHANNEL_RECURRING_LEGACY = "recurring"
+    private val legacyChannels = listOf(
+        "reminders", "recurring", "recurring_v2", "summary", "awards"
+    )
 
     const val ID_DAILY = 1
     const val ID_RECURRING = 2
@@ -34,40 +38,40 @@ object Notifications {
 
     fun ensureChannels(context: Context) {
         val manager = context.getSystemService(NotificationManager::class.java) ?: return
-        manager.deleteNotificationChannel(CHANNEL_RECURRING_LEGACY)
-        manager.createNotificationChannel(
-            NotificationChannel(
-                CHANNEL_REMINDERS,
-                context.getString(R.string.channel_reminders),
-                NotificationManager.IMPORTANCE_DEFAULT
-            )
-        )
-        manager.createNotificationChannel(
-            NotificationChannel(
-                CHANNEL_RECURRING,
-                context.getString(R.string.channel_recurring),
-                // DEFAULT, not HIGH: no heads-up popup over whatever the
-                // user is doing — a status-bar entry is enough.
-                NotificationManager.IMPORTANCE_DEFAULT
-            )
-        )
-        manager.createNotificationChannel(
-            NotificationChannel(
-                CHANNEL_SUMMARY,
-                context.getString(R.string.channel_summary),
-                NotificationManager.IMPORTANCE_LOW
-            )
-        )
-        manager.createNotificationChannel(
-            NotificationChannel(
-                CHANNEL_AWARDS,
-                context.getString(R.string.channel_awards),
-                // Silent: earning an award is good news, not urgent news, and
-                // the app already says so on screen when it is open.
-                NotificationManager.IMPORTANCE_LOW
-            )
-        )
+        legacyChannels.forEach(manager::deleteNotificationChannel)
+        listOf(
+            CHANNEL_REMINDERS to R.string.channel_reminders,
+            CHANNEL_RECURRING to R.string.channel_recurring,
+            CHANNEL_SUMMARY to R.string.channel_summary,
+            CHANNEL_AWARDS to R.string.channel_awards
+        ).forEach { (id, nameRes) ->
+            manager.createNotificationChannel(audibleChannel(context, id, nameRes))
+        }
     }
+
+    /**
+     * A notification nobody hears is a notification nobody acts on, so every
+     * channel rings with the phone's own notification sound and vibrates.
+     * IMPORTANCE_DEFAULT, not HIGH: it makes a sound and waits in the shade
+     * rather than jumping over whatever is on screen. Anyone who wants one of
+     * them quiet can still say so in Android's own channel settings.
+     */
+    private fun audibleChannel(context: Context, id: String, nameRes: Int) =
+        NotificationChannel(
+            id,
+            context.getString(nameRes),
+            NotificationManager.IMPORTANCE_DEFAULT
+        ).apply {
+            setSound(
+                Settings.System.DEFAULT_NOTIFICATION_URI,
+                AudioAttributes.Builder()
+                    .setUsage(AudioAttributes.USAGE_NOTIFICATION)
+                    .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
+                    .build()
+            )
+            enableVibration(true)
+            enableLights(true)
+        }
 
     /**
      * "Award earned: Iron month". The award's own wording is reused, so the
@@ -113,11 +117,12 @@ object Notifications {
             .setStyle(NotificationCompat.BigTextStyle().bigText(text))
             .setContentIntent(pending)
             .setAutoCancel(true)
-            // Quiet by design: no full-screen intent, no vibration pattern,
-            // and never louder than the channel allows.
+            // Heard, but not intrusive: no full-screen intent, and never louder
+            // than the channel allows. Each fresh notification alerts — one that
+            // replaces an unread predecessor is new news, not an update to it.
             .setPriority(NotificationCompat.PRIORITY_DEFAULT)
+            .setDefaults(NotificationCompat.DEFAULT_SOUND or NotificationCompat.DEFAULT_VIBRATE)
             .setCategory(NotificationCompat.CATEGORY_REMINDER)
-            .setOnlyAlertOnce(true)
             .build()
         NotificationManagerCompat.from(context).notify(id, notification)
     }
