@@ -63,6 +63,7 @@ Snap a receipt and Kosht reads the total, date and store for you.
 - **QR codes come first.** Shops that print one hand over exact figures instead of guessed ones — and on the short slips that carry nothing but a QR, it is the only thing there is to read. The electronic receipt behind the code is fetched and kept, so it opens later even with no connection.
 - **A code is only trusted once it proves itself.** Loyalty cards, Wi-Fi passwords and adverts share the same square shape; a payload counts as a receipt only when it carries fiscal fields or leads to a page an amount can actually be read from.
 - **No QR, no problem.** The photo goes through on-device recognition instead — 100% offline, nothing uploaded.
+- **The shop is read, not guessed.** A familiar chain is matched by name; an unfamiliar one is found the way a person finds it — the largest print at the top of the slip, a trade name in quotes, a legal form, the line beside the tax number. Addresses, cashiers, document headers and scanning noise are ruled out, and when nothing looks like a name the note is left empty rather than filled with a random line from the receipt.
 
 Either way a review dialog shows what was read, and every field stays editable before you save.
 
@@ -86,7 +87,7 @@ Signing up is an email, a six-digit code that Kosht mails you (good for five min
 - **Live official rates** from the National Bank, refreshed automatically or by hand — with the update time always visible
 - Amounts in foreign currency show their **BYN equivalent everywhere**: debts, savings, recurring charges
 - Every expense **freezes the rate at the moment you paid**, so history never drifts when rates move
-- **Switch the app currency** and every stored amount is converted at the live rate in one tap (or turn auto-convert off — your choice)
+- **Switch the app currency** and the whole app follows at the live rate in one tap: records, the daily budget, balance corrections, challenge limits, savings, goals, debts and recurring charges — including the ones entered in a third currency, which cross through BYN. Frozen historical equivalents stay untouched, and a currency the National Bank does not publish is left alone rather than multiplied by nothing (or turn auto-convert off — your choice)
 - Foreign-currency recurring payments let you set the **exact rate you were charged**
 
 ### 👛 The Wallet
@@ -98,10 +99,11 @@ Signing up is an email, a six-digit code that Kosht mails you (good for five min
 ### 🏆 Gamification that helps, not annoys
 - **Under-budget streak** — days in a row you stayed within your daily budget (auto-calculated or set your own)
 - **Custom challenges** — "spend under 100 on eating out this week", "no-spend weekend", "save 200 this month" — you configure, Kosht tracks, and a tap re-opens any challenge for editing
-- **18 awards**, from first steps to a 100-day streak, laid out as swipeable pages. Tap one to see how to earn it, how far along you are ("6 / 10"), and the day you earned it — once earned, it is yours forever
+- **30 awards**, from first steps to a year inside the budget, laid out as swipeable pages — a thousand records, five thousand saved, a perfect month without a single day over budget, three months in a row in the black, twenty challenges completed. Tap one to see how to earn it, how far along you are ("6 / 10"), and the day you earned it — once earned, it is yours forever
+- **You hear about it when it happens.** An award unlocks the moment it is deserved, whatever screen you are on: a congratulation appears over the app and a quiet note lands in the shade. No screen to go and check
 
 ### 🔔 Smart notifications (all optional)
-An evening nudge only if nothing is logged, recurring payments awaiting confirmation, and a Monday money digest. All of them are quiet by design — no heads-up popups, no forced sound — and a tap takes you straight into the app.
+An evening nudge only if nothing is logged, recurring payments awaiting confirmation, a Monday money digest, and awards as you earn them. All of them are quiet by design — no heads-up popups, no forced sound — and a tap takes you straight into the app.
 
 ### 🎨 Made for you
 Light & dark themes, Material You dynamic colors, English & Russian interface, a profile with photo or built-in avatars — and interface toggles to hide anything you don't need. Without an account nothing ever leaves the phone; with one, only you can read it.
@@ -109,13 +111,13 @@ Light & dark themes, Material You dynamic colors, English & Russian interface, a
 ### 🔒 Consent you can actually withdraw
 Collecting an email address makes this an operator of personal data under the Belarusian law of 07.05.2021 No. 99-З, and the app is built to match rather than to look like it does.
 
-- **The Terms and the Personal data policy** are real documents, shipped as PDFs and readable from Settings — and from the sign-up form, before you agree to them.
+- **The Terms and the Personal data policy** are real documents, shipped as PDFs and kept where the app they describe is — Settings → About, alongside the manual. A tap writes the PDF into your phone's Downloads and opens it, so it stays yours to read, print or forward, and the same links sit on the sign-up form before you agree to anything.
 - **Consent is an append-only ledger**, not a flag. What has to be provable is when someone agreed and to which wording, so nothing in it can be updated or deleted — not even by the account that owns it.
 - **Advertising consent is separate, unticked, and never a condition** of having an account. Switch it off in Settings or from the unsubscribe link, which works without signing in.
-- **Every right is a button**: read the documents, download everything held about you, erase the account and all of it for good.
+- **Every right is where you would look for it**: the documents under About, the mailing switch among the notifications, and *Delete account and data* at the foot of the Account block — with a confirmation, because it cannot be undone. A copy of everything held about you is served on request to the address in the policy, within fifteen days.
 
 ### 📖 Learn it in minutes
-An illustrated **guide lives right inside Settings**, and a full **PDF manual** with screenshots is one tap away (also in [`docs/MANUAL.pdf`](docs/MANUAL.pdf)).
+An illustrated **guide lives right inside Settings**, and a full **PDF manual** with screenshots is one tap away — it downloads to your phone rather than just flashing up (also in [`docs/MANUAL.pdf`](docs/MANUAL.pdf)).
 
 ---
 
