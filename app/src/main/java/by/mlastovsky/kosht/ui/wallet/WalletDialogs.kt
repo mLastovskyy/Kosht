@@ -70,9 +70,9 @@ import by.mlastovsky.kosht.ui.CategoryVisuals
 import by.mlastovsky.kosht.ui.components.CategoryActions
 import by.mlastovsky.kosht.ui.components.CategoryBadge
 import by.mlastovsky.kosht.ui.components.CategoryPickerRow
+import by.mlastovsky.kosht.ui.components.CurrencyChips
 import by.mlastovsky.kosht.ui.components.TextInput
 import by.mlastovsky.kosht.ui.relativeDate
-import by.mlastovsky.kosht.ui.settings.SettingsViewModel
 import by.mlastovsky.kosht.util.Money
 import java.time.LocalDate
 
@@ -90,22 +90,6 @@ private fun AmountField(
         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
         modifier = modifier.fillMaxWidth()
     )
-}
-
-@Composable
-private fun CurrencyChips(
-    selected: String,
-    onSelect: (String) -> Unit
-) {
-    LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-        items(SettingsViewModel.SUPPORTED_CURRENCIES) { code ->
-            FilterChip(
-                selected = code == selected,
-                onClick = { onSelect(code) },
-                label = { Text(code) }
-            )
-        }
-    }
 }
 
 @Composable

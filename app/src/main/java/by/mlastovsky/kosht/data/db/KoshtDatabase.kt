@@ -24,7 +24,7 @@ import by.mlastovsky.kosht.data.CategorySeed
         SyncTombstoneEntity::class,
         SyncCursorEntity::class
     ],
-    version = 19,
+    version = 20,
     exportSchema = false
 )
 abstract class KoshtDatabase : RoomDatabase() {
@@ -63,7 +63,7 @@ abstract class KoshtDatabase : RoomDatabase() {
                     MIGRATION_6_7, MIGRATION_7_8, MIGRATION_8_9, MIGRATION_9_10,
                     MIGRATION_10_11, MIGRATION_11_12, MIGRATION_12_13, MIGRATION_13_14,
                     MIGRATION_14_15, MIGRATION_15_16, MIGRATION_16_17,
-                    MIGRATION_17_18, MIGRATION_18_19
+                    MIGRATION_17_18, MIGRATION_18_19, MIGRATION_19_20
                 )
                 .build()
 
@@ -349,6 +349,13 @@ abstract class KoshtDatabase : RoomDatabase() {
                     "ALTER TABLE transactions " +
                         "ADD COLUMN debtDeltaMinor INTEGER NOT NULL DEFAULT 0"
                 )
+            }
+        }
+
+        private val MIGRATION_19_20 = object : Migration(19, 20) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("ALTER TABLE challenges ADD COLUMN currencyCode TEXT")
+                db.execSQL("ALTER TABLE challenges ADD COLUMN goalId INTEGER")
             }
         }
 

@@ -75,6 +75,7 @@ object AppViewModelProvider {
                 app().container.walletRepository,
                 app().container.awardTracker,
                 app().container.transactionRepository,
+                app().container.ratesRepository,
                 app().container.settingsRepository
             )
         }

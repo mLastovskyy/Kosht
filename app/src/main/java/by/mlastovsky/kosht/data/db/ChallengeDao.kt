@@ -21,6 +21,18 @@ interface ChallengeDao {
     @Query("DELETE FROM challenges WHERE id = :id")
     suspend fun deleteById(id: Long)
 
-    @Query("UPDATE challenges SET amountMinor = CAST(ROUND(amountMinor * :factor) AS INTEGER)")
+    @Query(
+        "UPDATE challenges SET amountMinor = CAST(ROUND(amountMinor * :factor) AS INTEGER) " +
+            "WHERE currencyCode IS NULL"
+    )
     suspend fun rescaleAmounts(factor: Double)
+
+    @Query("SELECT DISTINCT currencyCode FROM challenges WHERE currencyCode IS NOT NULL")
+    suspend fun currencies(): List<String>
+
+    @Query(
+        "UPDATE challenges SET amountMinor = CAST(ROUND(amountMinor * :factor) AS INTEGER), " +
+            "currencyCode = :to WHERE currencyCode = :from"
+    )
+    suspend fun convert(from: String, to: String, factor: Double)
 }

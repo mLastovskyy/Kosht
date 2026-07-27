@@ -16,7 +16,10 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -33,6 +36,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import by.mlastovsky.kosht.ui.CategoryVisuals
+import by.mlastovsky.kosht.ui.settings.SettingsViewModel
 
 @Composable
 fun CategoryBadge(
@@ -86,6 +90,22 @@ fun CategoryBadge(
 }
 
 private const val PICTURE_PIXELS = 256
+
+@Composable
+fun CurrencyChips(
+    selected: String,
+    onSelect: (String) -> Unit
+) {
+    LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        items(SettingsViewModel.SUPPORTED_CURRENCIES) { code ->
+            FilterChip(
+                selected = code == selected,
+                onClick = { onSelect(code) },
+                label = { Text(code) }
+            )
+        }
+    }
+}
 
 @Composable
 fun AnimatedAmountText(

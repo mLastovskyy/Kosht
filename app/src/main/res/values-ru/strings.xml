@@ -276,7 +276,7 @@
     <string name="account_last_sync_label">Последняя синхронизация</string>
     <string name="account_syncing">Синхронизация…</string>
     <string name="account_sync_photos">Синхронизировать фото чеков</string>
-    <string name="account_sync_photos_hint">Уезжают в аккаунт; выключение удаляет копии</string>
+    <string name="account_sync_photos_hint">Дополнительно хранятся на удалённом сервере; выключение удаляет их оттуда</string>
     <string name="account_photos_purged">Загруженные фото удалены. Копии на этом телефоне не тронуты.</string>
     <string name="account_last_sync_never">Ещё не синхронизировалось</string>
     <string name="account_sign_out_title">Выйти из аккаунта?</string>
@@ -450,6 +450,9 @@
     <string name="challenge_duration_week">Неделя</string>
     <string name="challenge_duration_month_end">До конца месяца</string>
     <string name="challenge_duration_30">30 дней</string>
+    <string name="challenge_duration_custom">Свои даты</string>
+    <string name="challenge_goal_created">В Кошельке появится цель с этим названием; отложенное на неё идёт в зачёт</string>
+    <string name="challenge_goal_linked">Цель в Кошельке меняется вместе с испытанием</string>
     <string name="badges_title">Награды</string>
     <string name="badge_first_steps">Первые шаги</string>
     <string name="badge_ten">10 записей</string>
@@ -540,7 +543,7 @@
     <string name="guide_group_more">ОСТАЛЬНОЕ</string>
     <string name="guide_home_lines">Общий баланс и итоги месяца.\nПлитки счетов — когда счетов больше одного.\nНедавние записи: тап открывает правку, «Все» — Историю.\nВ шапке — серия 🔥, награды 🏆 и профиль.</string>
     <string name="guide_history_lines">Все записи по дням, над каждым днём — его итог.\nПоиск по заметке и категории, фильтры и период.\nСвайп влево открывает корзину, тап по ней спрашивает.\nПосле удаления внизу ждёт «Отменить».</string>
-    <string name="guide_stats_lines">Круг по категориям, в центре итог; ниже траты по дням.\nТап по категории раскрывает товары — в её цвете.\nКалендарь: чем темнее день, тем больше траты.\nОтчёт — за неделю, месяц, квартал или год.</string>
+    <string name="guide_stats_lines">Круг по категориям, в центре итог; ниже траты по дням.\nТап по дольке называет её категорию, тап по категории раскрывает товары.\nКалендарь: чем темнее день, тем больше траты.\nОтчёт — за неделю, месяц, квартал или год.</string>
     <string name="guide_wallet_lines">Курсы НБРБ и счета с переводами между ними.\nПлатежи ждут подтверждения — сами не списываются.\nДолги, цели и накопления.</string>
     <string name="guide_settings_lines">Профиль, тема, язык, валюта.\nСчета, отчёт, уведомления, безопасность.\nВнизу — руководство, документы и версия.</string>
     <string name="guide_add_head">Новая запись</string>
@@ -552,7 +555,7 @@
     <string name="guide_scan_head">Скан чека</string>
     <string name="guide_scan_lines">Сфотографируйте чек или выберите фото из галереи.\nСумма, магазин, дата и позиции подставятся сами.\nQR на чеке ведёт к электронному — цифры точнее.\nВсё считается на телефоне, фото никуда не уходит.</string>
     <string name="guide_streak_head">Серия и награды</string>
-    <string name="guide_streak_lines">Серия — дни подряд в рамках дневного бюджета.\nИспытания вы задаёте сами.\nБейджи приходят сами, как только заслужены.</string>
+    <string name="guide_streak_lines">Серия — дни подряд в рамках дневного бюджета.\nИспытания вы задаёте сами: срок чипом или своими датами.\nУ испытания «Накопить» своя валюта и цель в Кошельке.\nБейджи приходят сами, как только заслужены.</string>
     <string name="guide_lock_head">Блокировка</string>
     <string name="guide_lock_lines">Свой код и вход по отпечатку.\nМожно задать, через сколько минут спрашивать код.\nКод нигде не хранится в открытом виде.</string>
     <string name="guide_sync_head">Аккаунт</string>

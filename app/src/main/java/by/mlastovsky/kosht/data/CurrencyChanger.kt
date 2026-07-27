@@ -61,6 +61,7 @@ class CurrencyChanger(
         convert(goalDao.currencies(), newCode, rates, goalDao::convert)
         convert(debtDao.currencies(), newCode, rates, debtDao::convert)
         convert(recurringDao.currencies(), newCode, rates, recurringDao::convert)
+        convert(challengeDao.currencies(), newCode, rates, challengeDao::convert)
     }
 
     private suspend fun convert(

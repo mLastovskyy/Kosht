@@ -24,12 +24,16 @@ class ChallengeEvaluatorTest {
     private fun challenge(
         type: ChallengeType,
         amountMinor: Long,
-        categoryId: Long? = null
+        categoryId: Long? = null,
+        currencyCode: String? = null,
+        goalId: Long? = null
     ) = ChallengeEntity(
         type = type,
         title = "test",
         amountMinor = amountMinor,
+        currencyCode = currencyCode,
         categoryId = categoryId,
+        goalId = goalId,
         startEpochDay = start.toEpochDay(),
         endEpochDay = end.toEpochDay(),
         createdAt = 0
@@ -38,12 +42,17 @@ class ChallengeEvaluatorTest {
     private fun spend(day: LocalDate, minor: Long, categoryId: Long = 1L) =
         DaySpend(day, categoryId, minor)
 
-    private fun saving(day: LocalDate, minor: Long, currency: String = "BYN") =
-        SavingEntity(
-            amountMinor = minor,
-            currencyCode = currency,
-            timestamp = Dates.toEpochMillis(day)
-        )
+    private fun saving(
+        day: LocalDate,
+        minor: Long,
+        currency: String = "BYN",
+        goalId: Long? = null
+    ) = SavingEntity(
+        amountMinor = minor,
+        currencyCode = currency,
+        timestamp = Dates.toEpochMillis(day),
+        goalId = goalId
+    )
 
     @Test
     fun `a limit still has room while the period runs`() {
@@ -155,6 +164,38 @@ class ChallengeEvaluatorTest {
         )
         assertEquals(ChallengeStatus.DONE, result.status)
         assertEquals(360_00L, result.progressLabelMinor)
+    }
+
+    @Test
+    fun `a savings target counts only what went to its own goal`() {
+        val result = ChallengeEvaluator.evaluate(
+            challenge = challenge(ChallengeType.SAVE_TARGET, 100_00, goalId = 7L),
+            spend = emptyList(),
+            savings = listOf(
+                saving(start, 60_00, goalId = 7L),
+                saving(start.plusDays(1), 90_00, goalId = 8L),
+                saving(start.plusDays(2), 40_00)
+            ),
+            rates = rates,
+            currencyCode = "BYN",
+            today = LocalDate.of(2026, 7, 3)
+        )
+        assertEquals(ChallengeStatus.ACTIVE, result.status)
+        assertEquals(60_00L, result.progressLabelMinor)
+    }
+
+    @Test
+    fun `a savings target keeps its own currency when the app changes`() {
+        val result = ChallengeEvaluator.evaluate(
+            challenge = challenge(ChallengeType.SAVE_TARGET, 100_00, currencyCode = "USD"),
+            spend = emptyList(),
+            savings = listOf(saving(start, 320_00, "BYN")),
+            rates = rates,
+            currencyCode = "BYN",
+            today = LocalDate.of(2026, 7, 3)
+        )
+        assertEquals(ChallengeStatus.DONE, result.status)
+        assertEquals(320_00L, result.progressLabelMinor)
     }
 
     @Test

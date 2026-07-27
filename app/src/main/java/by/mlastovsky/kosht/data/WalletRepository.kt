@@ -189,20 +189,52 @@ class WalletRepository(
         amountMinor: Long,
         categoryId: Long?,
         start: LocalDate,
-        end: LocalDate
+        end: LocalDate,
+        currencyCode: String? = null,
+        goalId: Long? = null
     ): Long = challengeDao.insert(
         ChallengeEntity(
             type = type,
             title = title.trim(),
             amountMinor = amountMinor,
+            currencyCode = currencyCode,
             categoryId = categoryId,
+            goalId = goalId,
             startEpochDay = start.toEpochDay(),
             endEpochDay = end.toEpochDay(),
             createdAt = System.currentTimeMillis()
         )
     )
 
-    suspend fun updateChallenge(challenge: ChallengeEntity) = challengeDao.update(challenge)
+    suspend fun addSavingChallenge(
+        title: String,
+        amountMinor: Long,
+        currencyCode: String,
+        start: LocalDate,
+        end: LocalDate
+    ): Long = addChallenge(
+        type = ChallengeType.SAVE_TARGET,
+        title = title,
+        amountMinor = amountMinor,
+        categoryId = null,
+        start = start,
+        end = end,
+        currencyCode = currencyCode,
+        goalId = addGoal(title, amountMinor, currencyCode)
+    )
+
+    suspend fun updateChallenge(challenge: ChallengeEntity, savingsFactor: Double? = null) {
+        challengeDao.update(challenge)
+        val goal = challenge.goalId?.let { goalDao.getById(it) } ?: return
+        updateGoal(
+            goal.copy(
+                title = challenge.title,
+                targetMinor = challenge.amountMinor,
+                currencyCode = challenge.currencyCode ?: goal.currencyCode
+            ),
+            savingsFactor = savingsFactor
+        )
+    }
 
     suspend fun deleteChallenge(id: Long) = challengeDao.deleteById(id)
 

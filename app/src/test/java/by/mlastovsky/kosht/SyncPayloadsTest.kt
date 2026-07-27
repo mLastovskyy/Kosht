@@ -2,12 +2,14 @@ package by.mlastovsky.kosht
 
 import by.mlastovsky.kosht.data.AppSettings
 import by.mlastovsky.kosht.data.SyncedSettings
+import by.mlastovsky.kosht.data.db.ChallengeEntity
 import by.mlastovsky.kosht.data.db.SyncMeta
 import by.mlastovsky.kosht.data.db.TransactionEntity
 import by.mlastovsky.kosht.data.db.TransactionItemEntity
 import by.mlastovsky.kosht.data.db.UidRef
 import by.mlastovsky.kosht.data.sync.SyncPayloads
 import by.mlastovsky.kosht.data.sync.UidIndex
+import by.mlastovsky.kosht.model.ChallengeType
 import by.mlastovsky.kosht.model.ThemeMode
 import by.mlastovsky.kosht.model.TransactionType
 import org.junit.Assert.assertEquals
@@ -66,6 +68,70 @@ class SyncPayloadsTest {
         assertEquals("Хлеб", arrived.note)
         // A brand-new row here, so Room assigns the id.
         assertEquals(0L, arrived.id)
+    }
+
+    @Test
+    fun `a saving challenge lands on the other device's goal`() {
+        val mine = UidIndex(
+            categories = emptyList(),
+            accounts = emptyList(),
+            goals = listOf(UidRef(id = 12, uid = "goal-uid"))
+        )
+        val yours = UidIndex(
+            categories = emptyList(),
+            accounts = emptyList(),
+            goals = listOf(UidRef(id = 64, uid = "goal-uid"))
+        )
+        val challenge = ChallengeEntity(
+            id = 2,
+            type = ChallengeType.SAVE_TARGET,
+            title = "На отпуск",
+            amountMinor = 500_00,
+            currencyCode = "USD",
+            goalId = 12,
+            startEpochDay = 20_600,
+            endEpochDay = 20_630,
+            createdAt = 1_700_000_000_000,
+            sync = SyncMeta(uid = "ch-uid", updatedAt = 5)
+        )
+
+        val payload = SyncPayloads.of(challenge, mine)
+        assertEquals("goal-uid", payload.getString("goalUid"))
+        assertEquals("USD", payload.getString("currencyCode"))
+
+        val arrived = SyncPayloads.toChallenge(
+            json = payload,
+            meta = SyncMeta(uid = "ch-uid", updatedAt = 5),
+            index = yours,
+            local = null
+        )
+        assertEquals(64L, arrived.goalId)
+        assertEquals("USD", arrived.currencyCode)
+        assertEquals(500_00L, arrived.amountMinor)
+    }
+
+    @Test
+    fun `a challenge from an older version keeps the app currency`() {
+        val plain = UidIndex(categories = emptyList(), accounts = emptyList(), goals = emptyList())
+        val payload = SyncPayloads.of(
+            ChallengeEntity(
+                type = ChallengeType.NO_SPEND,
+                title = "Неделя без трат",
+                amountMinor = 0,
+                startEpochDay = 20_600,
+                endEpochDay = 20_606,
+                createdAt = 1_700_000_000_000
+            ),
+            plain
+        )
+        val arrived = SyncPayloads.toChallenge(
+            json = payload,
+            meta = SyncMeta(uid = "ch-uid", updatedAt = 5),
+            index = plain,
+            local = null
+        )
+        assertNull(arrived.currencyCode)
+        assertNull(arrived.goalId)
     }
 
     @Test

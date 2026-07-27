@@ -272,7 +272,7 @@
     <string name="account_last_sync_label">Last sync</string>
     <string name="account_syncing">Syncing…</string>
     <string name="account_sync_photos">Sync receipt photos</string>
-    <string name="account_sync_photos_hint">Uploaded to your account; switching off deletes the copies</string>
+    <string name="account_sync_photos_hint">Kept on the remote server as well; switching off deletes them there</string>
     <string name="account_photos_purged">Uploaded photos deleted. The copies on this phone are untouched.</string>
     <string name="account_last_sync_never">Not synced yet</string>
     <string name="account_sign_out_title">Sign out?</string>
@@ -446,6 +446,9 @@
     <string name="challenge_duration_week">Week</string>
     <string name="challenge_duration_month_end">Until month end</string>
     <string name="challenge_duration_30">30 days</string>
+    <string name="challenge_duration_custom">Own dates</string>
+    <string name="challenge_goal_created">A goal by this name joins the Wallet; what you put aside for it counts here</string>
+    <string name="challenge_goal_linked">The goal in the Wallet follows these changes</string>
     <string name="badges_title">Awards</string>
     <string name="badge_first_steps">First steps</string>
     <string name="badge_ten">10 records</string>
@@ -536,7 +539,7 @@
     <string name="guide_group_more">EVERYTHING ELSE</string>
     <string name="guide_home_lines">The total balance and the totals for this month.\nAccount tiles once you keep more than one.\nRecent records: tap to edit, "See all" for History.\nUp top: the streak, the awards and your profile.</string>
     <string name="guide_history_lines">Every record by day, with the total for the day above it.\nSearch by note and category, filters and a period.\nA swipe left reveals the bin, tapping it asks first.\n"Undo" waits along the bottom afterwards.</string>
-    <string name="guide_stats_lines">A category donut with the total inside; days below it.\nTap a category to open the items, in its own colour.\nCalendar: the darker the day, the more it cost.\nReport: a week, a month, a quarter or a year.</string>
+    <string name="guide_stats_lines">A category donut with the total inside; days below it.\nTap a slice to name its category, tap a category to open the items.\nCalendar: the darker the day, the more it cost.\nReport: a week, a month, a quarter or a year.</string>
     <string name="guide_wallet_lines">Bank rates, accounts and transfers between them.\nPayments wait for your confirmation — never charged alone.\nDebts, goals and savings.</string>
     <string name="guide_settings_lines">Profile, theme, language, currency.\nAccounts, report, notifications, security.\nAt the bottom: the manual, the documents and the version.</string>
     <string name="guide_add_head">A new record</string>
@@ -548,7 +551,7 @@
     <string name="guide_scan_head">Receipt scanning</string>
     <string name="guide_scan_lines">Photograph the slip or pick a photo from the gallery.\nThe sum, shop, date and items fill themselves in.\nA QR code leads to the electronic receipt — exact figures.\nIt all runs on the phone; the photo stays here.</string>
     <string name="guide_streak_head">Streak and awards</string>
-    <string name="guide_streak_lines">The streak counts days inside your daily budget.\nChallenges are yours to set.\nBadges arrive by themselves once earned.</string>
+    <string name="guide_streak_lines">The streak counts days inside your daily budget.\nChallenges are yours to set — a chip or dates of your own.\nA saving one carries its currency and a goal in the Wallet.\nBadges arrive by themselves once earned.</string>
     <string name="guide_lock_head">App lock</string>
     <string name="guide_lock_lines">A code of your own, plus fingerprint entry.\nSet how many minutes before it asks again.\nThe code is never kept in the clear.</string>
     <string name="guide_sync_head">Account</string>

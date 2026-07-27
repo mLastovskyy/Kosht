@@ -271,7 +271,9 @@ object SyncPayloads {
         .put("type", row.type.name)
         .put("title", row.title)
         .put("amountMinor", row.amountMinor)
+        .put("currencyCode", row.currencyCode)
         .put("categoryUid", row.categoryId?.let { index.categoryUid(it) })
+        .put("goalUid", index.goalUid(row.goalId))
         .put("startEpochDay", row.startEpochDay)
         .put("endEpochDay", row.endEpochDay)
         .put("createdAt", row.createdAt)
@@ -286,7 +288,9 @@ object SyncPayloads {
         type = ChallengeType.valueOf(json.getString("type")),
         title = json.optString("title"),
         amountMinor = json.getLong("amountMinor"),
+        currencyCode = json.stringOrNull("currencyCode"),
         categoryId = index.categoryId(json.stringOrNull("categoryUid")),
+        goalId = index.goalId(json.stringOrNull("goalUid")),
         startEpochDay = json.getLong("startEpochDay"),
         endEpochDay = json.getLong("endEpochDay"),
         createdAt = json.getLong("createdAt"),

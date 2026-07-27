@@ -32,6 +32,7 @@ import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.AssistChip
 import androidx.compose.material3.DatePicker
 import androidx.compose.material3.DatePickerDialog
+import androidx.compose.material3.DateRangePicker
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
@@ -47,6 +48,7 @@ import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.rememberDatePickerState
+import androidx.compose.material3.rememberDateRangePickerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -73,6 +75,7 @@ import by.mlastovsky.kosht.ui.AppViewModelProvider
 import by.mlastovsky.kosht.ui.awards.AwardVisuals
 import by.mlastovsky.kosht.ui.components.CategoryActions
 import by.mlastovsky.kosht.ui.components.CategoryPickerRow
+import by.mlastovsky.kosht.ui.components.CurrencyChips
 import by.mlastovsky.kosht.ui.components.TextInput
 import by.mlastovsky.kosht.ui.relativeDate
 import by.mlastovsky.kosht.ui.theme.KoshtTheme
@@ -193,8 +196,8 @@ fun AchievementsScreen(
         AddChallengeDialog(
             categories = state.expenseCategories,
             currencyCode = state.currencyCode,
-            onConfirm = { type, title, amount, categoryId, end ->
-                viewModel.addChallenge(type, title, amount, categoryId, end)
+            onConfirm = { draft ->
+                viewModel.addChallenge(draft)
                 showAddChallenge = false
             },
             categoryActions = categoryActions,
@@ -207,8 +210,8 @@ fun AchievementsScreen(
             challenge = challenge,
             categories = state.expenseCategories,
             currencyCode = state.currencyCode,
-            onConfirm = { title, amount, categoryId, end ->
-                viewModel.updateChallenge(challenge, title, amount, categoryId, end)
+            onConfirm = { title, amount, currency, categoryId, end ->
+                viewModel.updateChallenge(challenge, title, amount, currency, categoryId, end)
                 challengeToEdit = null
             },
             categoryActions = categoryActions,
@@ -349,7 +352,10 @@ private fun challengeSubtitle(challenge: ChallengeProgress, currencyCode: String
         ChallengeType.SAVE_TARGET -> stringResource(
             R.string.challenge_saved_of,
             Money.format(challenge.progressLabelMinor, "BYN"),
-            Money.format(challenge.entity.amountMinor, currencyCode)
+            Money.format(
+                challenge.entity.amountMinor,
+                challenge.entity.currencyCode ?: currencyCode
+            )
         )
     }
 
@@ -542,19 +548,29 @@ private fun EditChallengeDialog(
     challenge: ChallengeProgress,
     categories: List<CategoryEntity>,
     currencyCode: String,
-    onConfirm: (title: String, amountMinor: Long, categoryId: Long?, end: LocalDate) -> Unit,
+    onConfirm: (
+        title: String,
+        amountMinor: Long,
+        currency: String?,
+        categoryId: Long?,
+        end: LocalDate
+    ) -> Unit,
     categoryActions: CategoryActions,
     onDismiss: () -> Unit
 ) {
+    val saving = challenge.entity.type == ChallengeType.SAVE_TARGET
     var title by remember { mutableStateOf(challenge.entity.title) }
+    var currency by remember {
+        mutableStateOf(challenge.entity.currencyCode ?: currencyCode)
+    }
     var amountText by remember {
-        mutableStateOf(Money.editableText(challenge.entity.amountMinor, currencyCode))
+        mutableStateOf(Money.editableText(challenge.entity.amountMinor, currency))
     }
     var categoryId by remember { mutableStateOf(challenge.entity.categoryId) }
     var end by remember { mutableStateOf(LocalDate.ofEpochDay(challenge.entity.endEpochDay)) }
     var showDatePicker by remember { mutableStateOf(false) }
     val needsAmount = challenge.entity.type != ChallengeType.NO_SPEND
-    val amountMinor = Money.parseToMinor(amountText, currencyCode) ?: 0L
+    val amountMinor = Money.parseToMinor(amountText, currency) ?: 0L
 
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -578,6 +594,16 @@ private fun EditChallengeDialog(
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                         modifier = Modifier.fillMaxWidth()
                     )
+                }
+                if (saving) {
+                    CurrencyChips(currency) { currency = it }
+                    if (challenge.entity.goalId != null) {
+                        Text(
+                            text = stringResource(R.string.challenge_goal_linked),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
                 }
                 if (challenge.entity.type == ChallengeType.SPEND_LIMIT) {
                     ChallengeCategoryRow(
@@ -605,6 +631,7 @@ private fun EditChallengeDialog(
                     onConfirm(
                         title,
                         if (needsAmount) amountMinor else 0L,
+                        currency.takeIf { saving },
                         if (challenge.entity.type == ChallengeType.SPEND_LIMIT) {
                             categoryId
                         } else {
@@ -654,28 +681,29 @@ private fun EditChallengeDialog(
 private fun AddChallengeDialog(
     categories: List<CategoryEntity>,
     currencyCode: String,
-    onConfirm: (
-        type: ChallengeType,
-        title: String,
-        amountMinor: Long,
-        categoryId: Long?,
-        end: LocalDate
-    ) -> Unit,
+    onConfirm: (ChallengeDraft) -> Unit,
     categoryActions: CategoryActions,
     onDismiss: () -> Unit
 ) {
     var type by remember { mutableStateOf(ChallengeType.SPEND_LIMIT) }
     var title by remember { mutableStateOf("") }
     var amountText by remember { mutableStateOf("") }
+    var currency by remember { mutableStateOf(currencyCode) }
     var categoryId by remember { mutableStateOf<Long?>(null) }
     var durationIndex by remember { mutableStateOf(0) }
-    val amountMinor = Money.parseToMinor(amountText, currencyCode) ?: 0L
+    var chosenRange by remember { mutableStateOf<ClosedRange<LocalDate>?>(null) }
+    var showRangePicker by remember { mutableStateOf(false) }
+    val saving = type == ChallengeType.SAVE_TARGET
+    val amountMinor = Money.parseToMinor(amountText, currency) ?: 0L
     val needsAmount = type != ChallengeType.NO_SPEND
 
     val today = LocalDate.now()
-    val endDate = when (durationIndex) {
-        0 -> today.plusDays(6)
-        1 -> YearMonth.now().atEndOfMonth()
+    val range = chosenRange.takeIf { durationIndex == CUSTOM_DURATION }
+    val start = range?.start ?: today
+    val endDate = when {
+        range != null -> range.endInclusive
+        durationIndex == 0 -> today.plusDays(6)
+        durationIndex == 1 -> YearMonth.now().atEndOfMonth()
         else -> today.plusDays(29)
     }
 
@@ -693,9 +721,10 @@ private fun AddChallengeDialog(
                                 index = index,
                                 count = ChallengeType.entries.size
                             ),
+                            icon = {},
                             label = {
                                 Text(
-                                    stringResource(
+                                    text = stringResource(
                                         when (option) {
                                             ChallengeType.SPEND_LIMIT ->
                                                 R.string.challenge_type_limit_short
@@ -705,7 +734,8 @@ private fun AddChallengeDialog(
                                                 R.string.challenge_type_save_short
                                         }
                                     ),
-                                    maxLines = 1
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis
                                 )
                             }
                         )
@@ -727,6 +757,14 @@ private fun AddChallengeDialog(
                         singleLine = true,
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                         modifier = Modifier.fillMaxWidth()
+                    )
+                }
+                if (saving) {
+                    CurrencyChips(currency) { currency = it }
+                    Text(
+                        text = stringResource(R.string.challenge_goal_created),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
                 if (type == ChallengeType.SPEND_LIMIT) {
@@ -752,6 +790,26 @@ private fun AddChallengeDialog(
                             label = { Text(stringResource(labelRes), maxLines = 1) }
                         )
                     }
+                    item(key = CUSTOM_DURATION) {
+                        FilterChip(
+                            selected = durationIndex == CUSTOM_DURATION,
+                            onClick = { showRangePicker = true },
+                            leadingIcon = {
+                                Icon(
+                                    Icons.Rounded.Event,
+                                    contentDescription = null,
+                                    Modifier.size(18.dp)
+                                )
+                            },
+                            label = {
+                                Text(
+                                    text = range?.let { rangeLabel(it) }
+                                        ?: stringResource(R.string.challenge_duration_custom),
+                                    maxLines = 1
+                                )
+                            }
+                        )
+                    }
                 }
             }
         },
@@ -760,11 +818,15 @@ private fun AddChallengeDialog(
                 enabled = title.isNotBlank() && (!needsAmount || amountMinor > 0),
                 onClick = {
                     onConfirm(
-                        type,
-                        title,
-                        if (needsAmount) amountMinor else 0L,
-                        if (type == ChallengeType.SPEND_LIMIT) categoryId else null,
-                        endDate
+                        ChallengeDraft(
+                            type = type,
+                            title = title,
+                            amountMinor = if (needsAmount) amountMinor else 0L,
+                            currencyCode = currency.takeIf { saving },
+                            categoryId = if (type == ChallengeType.SPEND_LIMIT) categoryId else null,
+                            start = start,
+                            end = endDate
+                        )
                     )
                 }
             ) { Text(stringResource(R.string.action_add)) }
@@ -773,6 +835,64 @@ private fun AddChallengeDialog(
             TextButton(onClick = onDismiss) { Text(stringResource(R.string.action_cancel)) }
         }
     )
+
+    if (showRangePicker) {
+        ChallengeRangeDialog(
+            initial = range,
+            onDismiss = { showRangePicker = false },
+            onPick = { picked ->
+                chosenRange = picked
+                durationIndex = CUSTOM_DURATION
+                showRangePicker = false
+            }
+        )
+    }
+}
+
+private const val CUSTOM_DURATION = 3
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun ChallengeRangeDialog(
+    initial: ClosedRange<LocalDate>?,
+    onDismiss: () -> Unit,
+    onPick: (ClosedRange<LocalDate>) -> Unit
+) {
+    val pickerState = rememberDateRangePickerState(
+        initialSelectedStartDateMillis = initial?.start?.toUtcMillis(),
+        initialSelectedEndDateMillis = initial?.endInclusive?.toUtcMillis()
+    )
+    val started = pickerState.selectedStartDateMillis
+    val ended = pickerState.selectedEndDateMillis
+    DatePickerDialog(
+        onDismissRequest = onDismiss,
+        confirmButton = {
+            TextButton(
+                enabled = started != null && ended != null,
+                onClick = {
+                    if (started != null && ended != null) {
+                        onPick(started.toUtcDate()..ended.toUtcDate())
+                    }
+                }
+            ) { Text(stringResource(R.string.action_apply)) }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) { Text(stringResource(R.string.action_cancel)) }
+        }
+    ) {
+        DateRangePicker(state = pickerState, showModeToggle = false)
+    }
+}
+
+private fun LocalDate.toUtcMillis(): Long =
+    atStartOfDay(ZoneOffset.UTC).toInstant().toEpochMilli()
+
+private fun Long.toUtcDate(): LocalDate =
+    Instant.ofEpochMilli(this).atZone(ZoneOffset.UTC).toLocalDate()
+
+private fun rangeLabel(range: ClosedRange<LocalDate>): String {
+    val formatter = DateTimeFormatter.ofPattern("d MMM", Locale.getDefault())
+    return range.start.format(formatter) + " – " + range.endInclusive.format(formatter)
 }
 
 @Composable

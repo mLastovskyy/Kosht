@@ -15,7 +15,11 @@ data class ChallengeEntity(
 
     val amountMinor: Long,
 
+    val currencyCode: String? = null,
+
     val categoryId: Long? = null,
+
+    val goalId: Long? = null,
 
     val startEpochDay: Long,
     val endEpochDay: Long,

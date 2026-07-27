@@ -84,12 +84,17 @@ object ChallengeEvaluator {
 
                 val savedByn = savings
                     .filter { it.amountMinor > 0 }
+                    .filter { challenge.goalId == null || it.goalId == challenge.goalId }
                     .filter { inPeriod(Dates.toLocalDate(it.timestamp)) }
                     .sumOf {
                         RatesRepository.toBynMinor(it.amountMinor, it.currencyCode, rates) ?: 0L
                     }
                 val targetByn = RatesRepository
-                    .toBynMinor(challenge.amountMinor, currencyCode, rates)
+                    .toBynMinor(
+                        challenge.amountMinor,
+                        challenge.currencyCode ?: currencyCode,
+                        rates
+                    )
                     ?: challenge.amountMinor
                 ChallengeProgress(
                     entity = challenge,

@@ -2,6 +2,7 @@ package by.mlastovsky.kosht.ui.achievements
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import by.mlastovsky.kosht.data.RatesRepository
 import by.mlastovsky.kosht.data.SettingsRepository
 import by.mlastovsky.kosht.data.TransactionRepository
 import by.mlastovsky.kosht.data.WalletRepository
@@ -10,6 +11,7 @@ import by.mlastovsky.kosht.data.awards.AwardRules
 import by.mlastovsky.kosht.data.awards.AwardTracker
 import by.mlastovsky.kosht.data.awards.ChallengeProgress
 import by.mlastovsky.kosht.data.db.CategoryEntity
+import by.mlastovsky.kosht.data.db.ChallengeEntity
 import by.mlastovsky.kosht.model.ChallengeType
 import by.mlastovsky.kosht.model.TransactionType
 import by.mlastovsky.kosht.ui.components.CategoryEdit
@@ -18,6 +20,7 @@ import java.time.LocalDate
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
@@ -28,6 +31,16 @@ data class BadgeUi(
     val unlockedAt: Long? = null,
 
     val progressText: String? = null
+)
+
+data class ChallengeDraft(
+    val type: ChallengeType,
+    val title: String,
+    val amountMinor: Long,
+    val currencyCode: String?,
+    val categoryId: Long?,
+    val start: LocalDate,
+    val end: LocalDate
 )
 
 data class AchievementsUiState(
@@ -44,6 +57,7 @@ class AchievementsViewModel(
     private val walletRepository: WalletRepository,
     private val tracker: AwardTracker,
     private val transactionRepository: TransactionRepository,
+    private val ratesRepository: RatesRepository,
     settingsRepository: SettingsRepository
 ) : ViewModel() {
 
@@ -128,23 +142,29 @@ class AchievementsViewModel(
         viewModelScope.launch { transactionRepository.deleteCategory(category) }
     }
 
-    fun addChallenge(
-        type: ChallengeType,
-        title: String,
-        amountMinor: Long,
-        categoryId: Long?,
-        end: LocalDate
-    ) {
-        if (title.isBlank()) return
+    fun addChallenge(draft: ChallengeDraft) {
+        if (draft.title.isBlank()) return
         viewModelScope.launch {
-            walletRepository.addChallenge(
-                type = type,
-                title = title,
-                amountMinor = amountMinor,
-                categoryId = categoryId,
-                start = LocalDate.now(),
-                end = end
-            )
+            val savingCurrency = draft.currencyCode
+                ?.takeIf { draft.type == ChallengeType.SAVE_TARGET }
+            if (savingCurrency == null) {
+                walletRepository.addChallenge(
+                    type = draft.type,
+                    title = draft.title,
+                    amountMinor = draft.amountMinor,
+                    categoryId = draft.categoryId,
+                    start = draft.start,
+                    end = draft.end
+                )
+            } else {
+                walletRepository.addSavingChallenge(
+                    title = draft.title,
+                    amountMinor = draft.amountMinor,
+                    currencyCode = savingCurrency,
+                    start = draft.start,
+                    end = draft.end
+                )
+            }
         }
     }
 
@@ -152,20 +172,31 @@ class AchievementsViewModel(
         challenge: ChallengeProgress,
         title: String,
         amountMinor: Long,
+        currencyCode: String?,
         categoryId: Long?,
         end: LocalDate
     ) {
         if (title.isBlank()) return
+        val entity = challenge.entity
         viewModelScope.launch {
             walletRepository.updateChallenge(
-                challenge.entity.copy(
+                entity.copy(
                     title = title.trim(),
                     amountMinor = amountMinor,
+                    currencyCode = currencyCode ?: entity.currencyCode,
                     categoryId = categoryId,
                     endEpochDay = end.toEpochDay()
-                )
+                ),
+                savingsFactor = savingsFactor(entity, currencyCode)
             )
         }
+    }
+
+    private suspend fun savingsFactor(entity: ChallengeEntity, currencyCode: String?): Double? {
+        if (entity.goalId == null || currencyCode == null) return null
+        val from = entity.currencyCode ?: uiState.value.currencyCode
+        if (from == currencyCode) return null
+        return RatesRepository.factor(from, currencyCode, ratesRepository.rates.first())
     }
 
     fun deleteChallenge(challenge: ChallengeProgress) {
