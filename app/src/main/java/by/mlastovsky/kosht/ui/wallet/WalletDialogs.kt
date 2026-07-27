@@ -745,6 +745,10 @@ private fun recurringDateRes(income: Boolean): Int =
 private fun recurringConvertedRes(income: Boolean): Int =
     if (income) R.string.recurring_converted_income else R.string.recurring_converted
 
+@StringRes
+private fun recurringChargedRes(income: Boolean): Int =
+    if (income) R.string.recurring_credited else R.string.recurring_charged
+
 @Composable
 private fun AccountChips(
     accounts: List<AccountEntity>,
@@ -1161,15 +1165,12 @@ fun ConfirmRecurringDialog(
     accounts: List<AccountEntity>,
     defaultAccountId: Long?,
     type: TransactionType,
-    onConfirm: (amountMinor: Long, rate: Double, accountId: Long?) -> Unit,
+    onConfirm: (amountMinor: Long, chargedMinor: Long, accountId: Long?) -> Unit,
     onDismiss: () -> Unit
 ) {
     val sameCurrency = currencyCode == appCurrencyCode
     var amountText by remember {
         mutableStateOf(Money.editableText(initialAmountMinor, currencyCode))
-    }
-    var rateText by remember {
-        mutableStateOf(suggestedRate?.let { "%.4f".format(it).replace(',', '.') } ?: "")
     }
     var accountId by remember(accounts, defaultAccountId) {
         mutableStateOf(
@@ -1178,8 +1179,32 @@ fun ConfirmRecurringDialog(
         )
     }
     val amountMinor = Money.parseToMinor(amountText, currencyCode) ?: 0L
-    val rate = if (sameCurrency) 1.0 else rateText.replace(',', '.').toDoubleOrNull() ?: 0.0
-    val convertedMinor = if (rate > 0) Math.round(amountMinor * rate) else 0L
+    val atOfficialRate = suggestedRate
+        ?.takeIf { it > 0 }
+        ?.let { Math.round(amountMinor * it) }
+        ?: 0L
+
+    var chargedText by remember { mutableStateOf("") }
+    var chargedByHand by remember { mutableStateOf(false) }
+    LaunchedEffect(atOfficialRate, chargedByHand) {
+        if (!chargedByHand) {
+            chargedText = if (atOfficialRate > 0) {
+                Money.editableText(atOfficialRate, appCurrencyCode)
+            } else {
+                ""
+            }
+        }
+    }
+
+    val chargedMinor = when {
+        sameCurrency -> amountMinor
+        else -> Money.parseToMinor(chargedText, appCurrencyCode) ?: 0L
+    }
+    val ownRate = if (amountMinor > 0 && chargedMinor > 0) {
+        chargedMinor.toDouble() / amountMinor
+    } else {
+        0.0
+    }
     val income = type == TransactionType.INCOME
 
     AlertDialog(
@@ -1220,38 +1245,43 @@ fun ConfirmRecurringDialog(
                 }
                 if (!sameCurrency) {
                     OutlinedTextField(
-                        value = rateText,
-                        onValueChange = { rateText = it.take(10) },
+                        value = chargedText,
+                        onValueChange = {
+                            chargedByHand = true
+                            chargedText = it.take(12)
+                        },
                         label = {
                             Text(
                                 stringResource(
-                                    R.string.recurring_rate,
-                                    currencyCode,
+                                    recurringChargedRes(income),
                                     appCurrencyCode
                                 )
                             )
                         },
+                        supportingText = { Text(stringResource(R.string.recurring_charged_hint)) },
                         singleLine = true,
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                         modifier = Modifier.fillMaxWidth()
                     )
-                }
-                if (convertedMinor > 0) {
-                    Text(
-                        text = stringResource(
-                            recurringConvertedRes(income),
-                            Money.format(convertedMinor, appCurrencyCode)
-                        ),
-                        style = MaterialTheme.typography.titleMedium,
-                        color = MaterialTheme.colorScheme.primary
-                    )
+                    if (ownRate > 0) {
+                        Text(
+                            text = stringResource(
+                                R.string.recurring_rate_value,
+                                currencyCode,
+                                appCurrencyCode,
+                                "%.4f".format(ownRate)
+                            ),
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
                 }
             }
         },
         confirmButton = {
             TextButton(
-                enabled = amountMinor > 0 && rate > 0,
-                onClick = { onConfirm(amountMinor, rate, accountId) }
+                enabled = amountMinor > 0 && chargedMinor > 0,
+                onClick = { onConfirm(amountMinor, chargedMinor, accountId) }
             ) { Text(stringResource(R.string.action_confirm)) }
         },
         dismissButton = {

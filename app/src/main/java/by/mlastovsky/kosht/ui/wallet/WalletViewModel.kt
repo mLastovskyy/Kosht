@@ -514,15 +514,14 @@ class WalletViewModel(
     fun confirmRecurring(
         item: RecurringWithCategory,
         amountMinor: Long,
-        rate: Double,
+        chargedMinor: Long,
         accountId: Long? = null
     ) {
-        if (amountMinor <= 0 || rate <= 0.0) return
+        if (amountMinor <= 0 || chargedMinor <= 0) return
         viewModelScope.launch {
             val state = uiState.value
-            val converted = Math.round(amountMinor * rate)
-            val byn = RatesRepository.toBynMinor(converted, state.currencyCode, state.rates)
-            walletRepository.confirmRecurring(item.recurring, converted, byn, accountId)
+            val byn = RatesRepository.toBynMinor(chargedMinor, state.currencyCode, state.rates)
+            walletRepository.confirmRecurring(item.recurring, chargedMinor, byn, accountId)
         }
     }
 

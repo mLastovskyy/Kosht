@@ -573,8 +573,8 @@ fun WalletScreen(
             accounts = state.pickableAccounts,
             defaultAccountId = item.recurring.accountId,
             type = item.recurring.type,
-            onConfirm = { amountMinor, rate, accountId ->
-                viewModel.confirmRecurring(item, amountMinor, rate, accountId)
+            onConfirm = { amountMinor, chargedMinor, accountId ->
+                viewModel.confirmRecurring(item, amountMinor, chargedMinor, accountId)
                 recurringToConfirm = null
             },
             onDismiss = { recurringToConfirm = null }
