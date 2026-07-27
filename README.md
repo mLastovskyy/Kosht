@@ -69,13 +69,13 @@ Cash out of a card, or one card topping up another, is not spending — the mone
 Switch on *Settings → Interface → Transfer fee* and the dialog gains a fee field for the times moving money costs something: the fee comes off the source account on top of the amount, and it is the one part that really does leave your pocket — so the total balance drops by exactly that much, and the row says "fee 1,50". Tap a transfer anywhere to correct or delete it.
 
 ### 🧺 What the money was actually for
-Any record can list its items — the products from a receipt, or the parts of a payment like rent and utilities. It is optional, it never overwrites the record's own amount, and it is where the interesting questions get answered.
+Any record can list its items — the products from a receipt, or the parts of a payment like rent and utilities. It is optional, and it is where the interesting questions get answered. A record with no sum of its own takes it from the items; a sum you typed is left alone, and if the items come to more than it, saving asks you first.
 
 - **Suggestions that fit.** The chips offer what you have written in *this* category before, plus the handful of things such a payment usually consists of: Housing suggests rent, utilities, internet; Groceries suggests bread, milk, coffee. Tapping one keeps the spelling identical, which is what makes the numbers add up later.
 - **Quantity × price**, the way a receipt spells it: two at 1,75 is a line of 3,50.
 - **Read off the receipt by itself** where the slip prints its lines, quantities included — discounts, VAT and card details are not items and are left out.
 - **The figures have to agree.** Lines adding up to far more than the receipt total mean something was misread, so the list is dropped rather than trusted; adding up to less is said out loud ("5 items · 41,20 of 45,30 — the rest could not be read"). Nothing is ever invented to make the arithmetic work.
-- **Statistics → Charts:** a category whose records list items carries a basket with a count — tap it and the category opens up into what was actually bought, with each item's share of it. Income counts too: a salary splits into the pay and the bonus as readily as a receipt splits into products.
+- **Statistics → Charts:** a category whose records list items carries a basket with a count — tap it and the category opens up into what was actually bought, each item's bar drawn in that category's own colour. Income counts too: a salary splits into the pay and the bonus as readily as a receipt splits into products.
 - **One product, one row.** Names are added up on their settled form — case, stray spaces and the ё/е that half the keyboards skip are ignored — so "молоко", "Молоко  " and "МОЛОКО" are one line with one total, including everything written down before any of this existed.
 
 ### 📸 Receipt scanning — QR first, OCR always
@@ -89,7 +89,7 @@ Snap a receipt and Kosht reads the total, date and store for you. When the QR le
 - **An AI model of our own decides what each line is.** 77 KB of weights, trained on Belarusian slips and on the mistakes recognition makes on them, shipped inside the APK and run on the phone. It answers what rules cannot: which line settles a slip that never prints "итого", which line in the header is the shop, whether a line that looks like a purchase really names one. Where the slip does say "к оплате", the plain rule still wins.
 - **The photo is prepared, read several ways, and repaired.** A slip photographed by hand is lit unevenly, so every dot is judged against the paper around it instead of one brightness for the whole frame; a small photo is enlarged. The page is then recognised in several passes with different layout assumptions, scored on confidence and on how many prices came out, and the best one is kept. Afterwards the letters recognition mistakes for digits are put right: `1,4О`, `l2,50` and `З,20` are prices, and only tokens already shaped like an amount are touched, so names keep their letters, dates stay dates and no figure is ever invented.
 - **The shop is read, not guessed.** A familiar chain is matched by name; an unfamiliar one is found the way a person finds it — the largest print at the top of the slip, a trade name in quotes, a legal form, the line beside the tax number. Addresses, cashiers, document headers and scanning noise are ruled out, and when nothing looks like a name — or the line is longer than a note field takes — it is left empty rather than filled with half a line from the receipt.
-- **The shopping itself is read too**, when the slip lists it: name, price and quantity per line, straight into the record's item list (see below).
+- **The shopping itself is read too**, when the slip lists it: name, price and quantity per line, straight into the record's item list (see below). The layouts real shops print are all handled — a name wrapped over two or three lines, an article number and a bar code above the figures, and the `price × quantity   sum` row that follows it.
 - **A scanned record says so.** A small scanner mark stays with it in the editor and in every list, so months later you still know the figures were not typed by hand.
 
 Either way a review dialog shows what was read, and every field stays editable before you save.
@@ -105,6 +105,9 @@ Signing up is an email, a six-digit code that Kosht mails you (good for five min
 - **Settings → Account** is one row: the address, when it last synced, and a sync button that turns into a spinner while it works. Tap the row for the full address, the exact time and the state of automatic sync.
 - **Your settings travel too** — currency, theme, interface and notification switches, the daily budget, the report you built and your name and nickname, so a second phone looks and behaves like the first. The interface language stays with the device.
 - **Receipt photos stay on the device unless you say otherwise.** Switching *Sync receipt photos* on is a consent of its own, recorded as one: the images then live in a private bucket in your own folder, which no other account can read, write or delete. Switching it off deletes the uploaded copies and keeps the originals here.
+
+### 🗂 History that does not lose anything
+Months walk back with the arrows or a period picker, search runs over notes and category names, and every day carries its own total. Deleting takes two deliberate moves: **swipe a row left** and a bin appears, **tap the bin** and it asks. Then *Undo* still waits along the bottom — and it puts back everything the record had moved, debts included.
 
 ### 📊 Statistics three ways
 - **Charts** — an animated category donut, daily spending bars, and a category that opens up into the items behind it when its records list any
