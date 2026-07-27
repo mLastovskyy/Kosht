@@ -19,15 +19,18 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.MenuBook
 import androidx.compose.material.icons.rounded.Add
 import androidx.compose.material.icons.rounded.Autorenew
+import androidx.compose.material.icons.rounded.CloudSync
 import androidx.compose.material.icons.rounded.CreditCard
 import androidx.compose.material.icons.rounded.DeleteOutline
 import androidx.compose.material.icons.rounded.DocumentScanner
 import androidx.compose.material.icons.rounded.Handshake
 import androidx.compose.material.icons.rounded.KeyboardArrowDown
 import androidx.compose.material.icons.rounded.LocalFireDepartment
+import androidx.compose.material.icons.rounded.Lock
 import androidx.compose.material.icons.rounded.Savings
 import androidx.compose.material.icons.rounded.Settings
 import androidx.compose.material.icons.rounded.ShoppingBasket
+import androidx.compose.material.icons.rounded.Update
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -46,7 +49,10 @@ import androidx.compose.ui.unit.sp
 import by.mlastovsky.kosht.R
 import by.mlastovsky.kosht.ui.navigation.MainTabs
 
-internal enum class TourArt { TABS, ADD, SCAN, ITEMS, HISTORY, STATS, WALLET, STREAK, MANUAL }
+internal enum class TourArt {
+    TABS, HOME, ADD, CALC, SCAN, ITEMS, HISTORY, STATS, WALLET, SETTINGS,
+    STREAK, LOCK, SYNC, UPDATE, MANUAL
+}
 
 internal data class MockSize(val width: Dp, val height: Dp)
 
@@ -58,14 +64,20 @@ internal val SmallMock = MockSize(132.dp, 196.dp)
 internal fun ScreenArt(art: TourArt, size: MockSize = FullMock) {
     when (art) {
         TourArt.TABS -> TabsArt(size)
+        TourArt.HOME -> HomeArt(size)
         TourArt.ADD -> AddArt(size)
+        TourArt.CALC -> CalcArt(size)
         TourArt.SCAN -> ScanArt(size)
         TourArt.ITEMS -> ItemsArt(size)
         TourArt.HISTORY -> HistoryArt(size)
         TourArt.STATS -> StatsArt(size)
         TourArt.WALLET -> WalletArt(size)
+        TourArt.SETTINGS -> SettingsArt(size)
         TourArt.STREAK -> StreakArt(size)
-        TourArt.MANUAL -> ManualArt()
+        TourArt.LOCK -> LockArt(size)
+        TourArt.SYNC -> SyncArt(size)
+        TourArt.UPDATE -> PathArt(Icons.Rounded.Update, R.string.settings_version)
+        TourArt.MANUAL -> PathArt(Icons.AutoMirrored.Rounded.MenuBook, R.string.guide_pdf_title)
     }
 }
 
@@ -313,7 +325,210 @@ private fun StreakArt(size: MockSize) {
 }
 
 @Composable
-private fun ManualArt() {
+private fun HomeArt(size: MockSize) {
+    Phone(size) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Placeholder(0.4f, 9.dp)
+            Spacer(Modifier.weight(1f))
+            Box(
+                modifier = Modifier
+                    .size(14.dp)
+                    .clip(CircleShape)
+                    .background(MaterialTheme.colorScheme.surfaceContainerHighest)
+            )
+        }
+        Spacer(Modifier.height(8.dp))
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(46.dp)
+                .clip(MaterialTheme.shapes.medium)
+                .background(MaterialTheme.colorScheme.primaryContainer)
+        )
+        Spacer(Modifier.height(8.dp))
+        Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+            repeat(2) {
+                Box(
+                    modifier = Modifier
+                        .weight(1f)
+                        .height(20.dp)
+                        .clip(MaterialTheme.shapes.small)
+                        .background(MaterialTheme.colorScheme.surfaceContainerHighest)
+                )
+            }
+        }
+        Spacer(Modifier.height(10.dp))
+        Placeholder(0.9f)
+        Spacer(Modifier.height(7.dp))
+        Placeholder(0.75f)
+        Spacer(Modifier.weight(1f))
+        MockBar(selected = 0)
+    }
+}
+
+@Composable
+private fun CalcArt(size: MockSize) {
+    Phone(size) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.End
+        ) {
+            Text(
+                text = "24,95",
+                fontSize = 15.sp,
+                lineHeight = 18.sp,
+                color = MaterialTheme.colorScheme.onSurface
+            )
+        }
+        Spacer(Modifier.height(10.dp))
+        repeat(3) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(bottom = 6.dp),
+                horizontalArrangement = Arrangement.spacedBy(6.dp)
+            ) {
+                repeat(4) { column ->
+                    Box(
+                        modifier = Modifier
+                            .weight(1f)
+                            .height(18.dp)
+                            .clip(MaterialTheme.shapes.small)
+                            .background(
+                                if (column == 3) {
+                                    MaterialTheme.colorScheme.primaryContainer
+                                } else {
+                                    MaterialTheme.colorScheme.surfaceContainerHighest
+                                }
+                            )
+                    )
+                }
+            }
+        }
+        Spacer(Modifier.weight(1f))
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(22.dp)
+                .clip(MaterialTheme.shapes.medium)
+                .background(MaterialTheme.colorScheme.primary)
+        )
+    }
+}
+
+@Composable
+private fun SettingsArt(size: MockSize) {
+    Phone(size) {
+        repeat(3) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(bottom = 8.dp)
+                    .clip(MaterialTheme.shapes.small)
+                    .background(MaterialTheme.colorScheme.surfaceContainerHighest)
+                    .padding(6.dp)
+            ) {
+                Placeholder(0.55f)
+                Spacer(Modifier.height(5.dp))
+                Placeholder(0.8f)
+            }
+        }
+        Spacer(Modifier.weight(1f))
+        MockBar(selected = 4)
+    }
+}
+
+@Composable
+private fun LockArt(size: MockSize) {
+    Phone(size) {
+        Spacer(Modifier.height(6.dp))
+        Box(
+            modifier = Modifier.fillMaxWidth(),
+            contentAlignment = Alignment.Center
+        ) {
+            Spotlight(size = 30.dp) {
+                Icon(
+                    imageVector = Icons.Rounded.Lock,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.onPrimary,
+                    modifier = Modifier.size(16.dp)
+                )
+            }
+        }
+        Spacer(Modifier.height(10.dp))
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.Center
+        ) {
+            repeat(4) { index ->
+                Box(
+                    modifier = Modifier
+                        .padding(horizontal = 3.dp)
+                        .size(if (index < 2) 8.dp else 6.dp)
+                        .clip(CircleShape)
+                        .background(
+                            if (index < 2) {
+                                MaterialTheme.colorScheme.primary
+                            } else {
+                                MaterialTheme.colorScheme.surfaceContainerHighest
+                            }
+                        )
+                )
+            }
+        }
+        Spacer(Modifier.height(12.dp))
+        repeat(2) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(bottom = 6.dp),
+                horizontalArrangement = Arrangement.spacedBy(6.dp)
+            ) {
+                repeat(3) {
+                    Box(
+                        modifier = Modifier
+                            .weight(1f)
+                            .height(18.dp)
+                            .clip(MaterialTheme.shapes.small)
+                            .background(MaterialTheme.colorScheme.surfaceContainerHighest)
+                    )
+                }
+            }
+        }
+        Spacer(Modifier.weight(1f))
+    }
+}
+
+@Composable
+private fun SyncArt(size: MockSize) {
+    Phone(size) {
+        Box(
+            modifier = Modifier.fillMaxWidth(),
+            contentAlignment = Alignment.Center
+        ) {
+            Spotlight(size = 34.dp) {
+                Icon(
+                    imageVector = Icons.Rounded.CloudSync,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.onPrimary,
+                    modifier = Modifier.size(18.dp)
+                )
+            }
+        }
+        Spacer(Modifier.height(14.dp))
+        Placeholder(0.85f)
+        Spacer(Modifier.height(8.dp))
+        Placeholder(0.6f)
+        Spacer(Modifier.weight(1f))
+        MockBar(selected = 4)
+    }
+}
+
+@Composable
+private fun PathArt(icon: ImageVector, labelRes: Int) {
     Column(horizontalAlignment = Alignment.CenterHorizontally) {
         PathChip(Icons.Rounded.Settings, stringResource(R.string.nav_settings), accent = false)
         Icon(
@@ -324,11 +539,7 @@ private fun ManualArt() {
                 .padding(vertical = 6.dp)
                 .size(22.dp)
         )
-        PathChip(
-            Icons.AutoMirrored.Rounded.MenuBook,
-            stringResource(R.string.guide_pdf_title),
-            accent = true
-        )
+        PathChip(icon, stringResource(labelRes), accent = true)
     }
 }
 

@@ -36,17 +36,59 @@ import by.mlastovsky.kosht.ui.tour.ScreenArt
 import by.mlastovsky.kosht.ui.tour.TourArt
 import by.mlastovsky.kosht.util.PdfDocs
 
-private data class GuideCard(val art: TourArt, val titleRes: Int, val bodyRes: Int)
+private data class GuideCard(
+    val art: TourArt,
+    val titleRes: Int,
+    val bodyRes: Int,
+    val screen: Int? = null
+)
 
-private val cards = listOf(
-    GuideCard(TourArt.TABS, R.string.tour_tabs_title, R.string.tour_tabs_body),
-    GuideCard(TourArt.ADD, R.string.tour_add_title, R.string.tour_add_body),
-    GuideCard(TourArt.SCAN, R.string.tour_scan_title, R.string.tour_scan_body),
-    GuideCard(TourArt.ITEMS, R.string.guide_items_title, R.string.guide_items_short),
-    GuideCard(TourArt.HISTORY, R.string.guide_history_title, R.string.guide_history_short),
-    GuideCard(TourArt.STATS, R.string.guide_stats_title, R.string.guide_stats_short),
-    GuideCard(TourArt.WALLET, R.string.tour_wallet_title, R.string.tour_wallet_body),
-    GuideCard(TourArt.STREAK, R.string.tour_streak_title, R.string.tour_streak_body)
+private data class GuideGroup(val titleRes: Int, val cards: List<GuideCard>)
+
+private val groups = listOf(
+    GuideGroup(
+        R.string.guide_group_screens,
+        listOf(
+            GuideCard(TourArt.HOME, R.string.nav_home, R.string.guide_home_lines, screen = 1),
+            GuideCard(
+                TourArt.HISTORY,
+                R.string.nav_history,
+                R.string.guide_history_lines,
+                screen = 2
+            ),
+            GuideCard(TourArt.STATS, R.string.nav_stats, R.string.guide_stats_lines, screen = 3),
+            GuideCard(
+                TourArt.WALLET,
+                R.string.nav_wallet,
+                R.string.guide_wallet_lines,
+                screen = 4
+            ),
+            GuideCard(
+                TourArt.SETTINGS,
+                R.string.nav_settings,
+                R.string.guide_settings_lines,
+                screen = 5
+            )
+        )
+    ),
+    GuideGroup(
+        R.string.guide_group_record,
+        listOf(
+            GuideCard(TourArt.ADD, R.string.guide_add_head, R.string.guide_add_lines),
+            GuideCard(TourArt.CALC, R.string.guide_calc_head, R.string.guide_calc_lines),
+            GuideCard(TourArt.ITEMS, R.string.guide_items_head, R.string.guide_items_lines),
+            GuideCard(TourArt.SCAN, R.string.guide_scan_head, R.string.guide_scan_lines)
+        )
+    ),
+    GuideGroup(
+        R.string.guide_group_more,
+        listOf(
+            GuideCard(TourArt.STREAK, R.string.guide_streak_head, R.string.guide_streak_lines),
+            GuideCard(TourArt.LOCK, R.string.guide_lock_head, R.string.guide_lock_lines),
+            GuideCard(TourArt.SYNC, R.string.guide_sync_head, R.string.guide_sync_lines),
+            GuideCard(TourArt.UPDATE, R.string.guide_update_head, R.string.guide_update_lines)
+        )
+    )
 )
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -73,8 +115,18 @@ fun GuideScreen(onBack: () -> Unit) {
         )
         LazyColumn(contentPadding = PaddingValues(bottom = 32.dp)) {
             item(key = "pdf") { PdfManualCard() }
-            cards.forEach { card ->
-                item(key = card.titleRes) { GuideRow(card) }
+            groups.forEach { group ->
+                item(key = group.titleRes) {
+                    Text(
+                        text = stringResource(group.titleRes),
+                        style = MaterialTheme.typography.titleSmall,
+                        color = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.padding(start = 20.dp, top = 18.dp, bottom = 4.dp)
+                    )
+                }
+                group.cards.forEach { card ->
+                    item(key = card.bodyRes) { GuideRow(card) }
+                }
             }
         }
     }
@@ -89,11 +141,19 @@ private fun GuideRow(card: GuideCard) {
             .clip(MaterialTheme.shapes.large)
             .background(MaterialTheme.colorScheme.surfaceContainer)
             .padding(14.dp),
-        verticalAlignment = Alignment.CenterVertically
+        verticalAlignment = Alignment.Top
     ) {
         ScreenArt(card.art, SmallMock)
         Spacer(Modifier.width(16.dp))
         Column(Modifier.weight(1f)) {
+            card.screen?.let { number ->
+                Text(
+                    text = stringResource(R.string.guide_screen_of, number),
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                Spacer(Modifier.height(2.dp))
+            }
             Text(
                 text = stringResource(card.titleRes),
                 style = MaterialTheme.typography.titleMedium

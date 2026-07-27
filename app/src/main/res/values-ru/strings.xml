@@ -534,16 +534,35 @@
 
     <!-- Гид по приложению -->
     <string name="guide_title">Как пользоваться Kosht</string>
+    <string name="guide_screen_of">Экран %1$d из 5</string>
+    <string name="guide_group_screens">ПЯТЬ ЭКРАНОВ</string>
+    <string name="guide_group_record">КАК ЗАПИСАТЬ</string>
+    <string name="guide_group_more">ОСТАЛЬНОЕ</string>
+    <string name="guide_home_lines">Общий баланс и итоги месяца.\nПлитки счетов — когда счетов больше одного.\nНедавние записи: тап открывает правку, «Все» — Историю.\nВ шапке — серия 🔥, награды 🏆 и профиль.</string>
+    <string name="guide_history_lines">Все записи по дням, над каждым днём — его итог.\nПоиск по заметке и категории, фильтры и период.\nСвайп влево открывает корзину, тап по ней спрашивает.\nПосле удаления внизу ждёт «Отменить».</string>
+    <string name="guide_stats_lines">Круг по категориям, в центре итог; ниже траты по дням.\nТап по категории раскрывает товары — в её цвете.\nКалендарь: чем темнее день, тем больше траты.\nОтчёт — за неделю, месяц, квартал или год.</string>
+    <string name="guide_wallet_lines">Курсы НБРБ и счета с переводами между ними.\nПлатежи ждут подтверждения — сами не списываются.\nДолги, цели и накопления.</string>
+    <string name="guide_settings_lines">Профиль, тема, язык, валюта.\nСчета, отчёт, уведомления, безопасность.\nВнизу — руководство, документы и версия.</string>
+    <string name="guide_add_head">Новая запись</string>
+    <string name="guide_add_lines">Кнопка + на Главной или в Истории.\nСумма, категория, «Сохранить».\nРасход или доход — переключатель сверху либо свайп по сумме.\nЧипы рядом: дата, счёт, позиции.</string>
+    <string name="guide_calc_head">Калькулятор</string>
+    <string name="guide_calc_lines">Для новой записи открывается сам.\nСчитает: 12,50+3,90; пока не сложили — кнопка «=».\n«Применить» переносит сумму в запись.</string>
+    <string name="guide_items_head">Позиции</string>
+    <string name="guide_items_lines">Из чего состоит запись: товары или части платежа.\nПустая сумма соберётся из позиций.\nЕсли позиции дороже суммы — спросим перед сохранением.\nВ статистике они раскладывают категорию по товарам.</string>
+    <string name="guide_scan_head">Скан чека</string>
+    <string name="guide_scan_lines">Сфотографируйте чек или выберите фото из галереи.\nСумма, магазин, дата и позиции подставятся сами.\nQR на чеке ведёт к электронному — цифры точнее.\nВсё считается на телефоне, фото никуда не уходит.</string>
+    <string name="guide_streak_head">Серия и награды</string>
+    <string name="guide_streak_lines">Серия — дни подряд в рамках дневного бюджета.\nИспытания вы задаёте сами.\nБейджи приходят сами, как только заслужены.</string>
+    <string name="guide_lock_head">Блокировка</string>
+    <string name="guide_lock_lines">Свой код и вход по отпечатку.\nМожно задать, через сколько минут спрашивать код.\nКод нигде не хранится в открытом виде.</string>
+    <string name="guide_sync_head">Аккаунт</string>
+    <string name="guide_sync_lines">Без аккаунта всё остаётся на телефоне.\nС аккаунтом записи одинаковы на всех ваших телефонах.\nОфлайн работает как обычно — уедет, когда появится сеть.</string>
+    <string name="guide_update_head">Обновление</string>
+    <string name="guide_update_lines">Настройки → Версия: тап проверяет обновление.\nПриложение скачает и поставит его само.\nДанные остаются на месте.</string>
     <string name="guide_pdf_title">Полный PDF-мануал</string>
     <string name="guide_pdf_desc">Это руководство со скриншотами</string>
     <string name="guide_pdf_open">Скачать PDF</string>
     <string name="guide_pdf_error">Не найдено приложение для просмотра PDF</string>
-    <string name="guide_items_short">Из чего состоит запись. Пустая сумма соберётся из позиций.</string>
-    <string name="guide_history_short">Свайп влево — корзина, тап по ней — подтверждение.</string>
-    <string name="guide_stats_short">Круг по категориям, календарь и отчёт за период.</string>
-    <string name="guide_history_title">История</string>
-    <string name="guide_stats_title">Статистика</string>
-    <string name="guide_items_title">Покупки внутри записи</string>
 
     <!-- Встроенные категории -->
     <string name="category_groceries">Продукты</string>
