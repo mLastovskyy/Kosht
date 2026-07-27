@@ -139,7 +139,7 @@
     <string name="transaction_deleted">Transaction deleted</string>
     <string name="undo">Undo</string>
     <string name="history_delete_title">Delete this record?</string>
-    <string name="history_delete_text">You can bring it back right after.</string>
+    <string name="history_delete_text">The record leaves your history and statistics.</string>
 
     <!-- Statistics -->
     <string name="stats_total">Total</string>
