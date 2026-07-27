@@ -1,6 +1,6 @@
 package by.mlastovsky.kosht.ui.history
 
-import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.animate
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.Orientation
@@ -22,6 +22,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
@@ -44,9 +45,9 @@ import androidx.compose.material3.rememberDateRangePickerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -83,11 +84,11 @@ import java.time.LocalDate
 import java.time.ZoneOffset
 import java.time.format.DateTimeFormatter
 import kotlin.math.roundToInt
-import kotlinx.coroutines.launch
 
 @Composable
 fun HistoryScreen(
     onTransactionClick: (Long) -> Unit,
+    onScreen: Boolean = true,
     viewModel: HistoryViewModel = viewModel(factory = AppViewModelProvider.Factory)
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
@@ -99,6 +100,11 @@ fun HistoryScreen(
     }
     var revealedId by remember { mutableStateOf<Long?>(null) }
     var askedToDelete by remember { mutableStateOf<TransactionWithCategory?>(null) }
+    val listState = rememberLazyListState()
+    val busyList = listState.isScrollInProgress
+    LaunchedEffect(onScreen, busyList) {
+        if (!onScreen || busyList) revealedId = null
+    }
 
     Box(Modifier.fillMaxSize()) {
         Column(
@@ -229,6 +235,7 @@ fun HistoryScreen(
                 )
             } else {
                 LazyColumn(
+                    state = listState,
                     modifier = Modifier.fillMaxSize(),
                     contentPadding = PaddingValues(bottom = 96.dp)
                 ) {
@@ -256,7 +263,7 @@ fun HistoryScreen(
                                     currencyCode = state.currencyCode,
                                     onClick = {
                                         when {
-                                            revealed -> revealedId = null
+                                            revealedId != null -> revealedId = null
                                             item.transaction.isTransfer ->
                                                 transferInAction = item.transaction
                                             else -> onTransactionClick(item.transaction.id)
@@ -456,16 +463,16 @@ private fun RevealRow(
     content: @Composable () -> Unit
 ) {
     val travel = with(LocalDensity.current) { REVEAL_WIDTH.toPx() }
-    val shift = remember { Animatable(0f) }
-    val scope = rememberCoroutineScope()
+    var shift by remember { mutableFloatStateOf(0f) }
     LaunchedEffect(revealed) {
-        shift.animateTo(if (revealed) -travel else 0f)
+        val target = if (revealed) -travel else 0f
+        if (shift != target) animate(shift, target) { value, _ -> shift = value }
     }
     val dragState = rememberDraggableState { delta ->
-        scope.launch { shift.snapTo((shift.value + delta).coerceIn(-travel, 0f)) }
+        shift = (shift + delta).coerceIn(-travel, 0f)
     }
 
-    val shown = (-shift.value / travel).coerceIn(0f, 1f)
+    val shown = (-shift / travel).coerceIn(0f, 1f)
 
     Box(modifier) {
         Box(
@@ -496,14 +503,14 @@ private fun RevealRow(
         }
         Box(
             modifier = Modifier
-                .offset { IntOffset(shift.value.roundToInt(), 0) }
+                .offset { IntOffset(shift.roundToInt(), 0) }
                 .draggable(
                     state = dragState,
                     orientation = Orientation.Horizontal,
                     onDragStopped = {
-                        val open = shift.value < -travel / 2f
+                        val open = shift < -travel / 2f
                         onRevealChange(open)
-                        shift.animateTo(if (open) -travel else 0f)
+                        animate(shift, if (open) -travel else 0f) { value, _ -> shift = value }
                     }
                 )
         ) {
