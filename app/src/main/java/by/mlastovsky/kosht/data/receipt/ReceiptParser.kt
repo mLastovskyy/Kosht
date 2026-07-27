@@ -401,19 +401,68 @@ object ReceiptParser {
         lines: List<ReceiptLine>,
         judged: Judged?,
         above: Int
-    ): String? = knownChain(lines.map { it.text })
+    ): String? = knownChain(lines.map { it.text }, above)
         ?: judged?.merchant(above)
         ?: bestNamedLine(lines, above)
 
-    private fun knownChain(lines: List<String>): String? {
-
-        val header = lines.take(8).joinToString(" ").lowercase()
+    private fun knownChain(lines: List<String>, above: Int): String? {
+        val header = folded(lines.take(above).joinToString(" "))
         return knownChains.entries
-            .filter { header.contains(it.key) }
+            .filter { nearlyContains(header, folded(it.key)) }
 
             .maxByOrNull { it.key.length }
             ?.value
     }
+
+    private val lookAlikes = mapOf(
+        'a' to 'а', 'b' to 'в', 'c' to 'с', 'e' to 'е', 'h' to 'н', 'k' to 'к',
+        'm' to 'м', 'o' to 'о', 'p' to 'р', 't' to 'т', 'x' to 'х', 'y' to 'у',
+        '0' to 'о', '3' to 'з', '6' to 'б', '8' to 'в'
+    )
+
+    private fun folded(text: String): String {
+        val builder = StringBuilder(text.length)
+        text.lowercase().forEach { symbol ->
+            val letter = lookAlikes[symbol] ?: symbol
+            if (letter.isLetterOrDigit()) builder.append(letter)
+        }
+        return builder.toString()
+    }
+
+    private fun nearlyContains(header: String, name: String): Boolean {
+        if (header.contains(name)) return true
+        if (name.length < FUZZY_FROM) return false
+        for (start in header.indices) {
+            for (span in name.length - 1..name.length + 1) {
+                val end = start + span
+                if (end > header.length) continue
+                if (oneEditApart(header.substring(start, end), name)) return true
+            }
+        }
+        return false
+    }
+
+    private fun oneEditApart(left: String, right: String): Boolean {
+        if (left == right) return true
+        val (shorter, longer) = if (left.length <= right.length) left to right else right to left
+        if (longer.length - shorter.length > 1) return false
+        var here = 0
+        var there = 0
+        var edits = 0
+        while (here < shorter.length && there < longer.length) {
+            if (shorter[here] == longer[there]) {
+                here++
+                there++
+                continue
+            }
+            if (++edits > 1) return false
+            there++
+            if (shorter.length == longer.length) here++
+        }
+        return true
+    }
+
+    private const val FUZZY_FROM = 6
 
     private data class Candidate(val name: String, val score: Int, val index: Int)
 

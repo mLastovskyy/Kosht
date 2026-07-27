@@ -331,6 +331,68 @@ class ReceiptParserTest {
     }
 
     @Test
+    fun `a chain is recognised through latin look-alikes`() {
+        val text = """
+            3AO "CAHTA PИТЕЙЛ"
+            УНП 190950065
+            ул. Сурганова, 57Б
+            Яйцо С1 10шт                       4,29
+            УСЯГО                              4,29
+        """.trimIndent()
+        assertEquals("Санта", ReceiptParser.parse(text).merchant)
+    }
+
+    @Test
+    fun `a chain is recognised through a misread letter`() {
+        val text = """
+            ООО "ЕВР00ПТ"
+            г.Минск, ул.В.Хоружей, 31
+            Хлеб Нарочанский                   1,89
+            ИТОГО К ОПЛАТЕ                     1,89
+        """.trimIndent()
+        assertEquals("Евроопт", ReceiptParser.parse(text).merchant)
+    }
+
+    @Test
+    fun `the trade name below the legal entity still names the shop`() {
+        val text = """
+            ООО "ЕВРОТОРГ" Магазин "ЕВРООПТ"
+            УНП 101168731
+            Касса 7   Смена 3
+            Пакет майка                        0,17
+            ИТОГО К ОПЛАТЕ                     0,17
+        """.trimIndent()
+        assertEquals("Евроопт", ReceiptParser.parse(text).merchant)
+    }
+
+    @Test
+    fun `a chain name is not read out of an ordinary word`() {
+        val text = """
+            ЧУП "Хозтовары"
+            Мыло жидкое 500мл                  2,40
+            ИТОГО                              2,40
+        """.trimIndent()
+        assertEquals("Хозтовары", ReceiptParser.parse(text).merchant)
+    }
+
+    @Test
+    fun `an article number and a quoted brand still read as one purchase`() {
+        val text = """
+            Магазин "Копеечка"
+            УНП 191178504
+            2245761 Чипсы"LAY S"(рифл. колб. пепперони)125г
+            4690388119492
+                        5.99      x1.000        5.99
+            ИТОГО                              5.99
+        """.trimIndent()
+        val parsed = ReceiptParser.parse(text)
+        assertEquals(599L, parsed.amountMinor)
+        assertEquals(1, parsed.items.size)
+        assertEquals(599L, parsed.items.first().amountMinor)
+        assertEquals("Чипсы\"LAY S\"(рифл. колб. пепперони)125г", parsed.items.first().name)
+    }
+
+    @Test
     fun `a heading in an electronic receipt names the shop`() {
         val html = """
             <html><body>

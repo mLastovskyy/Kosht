@@ -134,6 +134,13 @@ SHOPS = [
     ('ООО "5 элемент"', "5 элемент"), ('ЗАО "Электросила"', "электросила"),
     ('ООО "Буслік"', "буслік"), ("Аптека №14", "аптека"),
     ('ООО "Прима Тэйст"', "прима"), ('ЧТУП "Кофейня на Немиге"', "кофейня"),
+    ('ООО "ЕВРОТОРГ" Магазин "ЕВРООПТ"', "евроопт"),
+    ('Магазин "Санта" №23', "санта"), ("Санта", "санта"),
+    ('ООО "Грин Ритейл" Магазин "Green"', "green"),
+    ('ООО "БелВиллесден" Гиппо', "гиппо"),
+    ('Магазин "Копеечка" №44', "копеечка"),
+    ('Аптека "Планета здоровья" №112', "планета"),
+    ('ООО "Хит! Экспресс"', "хит"), ('ЗАО "Юнифуд" Виталюр', "виталюр"),
 ]
 
 GOODS = [
@@ -152,6 +159,18 @@ GOODS = [
     "Парацетамол 500мг №10", "Бинт стерильный", "Лампа LED 9Вт",
     "Батарейки АА 4шт", "Кабель USB Type-C", "Наушники TWS",
     "Americano 300ml", "Cappuccino", "Круассан с миндалём",
+    "Чипсы LAY'S Краб 140г", 'Чипсы"LAY\'S"(сметана и зелень)140г',
+    "Чипсы Pringles Original 165г", "Чипсы Lays сметана-лук 140г",
+    "Напиток Coca-Cola 1л", "Шоколад Milka молочный 90г",
+    'Шоколад"MILKA"(орех)85г', "Печенье Oreo 95г", "Батончик Snickers 50г",
+    "Кофе Nescafe Gold 190г", "Йогурт Activia клубника 290г",
+    "Сок Rich апельсин 1л", "Чай Greenfield Golden Ceylon 25п",
+    "Сыр Брест-Литовск Классический 200г", "Пельмени Домашние 900г",
+    "Масло подсолнечное Олейна 1л", "Вода Дарида негаз 1,5л",
+    "Пиво Alivaria Gold 0,5л", 'Порошок"ARIEL"Color 3кг',
+    'Средство д/посуды"FAIRY"Лимон 900мл', "Крем NIVEA Soft 75мл",
+    "Салфетки Zewa Deluxe 150шт", "Зубная щётка Colgate 360",
+    "Пластырь Cosmos Universal 20шт", "Нурофен Экспресс 200мг №16",
 ]
 
 STREETS = [
@@ -182,11 +201,13 @@ def wrapped(name, rng):
 
 
 def synthetic(rng):
-    shop, _ = rng.choice(SHOPS)
+    shop, brand = rng.choice(SHOPS)
     lines = []
     if rng.random() < 0.3:
         lines.append(("O", "КАССОВЫЙ ЧЕК"))
     lines.append(("M", shop))
+    if rng.random() < 0.2:
+        lines.append(("M", f'Магазин "{brand.upper()}" №{rng.randint(1, 900)}'))
     lines.append(("O", f"УНП {rng.randint(100000000, 999999999)}"))
     lines.append(("O", rng.choice(STREETS)))
     if rng.random() < 0.5:
@@ -361,20 +382,20 @@ def write(weights):
 
 
 def main():
-    rng = random.Random(20260726)
+    rng = random.Random(20260728)
     handwritten = read_corpus()
-    generated = [synthetic(rng) for _ in range(220)]
+    generated = [synthetic(rng) for _ in range(420)]
     # Three written slips never reach training, so the score below is what the
     # model does with layouts it has not seen.
     unseen = handwritten[-3:]
     taught = handwritten[:-3]
     print(f"slips: {len(taught)} written + {len(generated)} generated, {len(unseen)} held back")
 
-    rows = samples(taught + generated, rng, noise_rounds=2)
-    checks = samples(unseen + [synthetic(rng) for _ in range(40)], rng, noise_rounds=1)
+    rows = samples(taught + generated, rng, noise_rounds=3)
+    checks = samples(unseen + [synthetic(rng) for _ in range(60)], rng, noise_rounds=2)
     print(f"lines: {len(rows)} training, {len(checks)} held out")
 
-    weights = train(rows, epochs=6, learning_rate=0.25, decay=1e-6, rng=rng)
+    weights = train(rows, epochs=10, learning_rate=0.25, decay=1e-6, rng=rng)
     score, confusion = accuracy(weights, checks)
     print(f"held-out accuracy: {score:.3f}")
     print("       " + "".join(f"{name[:4]:>7}" for name in CLASSES))
