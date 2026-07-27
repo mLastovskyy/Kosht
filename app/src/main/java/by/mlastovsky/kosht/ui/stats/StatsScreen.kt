@@ -5,6 +5,7 @@ import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -18,6 +19,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
@@ -64,10 +66,12 @@ import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -81,7 +85,9 @@ import by.mlastovsky.kosht.ui.components.CategoryBadge
 import by.mlastovsky.kosht.ui.components.EmptyState
 import by.mlastovsky.kosht.ui.components.MonthSelector
 import by.mlastovsky.kosht.ui.components.TransactionRow
+import by.mlastovsky.kosht.ui.components.TruncatedText
 import by.mlastovsky.kosht.ui.components.monthTitle
+import by.mlastovsky.kosht.ui.components.rememberFullTextReveal
 import by.mlastovsky.kosht.ui.editor.formatQuantity
 import by.mlastovsky.kosht.ui.relativeDate
 import by.mlastovsky.kosht.util.Money
@@ -89,6 +95,7 @@ import java.time.LocalDate
 import java.time.YearMonth
 import java.time.format.DateTimeFormatter
 import java.util.Locale
+import kotlin.math.atan2
 import kotlin.math.roundToInt
 
 @Composable
@@ -234,6 +241,7 @@ private fun ChartsContent(state: StatsUiState) {
             DonutChart(
                 slices = state.slices,
                 totalText = Money.format(state.totalMinor, state.currencyCode),
+                currencyCode = state.currencyCode,
                 chartKey = "${state.month}-${state.type}",
                 modifier = Modifier
                     .fillMaxWidth()
@@ -306,11 +314,9 @@ private fun ProductRowItem(
     ) {
         Column(Modifier.weight(1f)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Text(
+                TruncatedText(
                     text = product.name,
                     style = MaterialTheme.typography.bodyLarge,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
                     modifier = Modifier.weight(1f)
                 )
                 Text(
@@ -487,6 +493,7 @@ private fun TypeToggle(
 private fun DonutChart(
     slices: List<CategorySlice>,
     totalText: String,
+    currencyCode: String,
     chartKey: String,
     modifier: Modifier = Modifier
 ) {
@@ -495,6 +502,8 @@ private fun DonutChart(
         progress.snapTo(0f)
         progress.animateTo(1f, tween(durationMillis = 700, easing = FastOutSlowInEasing))
     }
+    var revealedId by remember(chartKey) { mutableStateOf<Long?>(null) }
+    val revealed = slices.firstOrNull { it.category.id == revealedId }
     val strokeWidth = with(LocalDensity.current) { 26.dp.toPx() }
     val trackColor = MaterialTheme.colorScheme.surfaceContainerHigh
 
@@ -503,6 +512,12 @@ private fun DonutChart(
             modifier = Modifier
                 .fillMaxWidth(0.62f)
                 .aspectRatio(1f)
+                .pointerInput(slices) {
+                    detectTapGestures { at ->
+                        val touched = sliceAt(at, size, strokeWidth, slices)
+                        revealedId = touched.takeIf { it != revealedId }
+                    }
+                }
         ) {
             val diameter = size.minDimension - strokeWidth
             val topLeft = Offset(
@@ -535,24 +550,75 @@ private fun DonutChart(
                         useCenter = false,
                         topLeft = topLeft,
                         size = arcSize,
-                        style = stroke
+                        style = if (slice.category.id == revealedId) {
+                            Stroke(width = strokeWidth * 1.3f, cap = StrokeCap.Butt)
+                        } else {
+                            stroke
+                        }
                     )
                 }
                 startAngle += fullSweep
             }
         }
-        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+        Column(
+            horizontalAlignment = Alignment.CenterHorizontally,
+            modifier = Modifier.widthIn(max = DONUT_LABEL_MAX_WIDTH)
+        ) {
             Text(
-                text = stringResource(R.string.stats_total),
+                text = if (revealed == null) {
+                    stringResource(R.string.stats_total)
+                } else {
+                    CategoryVisuals.displayName(revealed.category)
+                },
                 style = MaterialTheme.typography.labelMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
+                color = if (revealed == null) {
+                    MaterialTheme.colorScheme.onSurfaceVariant
+                } else {
+                    Color(revealed.category.colorArgb)
+                },
+                textAlign = TextAlign.Center,
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis
             )
             AnimatedAmountText(
-                text = totalText,
+                text = revealed?.let { Money.format(it.totalMinor, currencyCode) } ?: totalText,
                 style = MaterialTheme.typography.headlineSmall
             )
+            if (revealed != null) {
+                Text(
+                    text = "${(revealed.share * 100).roundToInt()} %",
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
         }
     }
+}
+
+private val DONUT_LABEL_MAX_WIDTH = 132.dp
+
+private fun sliceAt(
+    at: Offset,
+    canvas: IntSize,
+    strokeWidth: Float,
+    slices: List<CategorySlice>
+): Long? {
+    val center = Offset(canvas.width / 2f, canvas.height / 2f)
+    val radius = (minOf(canvas.width, canvas.height) - strokeWidth) / 2f
+    val distance = (at - center).getDistance()
+    if (distance < radius - strokeWidth || distance > radius + strokeWidth) return null
+    val fromNoon = (
+        Math.toDegrees(
+            atan2((at.y - center.y).toDouble(), (at.x - center.x).toDouble())
+        ).toFloat() + 450f
+        ) % 360f
+    var startAngle = 0f
+    slices.forEach { slice ->
+        val sweep = slice.share * 360f
+        if (fromNoon >= startAngle && fromNoon < startAngle + sweep) return slice.category.id
+        startAngle += sweep
+    }
+    return null
 }
 
 @Composable
@@ -607,10 +673,20 @@ private fun CategorySliceRow(
     expanded: Boolean = false,
     onClick: () -> Unit = {}
 ) {
+    val reveal = rememberFullTextReveal()
     Row(
         modifier = modifier
             .fillMaxWidth()
-            .then(if (products > 0) Modifier.clickable(onClick = onClick) else Modifier)
+            .then(
+                if (products > 0 || reveal.truncated) {
+                    Modifier.clickable {
+                        reveal.reveal()
+                        if (products > 0) onClick()
+                    }
+                } else {
+                    Modifier
+                }
+            )
             .padding(horizontal = 16.dp, vertical = 8.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(12.dp)
@@ -623,11 +699,11 @@ private fun CategorySliceRow(
         )
         Column(Modifier.weight(1f)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Text(
+                TruncatedText(
                     text = CategoryVisuals.displayName(slice.category),
                     style = MaterialTheme.typography.bodyLarge,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
+                    reveal = reveal,
+                    revealOnClick = false,
                     modifier = Modifier.weight(1f, fill = false)
                 )
 

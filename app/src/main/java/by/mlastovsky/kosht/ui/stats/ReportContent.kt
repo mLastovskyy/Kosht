@@ -26,6 +26,7 @@ import by.mlastovsky.kosht.R
 import by.mlastovsky.kosht.model.ReportField
 import by.mlastovsky.kosht.ui.CategoryVisuals
 import by.mlastovsky.kosht.ui.components.CategoryBadge
+import by.mlastovsky.kosht.ui.components.TruncatedText
 import by.mlastovsky.kosht.ui.theme.KoshtTheme
 import by.mlastovsky.kosht.util.Money
 import kotlin.math.abs
@@ -108,10 +109,11 @@ fun ReportContent(state: StatsUiState) {
                             size = 28.dp,
                             iconPath = top.category.iconPath
                         )
-                        Text(
+                        TruncatedText(
                             text = CategoryVisuals.displayName(top.category) +
                                 " · ${(top.share * 100).roundToInt()} %",
-                            style = MaterialTheme.typography.titleSmall
+                            style = MaterialTheme.typography.titleSmall,
+                            modifier = Modifier.weight(1f, fill = false)
                         )
                     }
                 }
