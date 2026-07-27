@@ -8,6 +8,7 @@ import androidx.compose.animation.core.keyframes
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -23,6 +24,7 @@ import androidx.compose.material.icons.rounded.Fingerprint
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
+import androidx.compose.material3.ripple
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -189,12 +191,17 @@ private fun PinKey(
     content: @Composable () -> Unit
 ) {
     val view = LocalView.current
+    val presses = remember(enabled) { MutableInteractionSource() }
     Box(
         modifier = modifier
             .height(64.dp)
             .clip(MaterialTheme.shapes.medium)
             .background(if (enabled) background else background.copy(alpha = 0.4f))
-            .clickable(enabled = enabled) {
+            .clickable(
+                interactionSource = presses,
+                indication = ripple(),
+                enabled = enabled
+            ) {
                 view.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP)
                 onClick()
             },

@@ -95,6 +95,10 @@ data class EditorUiState(
 
     val itemsTotalMinor: Long
         get() = items.sumOf { it.amountMinor }
+
+    val itemsOverSum: Boolean
+        get() = items.isNotEmpty() &&
+            itemsTotalMinor > (Expr.evaluateToMinor(amountInput, currencyCode) ?: 0L)
 }
 
 data class PendingScan(
@@ -140,6 +144,8 @@ class EditorViewModel(
         val scanned: Boolean = false,
         val isTransfer: Boolean = false,
         val items: List<ItemDraft> = emptyList(),
+
+        val amountFromItems: Boolean = false,
 
         val debtPerson: String = "",
 
@@ -302,22 +308,32 @@ class EditorViewModel(
 
     fun addItem(name: String, priceMinor: Long, quantity: Double?) {
         val draftItem = itemOrNull(name, priceMinor, quantity) ?: return
-        draft.update { it.copy(items = it.items + draftItem) }
+        draft.update { summed(it.copy(items = it.items + draftItem)) }
     }
 
     fun updateItem(index: Int, name: String, priceMinor: Long, quantity: Double?) {
         val draftItem = itemOrNull(name, priceMinor, quantity) ?: return
         draft.update { d ->
             if (index !in d.items.indices) return@update d
-            d.copy(items = d.items.toMutableList().also { it[index] = draftItem })
+            summed(d.copy(items = d.items.toMutableList().also { it[index] = draftItem }))
         }
     }
 
     fun removeItem(index: Int) {
         draft.update { d ->
             if (index !in d.items.indices) return@update d
-            d.copy(items = d.items.filterIndexed { at, _ -> at != index })
+            summed(d.copy(items = d.items.filterIndexed { at, _ -> at != index }))
         }
+    }
+
+    private fun summed(d: Draft): Draft {
+        val typed = Expr.evaluateToMinor(d.amountInput, currentCurrency()) ?: 0L
+        if (typed > 0L && !d.amountFromItems) return d
+        val listed = d.items.sumOf { it.amountMinor }
+        return d.copy(
+            amountInput = if (listed > 0L) minorToInput(listed) else "",
+            amountFromItems = listed > 0L
+        )
     }
 
     private fun itemOrNull(name: String, priceMinor: Long, quantity: Double?): ItemDraft? {
@@ -393,7 +409,7 @@ class EditorViewModel(
         val minor = Expr
             .evaluateToMinor(calcInput.value, currentCurrency()) ?: return
         if (minor <= 0) return
-        draft.update { it.copy(amountInput = minorToInput(minor)) }
+        draft.update { it.copy(amountInput = minorToInput(minor), amountFromItems = false) }
     }
 
     fun scanReceipt(uri: Uri, onResult: (Boolean) -> Unit) {
@@ -443,7 +459,8 @@ class EditorViewModel(
 
                 scanned = true,
 
-                items = if (d.items.isEmpty()) pending.items else d.items
+                items = if (d.items.isEmpty()) pending.items else d.items,
+                amountFromItems = false
             )
         }
         pendingScan.value = null

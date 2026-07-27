@@ -146,6 +146,7 @@ fun EditorScreen(
     var showPhotoView by remember { mutableStateOf(false) }
     var showEReceipt by remember { mutableStateOf(false) }
     var showItems by remember { mutableStateOf(false) }
+    var askedOverSum by remember { mutableStateOf(false) }
     var cameraTarget by remember { mutableStateOf<Uri?>(null) }
     val scanFailedMessage = stringResource(R.string.scan_failed)
 
@@ -439,7 +440,7 @@ fun EditorScreen(
         Button(
             onClick = {
                 view.performHapticFeedback(HapticFeedbackConstants.VIRTUAL_KEY)
-                viewModel.save(onClose)
+                if (state.itemsOverSum) askedOverSum = true else viewModel.save(onClose)
             },
             enabled = state.canSave,
             modifier = Modifier
@@ -605,6 +606,38 @@ fun EditorScreen(
         )
     }
 
+    if (askedOverSum) {
+        AlertDialog(
+            onDismissRequest = { askedOverSum = false },
+            title = { Text(stringResource(R.string.items_over_title)) },
+            text = {
+                Text(
+                    stringResource(
+                        R.string.items_over_text,
+                        Money.format(state.itemsTotalMinor, state.currencyCode),
+                        Money.format(
+                            Expr.evaluateToMinor(state.amountInput, state.currencyCode) ?: 0L,
+                            state.currencyCode
+                        )
+                    )
+                )
+            },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        askedOverSum = false
+                        viewModel.save(onClose)
+                    }
+                ) { Text(stringResource(R.string.editor_save)) }
+            },
+            dismissButton = {
+                TextButton(onClick = { askedOverSum = false }) {
+                    Text(stringResource(R.string.action_cancel))
+                }
+            }
+        )
+    }
+
     if (showEReceipt) {
         EReceiptDialog(
             url = state.receiptUrl,
@@ -649,12 +682,6 @@ private fun AccountSheet(
                     }
                 ),
                 style = MaterialTheme.typography.titleLarge
-            )
-            Spacer(Modifier.height(6.dp))
-            Text(
-                text = stringResource(R.string.account_pick_hint),
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
             )
             Spacer(Modifier.height(12.dp))
             accounts.forEach { account ->
@@ -1096,7 +1123,6 @@ private val SWIPE_THRESHOLD = 56.dp
 
 private val CHIP_LABEL_MAX_WIDTH = 120.dp
 
-// Square enough to sit level with the note field beside it.
 private val ACTION_BUTTON = 52.dp
 
 @Composable
@@ -1152,7 +1178,7 @@ private fun Keypad(
             KeypadButton(modifier = Modifier.weight(1f), onClick = onBackspace) {
                 Icon(
                     Icons.AutoMirrored.Rounded.Backspace,
-                    contentDescription = null,
+                    contentDescription = stringResource(R.string.cd_backspace),
                     tint = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }

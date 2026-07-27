@@ -281,6 +281,7 @@ private fun ChartsContent(state: StatsUiState) {
                     ProductRowItem(
                         product = product,
                         currencyCode = state.currencyCode,
+                        color = Color(slice.category.colorArgb),
                         modifier = Modifier.animateItem()
                     )
                 }
@@ -293,6 +294,7 @@ private fun ChartsContent(state: StatsUiState) {
 private fun ProductRowItem(
     product: ProductRow,
     currencyCode: String,
+    color: Color,
     modifier: Modifier = Modifier
 ) {
     Row(
@@ -327,7 +329,7 @@ private fun ProductRowItem(
             }
             LinearProgressIndicator(
                 progress = { product.share },
-                color = MaterialTheme.colorScheme.primary,
+                color = color,
                 trackColor = MaterialTheme.colorScheme.surfaceContainerHigh,
                 drawStopIndicator = {},
                 modifier = Modifier

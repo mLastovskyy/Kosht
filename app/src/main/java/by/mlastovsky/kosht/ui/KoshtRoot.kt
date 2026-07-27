@@ -76,7 +76,8 @@ fun KoshtRoot(
         return
     }
 
-    if (!TourSeen()) {
+    val tourSeen = TourSeen() ?: return
+    if (!tourSeen) {
         TourScreen()
         return
     }
@@ -239,9 +240,9 @@ fun KoshtRoot(
 @Composable
 private fun TourSeen(
     viewModel: TourViewModel = viewModel(factory = AppViewModelProvider.Factory)
-): Boolean {
+): Boolean? {
     val seen by viewModel.seen.collectAsStateWithLifecycle()
-    return seen != false
+    return seen
 }
 
 @Composable

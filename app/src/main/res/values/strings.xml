@@ -22,7 +22,7 @@
     <string name="settings_accounts_desc">Cards, cash and other money sources</string>
     <string name="account_new">New account</string>
     <string name="account_balance">Current balance</string>
-    <string name="account_balance_hint">Set the real balance — the app adds a correction without touching your history</string>
+    <string name="account_balance_hint">The app writes the difference off as a correction.</string>
 
     <!-- Transfers between accounts -->
     <string name="transfer_title">Transfer</string>
@@ -67,31 +67,32 @@
     <string name="editor_scan_receipt">Scan receipt</string>
     <string name="scan_from_camera">Take a photo</string>
     <string name="scan_from_gallery">Choose from gallery</string>
-    <string name="scan_failed">Could not read the receipt. Try a sharper photo.</string>
+    <string name="scan_failed">Receipt not recognised. Try a better photo.</string>
     <string name="attach_photo">Attach photo</string>
     <string name="photo_receipt">Receipt photo</string>
     <string name="photo_remove">Remove photo</string>
     <string name="photo_remove_confirm">Remove the profile photo? Your name and nickname stay.</string>
     <string name="account_pick_expense">Which account does it leave?</string>
     <string name="account_pick_income">Which account does it land on?</string>
-    <string name="account_pick_hint">Only this account\'s balance moves. You can change it later — the chip is here in an old record too.</string>
-    <string name="scan_ai_progress">AI is reading the receipt — this takes a few seconds</string>
+    <string name="scan_ai_progress">Reading the receipt…</string>
     <string name="scan_review_title">Recognized from receipt</string>
-    <string name="scan_review_hint">Read by the AI on your phone — check the values and correct them if needed</string>
+    <string name="scan_review_hint">Check and correct.</string>
     <string name="scan_review_date">Date: %1$s</string>
     <string name="scanned_mark">Scanned</string>
-    <string name="scan_review_items">Read off the receipt: %1$d items</string>
-    <string name="scan_review_items_partial">Read off the receipt: %1$d items · %2$s of %3$s — the rest could not be read</string>
+    <string name="scan_review_items">%1$d items</string>
+    <string name="scan_review_items_partial">%1$d items · %2$s of %3$s</string>
 
     <!-- What a record was for, line by line -->
     <string name="items_title">Items</string>
     <string name="items_add">Items</string>
-    <string name="items_hint">Optional: list what the money was for — products, or the parts of a payment like rent and utilities. Statistics then break the category down by them.</string>
+    <string name="items_hint">What the record is made of: goods, or parts of a payment.</string>
     <string name="items_name">Item</string>
     <string name="items_price">Price</string>
     <string name="items_quantity">Qty</string>
     <string name="items_summary">%1$s · %2$s</string>
     <string name="items_summary_of">%1$s · %2$s of %3$s</string>
+    <string name="items_over_title">Items add up to more</string>
+    <string name="items_over_text">Items: %1$s, record sum: %2$s.</string>
     <plurals name="items_count">
         <item quantity="one">%1$d item</item>
         <item quantity="other">%1$d items</item>
@@ -137,6 +138,8 @@
     <string name="filter_period">Period</string>
     <string name="transaction_deleted">Transaction deleted</string>
     <string name="undo">Undo</string>
+    <string name="history_delete_title">Delete this record?</string>
+    <string name="history_delete_text">You can bring it back right after.</string>
 
     <!-- Statistics -->
     <string name="stats_total">Total</string>
@@ -250,7 +253,7 @@
     <string name="ereceipt_title">Electronic receipt</string>
     <string name="ereceipt_open">Open the electronic receipt</string>
     <string name="ereceipt_remove">Detach</string>
-    <string name="ereceipt_unavailable">The saved copy is gone and there is nothing to open it from.</string>
+    <string name="ereceipt_unavailable">The receipt is no longer available.</string>
     <string name="ereceipt_from_qr">Read from the QR code on the receipt</string>
 
     <!-- Account and cloud sync -->
@@ -524,10 +527,10 @@
     <!-- In-app guide -->
     <string name="guide_title">How to use Kosht</string>
     <string name="guide_pdf_title">Full PDF manual</string>
-    <string name="guide_pdf_desc">An illustrated step-by-step manual with screenshots — saved into your Downloads and opened, so it stays on the phone</string>
+    <string name="guide_pdf_desc">This manual, with screenshots</string>
     <string name="guide_pdf_open">Download PDF</string>
     <string name="guide_pdf_error">No PDF viewer found</string>
-    <string name="guide_intro">A quick tour of every screen. The five main ones can be swiped through as well as tapped in the bottom bar. Everything works offline; data leaves the phone only if you switch on cloud sync.</string>
+    <string name="guide_intro">A short tour of the screens. The five main ones can be swiped through. Everything works offline.</string>
     <string name="guide_sync_title">Account &amp; sync</string>
     <string name="guide_sync_body">Kosht works without an account, and your records stay on the phone. An account is for one thing: seeing the same figures on your other phone.
 
@@ -575,7 +578,7 @@ What decides which line is which is a small AI model that ships inside the app �
     <string name="guide_history_title">History</string>
     <string name="guide_history_body">Arrows switch months. The search field filters by note and custom category names. Chips: All / Expense / Income, "Category" opens a category picker (tap ✕ on the chip to clear), "Period" opens a calendar where you select a single day or a range — the period replaces month navigation until you clear it with ✕. Records are grouped by day with a net total per day. Swipe a row left to delete — an Undo snackbar appears. Tap a row to edit it.
 
-Swiping a row deletes it and offers it back: "Transaction deleted — Undo" appears along the bottom, always above the add button, and the same offer follows a delete from the editor. The receipt photo is only thrown away once that offer has passed, so undoing really does put everything back.</string>
+Swiping a row left reveals a bin; tapping the bin asks first, and once the record is gone "Transaction deleted — Undo" appears along the bottom, always above the add button. A delete from the editor makes the same offer. The receipt photo is only thrown away once that offer has passed, so undoing really does put everything back.</string>
     <string name="guide_stats_title">Statistics</string>
     <string name="guide_stats_body">Three views via the round buttons: 1) Charts — a donut of categories with the total in the middle and daily bars below; 2) Calendar — a heatmap where a darker day means more spent; tap a day to see its records; 3) Report — the verdict for a whole period, with arrows walking back through past ones. It shows spending vs the previous period of the same length, income, result, daily average, no-spend days, top category and personalized tips. Which period it covers (week, month, quarter, year) and which rows are shown are set in Settings → Report. The Expense/Income toggle applies to charts and calendar, arrows switch months. Under the category list the Products block appears as soon as any record of the month lists what was bought — income too, since a salary can be split into the pay and the bonus: every product with what it cost you in total, how much of the shopping that is and how many records mention it. One product is one row however it was typed: case and stray spaces are ignored, and ё reads as е. Transfers between your own accounts are left out of every figure here — moving money is neither spending nor earning.</string>
     <string name="guide_wallet_title">Wallet: rates &amp; payments</string>
@@ -601,7 +604,7 @@ Tap a transfer in any list to correct it or delete it — the same dialog opens,
     <string name="guide_items_title">Products in a record</string>
     <string name="guide_items_body">A record can say what the money went on, not just how much of it went. The basket chip in the editor opens the list: type a product, optionally what it cost and how many, and Add puts it in. Tap a line to correct it, ✕ removes it. Names you have used before are offered as chips while you type — tapping one keeps the spelling identical. Typing it differently is no great loss either: the statistics fold case and stray spaces together, so "молоко", "Молоко  " and "МОЛОКО" stay one product with one total.
 
-Nothing here is required. A record with no list is complete, the chip stays quiet until you use it, and the amount of the record is never overwritten by what the lines add up to — the list is a description of the purchase, not a second source of truth.
+Nothing here is required: a record with no list is complete. When the record has no sum yet, it is taken from the items. A sum you typed yourself is left alone, but if the items come to more than it, saving asks you first.
 
 Scanning a receipt fills the list in by itself where the slip lists its lines (see "Receipt scanning"), quantities included.
 
@@ -650,18 +653,17 @@ With the lock on, the task switcher stops keeping a picture of the app, so the b
     <string name="tour_skip">Skip</string>
     <string name="tour_next">Next</string>
     <string name="tour_start">Get started</string>
-    <string name="tour_replay">Quick tour</string>
-    <string name="tour_replay_desc">The six screens a new user is shown</string>
-    <string name="tour_record_title">A record in three taps</string>
-    <string name="tour_record_body">The + button opens the editor: the calculator asks for the sum, you pick a category, Save writes it down. Expense or income — the switch at the top, or a swipe sideways across the amount.</string>
-    <string name="tour_scan_title">Photograph the receipt instead of typing</string>
-    <string name="tour_scan_body">"Scan receipt" reads the slip on the phone itself: a small AI model finds the total, the shop and the items. A QR code on the slip is followed to the electronic receipt.</string>
-    <string name="tour_tabs_title">Five screens, one swipe apart</string>
-    <string name="tour_tabs_body">Home with the balance, History, Statistics, Wallet, Settings. Swipe sideways or press the bottom row.</string>
-    <string name="tour_wallet_title">The Wallet keeps everything else</string>
-    <string name="tour_wallet_body">Accounts and transfers between them, regular payments (never charged behind your back — you confirm each one), debts, goals and savings.</string>
-    <string name="tour_actions_title">Some categories do more than count</string>
-    <string name="tour_actions_body">Income filed under "Debt" opens a debt in the Wallet; "Debt repaid" and "To savings" pay one off and top the other up. Delete such a record and whatever it moved comes back.</string>
-    <string name="tour_streak_title">A streak, and awards for it</string>
-    <string name="tour_streak_body">Days spent inside your daily budget build a streak, and achievements arrive on their own. The full manual lives in Settings → Guide.</string>
+    <string name="tour_tabs_title">Five screens</string>
+    <string name="tour_tabs_body">Swipe sideways or tap an icon below.</string>
+    <string name="tour_add_title">The + button writes a record</string>
+    <string name="tour_add_body">Sum, category, Save.</string>
+    <string name="tour_scan_title">Scan the receipt</string>
+    <string name="tour_scan_body">Photograph a slip and the sum and items fill themselves in.</string>
+    <string name="tour_wallet_title">Wallet</string>
+    <string name="tour_wallet_body">Accounts, payments, debts, savings. A payment is only recorded once you confirm it.</string>
+    <string name="tour_wallet_payments">Payments</string>
+    <string name="tour_streak_title">Streak</string>
+    <string name="tour_streak_body">Every day inside your daily budget keeps it going.</string>
+    <string name="tour_manual_title">The rest is in the manual</string>
+    <string name="tour_manual_body">Settings → Full PDF manual: every screen in detail. Updates live there too.</string>
 </resources>

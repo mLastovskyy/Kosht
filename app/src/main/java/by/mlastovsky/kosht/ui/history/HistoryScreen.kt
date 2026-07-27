@@ -1,17 +1,24 @@
 package by.mlastovsky.kosht.ui.history
 
+import androidx.compose.animation.core.Animatable
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.Orientation
+import androidx.compose.foundation.gestures.draggable
+import androidx.compose.foundation.gestures.rememberDraggableState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
@@ -26,35 +33,39 @@ import androidx.compose.material.icons.rounded.SearchOff
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.DatePickerDialog
 import androidx.compose.material3.DateRangePicker
-import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.SwipeToDismissBox
-import androidx.compose.material3.SwipeToDismissBoxDefaults
-import androidx.compose.material3.SwipeToDismissBoxState
-import androidx.compose.material3.SwipeToDismissBoxValue
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.rememberDateRangePickerState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalLocale
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import by.mlastovsky.kosht.R
 import by.mlastovsky.kosht.data.db.CategoryEntity
 import by.mlastovsky.kosht.data.db.TransactionEntity
+import by.mlastovsky.kosht.data.db.TransactionWithCategory
 import by.mlastovsky.kosht.model.TransactionType
 import by.mlastovsky.kosht.ui.AppViewModelProvider
 import by.mlastovsky.kosht.ui.CategoryVisuals
@@ -71,6 +82,8 @@ import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneOffset
 import java.time.format.DateTimeFormatter
+import kotlin.math.roundToInt
+import kotlinx.coroutines.launch
 
 @Composable
 fun HistoryScreen(
@@ -84,6 +97,8 @@ fun HistoryScreen(
     var transferInAction by remember {
         mutableStateOf<TransactionEntity?>(null)
     }
+    var revealedId by remember { mutableStateOf<Long?>(null) }
+    var askedToDelete by remember { mutableStateOf<TransactionWithCategory?>(null) }
 
     Box(Modifier.fillMaxSize()) {
         Column(
@@ -227,18 +242,24 @@ fun HistoryScreen(
                             )
                         }
                         items(group.items, key = { it.transaction.id }) { item ->
-                            DismissibleRow(
-                                modifier = Modifier.animateItem(),
-                                onDismiss = { viewModel.delete(item) }
+                            val revealed = revealedId == item.transaction.id
+                            RevealRow(
+                                revealed = revealed,
+                                onRevealChange = { open ->
+                                    revealedId = if (open) item.transaction.id else null
+                                },
+                                onDelete = { askedToDelete = item },
+                                modifier = Modifier.animateItem()
                             ) {
                                 TransactionRow(
                                     item = item,
                                     currencyCode = state.currencyCode,
                                     onClick = {
-                                        if (item.transaction.isTransfer) {
-                                            transferInAction = item.transaction
-                                        } else {
-                                            onTransactionClick(item.transaction.id)
+                                        when {
+                                            revealed -> revealedId = null
+                                            item.transaction.isTransfer ->
+                                                transferInAction = item.transaction
+                                            else -> onTransactionClick(item.transaction.id)
                                         }
                                     },
                                     accounts = state.accounts,
@@ -256,6 +277,17 @@ fun HistoryScreen(
         TransferDialog(
             initial = transfer,
             onDismiss = { transferInAction = null }
+        )
+    }
+
+    askedToDelete?.let { item ->
+        DeleteConfirmDialog(
+            onConfirm = {
+                viewModel.delete(item)
+                askedToDelete = null
+                revealedId = null
+            },
+            onDismiss = { askedToDelete = null }
         )
     }
 
@@ -415,43 +447,95 @@ private fun DayHeader(
     }
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun DismissibleRow(
-    onDismiss: () -> Unit,
+private fun RevealRow(
+    revealed: Boolean,
+    onRevealChange: (Boolean) -> Unit,
+    onDelete: () -> Unit,
     modifier: Modifier = Modifier,
     content: @Composable () -> Unit
 ) {
-    val threshold = SwipeToDismissBoxDefaults.positionalThreshold
-    val dismissState = remember(threshold) {
-        SwipeToDismissBoxState(
-            initialValue = SwipeToDismissBoxValue.Settled,
-            positionalThreshold = threshold
-        )
+    val travel = with(LocalDensity.current) { REVEAL_WIDTH.toPx() }
+    val shift = remember { Animatable(0f) }
+    val scope = rememberCoroutineScope()
+    LaunchedEffect(revealed) {
+        shift.animateTo(if (revealed) -travel else 0f)
     }
-    SwipeToDismissBox(
-        state = dismissState,
-        enableDismissFromStartToEnd = false,
-        modifier = modifier,
-        onDismiss = { value ->
-            if (value == SwipeToDismissBoxValue.EndToStart) onDismiss()
-        },
-        backgroundContent = {
+    val dragState = rememberDraggableState { delta ->
+        scope.launch { shift.snapTo((shift.value + delta).coerceIn(-travel, 0f)) }
+    }
+
+    val shown = (-shift.value / travel).coerceIn(0f, 1f)
+
+    Box(modifier) {
+        Box(
+            modifier = Modifier
+                .matchParentSize()
+                .padding(horizontal = PANEL_INSET, vertical = 4.dp)
+                .clip(MaterialTheme.shapes.large)
+                .background(MaterialTheme.colorScheme.errorContainer)
+        ) {
             Box(
                 modifier = Modifier
-                    .fillMaxSize()
-                    .background(MaterialTheme.colorScheme.errorContainer)
-                    .padding(horizontal = 24.dp),
-                contentAlignment = Alignment.CenterEnd
+                    .align(Alignment.CenterEnd)
+                    .fillMaxHeight()
+                    .width(REVEAL_WIDTH - PANEL_INSET)
+                    .clickable(onClick = onDelete),
+                contentAlignment = Alignment.Center
             ) {
                 Icon(
-                    Icons.Rounded.DeleteOutline,
+                    imageVector = Icons.Rounded.DeleteOutline,
                     contentDescription = stringResource(R.string.editor_delete),
-                    tint = MaterialTheme.colorScheme.onErrorContainer
+                    tint = MaterialTheme.colorScheme.onErrorContainer,
+                    modifier = Modifier
+                        .size(22.dp)
+                        .scale(0.8f + 0.2f * shown)
+                        .alpha(shown)
                 )
             }
         }
-    ) {
-        content()
+        Box(
+            modifier = Modifier
+                .offset { IntOffset(shift.value.roundToInt(), 0) }
+                .draggable(
+                    state = dragState,
+                    orientation = Orientation.Horizontal,
+                    onDragStopped = {
+                        val open = shift.value < -travel / 2f
+                        onRevealChange(open)
+                        shift.animateTo(if (open) -travel else 0f)
+                    }
+                )
+        ) {
+            content()
+        }
     }
+}
+
+private val REVEAL_WIDTH = 76.dp
+
+private val PANEL_INSET = 12.dp
+
+@Composable
+private fun DeleteConfirmDialog(
+    onConfirm: () -> Unit,
+    onDismiss: () -> Unit
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        icon = { Icon(Icons.Rounded.DeleteOutline, contentDescription = null) },
+        title = { Text(stringResource(R.string.history_delete_title)) },
+        text = { Text(stringResource(R.string.history_delete_text)) },
+        confirmButton = {
+            TextButton(onClick = onConfirm) {
+                Text(
+                    text = stringResource(R.string.editor_delete),
+                    color = MaterialTheme.colorScheme.error
+                )
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) { Text(stringResource(R.string.action_cancel)) }
+        }
+    )
 }
