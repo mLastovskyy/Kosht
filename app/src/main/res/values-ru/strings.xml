@@ -141,7 +141,7 @@
     <string name="transaction_deleted">Операция удалена</string>
     <string name="undo">Отменить</string>
     <string name="history_delete_title">Удалить запись?</string>
-    <string name="history_delete_text">Запись исчезнет из истории и статистики.</string>
+    <string name="history_delete_text">Запись исчезнет из истории.</string>
 
     <!-- Статистика -->
     <string name="stats_total">Итого</string>
