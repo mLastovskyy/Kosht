@@ -122,7 +122,7 @@ fun HomeScreen(
                         Row(
                             verticalAlignment = Alignment.CenterVertically,
                             modifier = Modifier
-                                .padding(start = 8.dp)
+                                .padding(start = 8.dp, end = 12.dp)
                                 .clip(CircleShape)
                                 .background(MaterialTheme.colorScheme.surfaceContainerHigh)
                                 .clickable(onClick = onAchievementsClick)

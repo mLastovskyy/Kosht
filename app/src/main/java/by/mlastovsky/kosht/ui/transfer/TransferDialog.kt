@@ -1,5 +1,6 @@
 package by.mlastovsky.kosht.ui.transfer
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -250,8 +251,9 @@ private fun AccountChips(
 ) {
     LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
         items(accounts, key = { it.id }) { account ->
+            val selected = account.id == selectedId
             FilterChip(
-                selected = account.id == selectedId,
+                selected = selected,
                 onClick = { onSelect(account.id) },
                 leadingIcon = {
                     AccountBadge(
@@ -261,6 +263,14 @@ private fun AccountChips(
                         size = 18.dp
                     )
                 },
+                border = BorderStroke(
+                    width = 1.dp,
+                    color = if (selected) {
+                        MaterialTheme.colorScheme.primary
+                    } else {
+                        MaterialTheme.colorScheme.outlineVariant
+                    }
+                ),
                 label = { Text(AccountVisuals.displayName(account), maxLines = 1) }
             )
         }
