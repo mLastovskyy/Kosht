@@ -80,7 +80,8 @@ object ReceiptParser {
         "белкарт", "visa", "mastercard", "maestro", "эквайер", "эквайринг",
         "rrn", "код авториз", "карта", "картка", "банк", "режим работы",
         "спасибо", "дзякуй", "приятн", "гарант", "обмен", "возврат",
-        "лиц.", "св-во", "www", "http", ".by", "@"
+        "лиц.", "св-во", "www", "http", ".by", "@",
+        "пользуетесь", "электронн", "qr", "отскан", "касса"
     )
 
     private val genericNames = setOf(
@@ -94,6 +95,11 @@ object ReceiptParser {
     )
 
     private val unpRegex = Regex("""\b(УНП|УНН|ИНН)\b""", RegexOption.IGNORE_CASE)
+
+    private val addressRegex = Regex(
+        """(^|\s)(г|гор|обл|мкр|пр|ул|д|пос)\s*\.\s*\S|,\s*д\s*\.?\s*\d""",
+        RegexOption.IGNORE_CASE
+    )
 
     private const val VOWELS = "аеёиоуыэюяіўaeiouy"
 
@@ -109,12 +115,21 @@ object ReceiptParser {
         val texts = cleaned.map { it.text }
         val judged = model?.let { Judged(cleaned, it) }
         val total = findTotal(texts) ?: judged?.total() ?: fallbackTotal(texts)
+        val above = headerEnd(texts)
         return ParsedReceipt(
             amountMinor = total,
             date = findDate(texts.joinToString("\n")),
-            merchant = findMerchant(cleaned, judged),
-            items = reconciled(kept(findItems(texts), judged), total)
+            merchant = findMerchant(cleaned, judged, above),
+            items = reconciled(kept(findItems(texts, judged?.totalAt), judged), total)
         )
+    }
+
+    private fun headerEnd(lines: List<String>): Int {
+        val total = lines.indexOfFirst { line ->
+            val lower = line.lowercase()
+            totalKeywords.take(2).any { group -> group.any { lower.contains(it) } }
+        }
+        return if (total > 0) minOf(total, HEADER_LINES) else HEADER_LINES
     }
 
     private class Judged(private val lines: List<ReceiptLine>, private val model: LineModel) {
@@ -128,6 +143,9 @@ object ReceiptParser {
         fun chance(kind: LineKind, index: Int): Float =
             chances.getOrNull(index)?.get(kind) ?: 0f
 
+        var totalAt: Int? = null
+            private set
+
         fun total(): Long? = lines.indices
             .filter { index ->
                 val lower = lines[index].text.lowercase()
@@ -136,10 +154,11 @@ object ReceiptParser {
             }
             .maxByOrNull { chance(LineKind.TOTAL, it) }
             ?.takeIf { chance(LineKind.TOTAL, it) >= MIN_TOTAL_CHANCE }
+            ?.also { totalAt = it }
             ?.let { index -> amountRegex.findAll(lines[index].text).lastOrNull()?.toMinor() }
 
-        fun merchant(): String? = lines.indices
-            .take(HEADER_LINES)
+        fun merchant(above: Int): String? = lines.indices
+            .take(above)
             .maxByOrNull { chance(LineKind.MERCHANT, it) }
             ?.takeIf { chance(LineKind.MERCHANT, it) >= MIN_MERCHANT_CHANCE }
             ?.let { index -> quotedName(lines[index].text) ?: lines[index].text }
@@ -216,37 +235,57 @@ object ReceiptParser {
 
     private data class FoundItem(val item: ParsedItem, val index: Int)
 
-    private fun findItems(lines: List<String>): List<FoundItem> {
+    private fun findItems(lines: List<String>, totalAt: Int?): List<FoundItem> {
         val end = lines.indexOfFirst { line ->
             val lower = line.lowercase()
             totalKeywords.take(2).any { group -> group.any { lower.contains(it) } }
         }.takeIf { it >= 0 } ?: lines.size
         val items = mutableListOf<FoundItem>()
+        val naming = mutableListOf<IndexedValue<String>>()
         var index = 0
         while (index < end && items.size < MAX_ITEMS) {
             val line = lines[index]
-            if (skipAsItem(line)) {
+            if (index == totalAt || skipAsItem(line)) {
+                naming.clear()
                 index++
                 continue
             }
-            val sameLine = itemOnOneLine(line)
-            if (sameLine != null) {
-                items += FoundItem(sameLine, index)
+            val amount = amountRegex.findAll(line).lastOrNull()
+            if (amount == null) {
+                if (readsLikeName(line)) {
+                    if (naming.size == MAX_NAME_LINES) naming.removeAt(0)
+                    naming += IndexedValue(index, line)
+                }
                 index++
                 continue
             }
-
-            val next = lines.getOrNull(index + 1)
-            val split = next?.takeIf { !skipAsItem(it) }?.let { itemFromPair(line, it) }
-            if (split != null) {
-                items += FoundItem(split, index)
-                index += 2
-                continue
+            val minor = amount.toMinor()
+            val quantity = quantityIn(line)
+            val onThisLine = item(line.take(firstFigureAt(line, amount.range.first)), minor, quantity)
+            if (onThisLine != null) {
+                items += FoundItem(onThisLine, index)
+            } else {
+                nameAbove(naming)?.let { above ->
+                    item(above.value, minor, quantity)?.let {
+                        items += FoundItem(it, above.index)
+                    }
+                }
             }
+            naming.clear()
             index++
         }
         return items
     }
+
+    private fun readsLikeName(line: String): Boolean {
+        val letters = line.count { it.isLetter() }
+        return letters >= MIN_NAME_LETTERS && letters > line.count { it.isDigit() }
+    }
+
+    private fun nameAbove(naming: List<IndexedValue<String>>): IndexedValue<String>? =
+        naming.maxWithOrNull(
+            compareBy({ line -> line.value.count { it.isLetter() } }, { -it.index })
+        )
 
     private fun skipAsItem(line: String): Boolean {
         val lower = line.lowercase()
@@ -255,45 +294,74 @@ object ReceiptParser {
         return dateRegex.containsMatchIn(line)
     }
 
-    private fun itemOnOneLine(line: String): ParsedItem? {
-        val amount = amountRegex.findAll(line).lastOrNull() ?: return null
+    private fun firstFigureAt(line: String, priceAt: Int): Int = listOfNotNull(
+        timesRegex.find(line)?.range?.first,
+        countAfterUnitRegex.find(line)?.range?.first
+    ).filter { it < priceAt }.minOrNull() ?: priceAt
 
-        val head = line.take(firstFigureAt(line, amount.range.first))
-        return item(head, amount.toMinor(), quantityIn(line))
+    private fun quantityIn(line: String): Double? {
+        val afterUnit = countAfterUnitRegex.find(line)?.groupValues?.get(1)
+        val counted = afterUnit ?: timesRegex.find(line)?.let { times ->
+            theCount(times.groupValues[1], times.groupValues[2])
+        }
+        return counted
+            ?.replace(',', '.')
+            ?.toDoubleOrNull()
+            ?.takeIf { it > 0 && it != 1.0 }
     }
 
-    private fun itemFromPair(nameLine: String, figuresLine: String): ParsedItem? {
-        if (amountRegex.containsMatchIn(nameLine)) return null
-        val amount = amountRegex.findAll(figuresLine).lastOrNull() ?: return null
-
-        if (figuresLine.count { it.isLetter() } > MAX_LETTERS_IN_FIGURES) return null
-        return item(nameLine, amount.toMinor(), quantityIn(figuresLine))
+    private fun theCount(left: String, right: String): String {
+        val here = decimalsIn(left)
+        val there = decimalsIn(right)
+        return when {
+            there == 3 && here != 3 -> right
+            here == 3 && there != 3 -> left
+            here == 0 && there > 0 -> left
+            there == 0 && here > 0 -> right
+            else -> left
+        }
     }
 
-    private fun firstFigureAt(line: String, priceAt: Int): Int {
-        val quantity = quantityRegex.find(line)
-        if (quantity != null && quantity.range.first < priceAt) return quantity.range.first
-        return priceAt
-    }
-
-    private fun quantityIn(line: String): Double? = quantityRegex.find(line)
-        ?.groupValues?.get(1)
-        ?.replace(',', '.')
-        ?.toDoubleOrNull()
-        ?.takeIf { it > 0 && it != 1.0 }
+    private fun decimalsIn(number: String): Int =
+        number.substringAfter(',').substringAfter('.').length.takeIf {
+            number.any { char -> char == ',' || char == '.' }
+        } ?: 0
 
     private fun item(rawName: String, amountMinor: Long, quantity: Double?): ParsedItem? {
         if (amountMinor <= 0) return null
         val name = rawName
-            .trim(' ', '"', '«', '»', '\'', ',', '.', ':', ';', '-', '—', '*', '=', '№', '/')
+            .trim(*NAME_TRIM)
+            .replace(articleRegex, "")
+            .trim(*NAME_TRIM)
             .replace(Regex("""\s{2,}"""), " ")
+            .let(::shortened)
         val letters = name.count { it.isLetter() }
         if (letters < 3 || letters <= name.count { it.isDigit() }) return null
-        if (name.length > MAX_ITEM_NAME) return null
         return ParsedItem(name = name, amountMinor = amountMinor, quantity = quantity)
     }
 
-    private val quantityRegex = Regex("""(\d+(?:[.,]\d{1,3})?)\s*[xх×*]\s*(?=\d)""")
+    private fun shortened(name: String): String {
+        if (name.length <= MAX_ITEM_NAME) return name
+        val cut = name.take(MAX_ITEM_NAME)
+        val space = cut.lastIndexOf(' ')
+        return (if (space >= MAX_ITEM_NAME / 2) cut.take(space) else cut)
+            .trimEnd(' ', ',', '.', '-', '(')
+    }
+
+    private val timesRegex =
+        Regex("""(\d+(?:[.,]\d{1,3})?)\s*[xх×*]\s*(\d+(?:[.,]\d{1,3})?)""")
+
+    private val countAfterUnitRegex = Regex(
+        """(?:шт|кг|мл|уп|пач|г|л)\.?\s*[*xх×]\s*(\d+(?:[.,]\d{1,3})?)""",
+        RegexOption.IGNORE_CASE
+    )
+
+    private val articleRegex = Regex("""^\s*(?:\d{1,3}\s*[.)]|\d{4,})\s+""")
+
+    private val NAME_TRIM = charArrayOf(
+        ' ', '"', '«', '»', '\'', '‘', '’', '`', ',', '.', ':', ';',
+        '-', '—', '*', '=', '№', '/', '|', '!'
+    )
 
     private val notAnItem = listOf(
         "наименование", "кол-во", "колич", "цена", "стоимость", "ндс", "пдв", "нсп",
@@ -303,14 +371,17 @@ object ReceiptParser {
         "оплат", "аплат", "белкарт", "belkart", "visa", "mastercard", "maestro",
         "карта", "картка", "банк",
         "адрес", "адрас", "ул.", "пр-т", "просп", "тел", "www", "http", ".by",
-        "спасибо", "дзякуй", "режим работы", "лиц.", "св-во", "объект", "магазин №"
+        "спасибо", "дзякуй", "режим работы", "лиц.", "св-во", "объект", "магазин №",
+        "платежн", "плацеж", "скко", "отзыв"
     )
-
-    private const val MAX_LETTERS_IN_FIGURES = 6
 
     private const val MAX_ITEMS = 60
 
     private const val MAX_ITEM_NAME = 60
+
+    private const val MAX_NAME_LINES = 4
+
+    private const val MIN_NAME_LETTERS = 3
 
     private fun findDate(text: String): LocalDate? {
         val today = LocalDate.now()
@@ -326,8 +397,13 @@ object ReceiptParser {
             .firstOrNull { it <= today && it >= today.minusYears(1) }
     }
 
-    private fun findMerchant(lines: List<ReceiptLine>, judged: Judged?): String? =
-        knownChain(lines.map { it.text }) ?: judged?.merchant() ?: bestNamedLine(lines)
+    private fun findMerchant(
+        lines: List<ReceiptLine>,
+        judged: Judged?,
+        above: Int
+    ): String? = knownChain(lines.map { it.text })
+        ?: judged?.merchant(above)
+        ?: bestNamedLine(lines, above)
 
     private fun knownChain(lines: List<String>): String? {
 
@@ -341,8 +417,8 @@ object ReceiptParser {
 
     private data class Candidate(val name: String, val score: Int, val index: Int)
 
-    private fun bestNamedLine(lines: List<ReceiptLine>): String? {
-        val header = lines.take(HEADER_LINES)
+    private fun bestNamedLine(lines: List<ReceiptLine>, above: Int): String? {
+        val header = lines.take(above)
         val unpAt = header.indexOfFirst { unpRegex.containsMatchIn(it.text) }
         return header
             .mapIndexedNotNull { index, line -> candidate(line, index, unpAt) }
@@ -356,6 +432,7 @@ object ReceiptParser {
         val raw = line.text
         val lower = raw.lowercase()
         if (notAMerchant.any { lower.contains(it) }) return null
+        if (addressRegex.containsMatchIn(raw)) return null
         if (raw.contains(dateRegex) || amountRegex.containsMatchIn(raw)) return null
         if (raw.any { it in "‹›<>|" }) return null
 
@@ -401,5 +478,5 @@ object ReceiptParser {
     private fun quotedName(line: String): String? =
         Regex("""["«]([^"»]{2,40})["»]""").find(line)?.groupValues?.get(1)?.trim()
 
-    private const val MIN_MERCHANT_SCORE = 1
+    private const val MIN_MERCHANT_SCORE = 2
 }

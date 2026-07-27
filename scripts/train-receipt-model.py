@@ -169,6 +169,18 @@ def money(low, high):
     return f"{random.randint(low, high)},{random.randint(0, 99):02d}"
 
 
+WRAPS = [
+    "полим/уп", "флоу-пак", "в/к охл вес 1 кг в/уп", "пэт/бут", "ваф стак 70 г",
+    "домашнему 85 г флоу-пак", "с яйцом и зеленью 180 г",
+]
+
+
+def wrapped(name, rng):
+    if rng.random() < 0.45:
+        return name, None
+    return name, rng.choice(WRAPS)
+
+
 def synthetic(rng):
     shop, _ = rng.choice(SHOPS)
     lines = []
@@ -189,19 +201,41 @@ def synthetic(rng):
         lines.append(("O", "Наименование      Кол-во   Цена   Стоимость"))
 
     total = 0
+    ordinal = 0
     for _ in range(rng.randint(2, 9)):
         name = rng.choice(GOODS)
         price = money(0, 40)
-        total += int(price.replace(",", ""))
         style = rng.random()
-        if style < 0.55:
+        if style < 0.4:
+            total += int(price.replace(",", ""))
             lines.append(("I", f"{name}   {price}"))
-        elif style < 0.8:
+        elif style < 0.58:
+            total += int(price.replace(",", ""))
             lines.append(("I", name))
             count = f"{rng.randint(1, 3)},{rng.randint(0, 999):03d}"
             lines.append(("O", f"{rng.randint(1000, 99999)}  шт*{count}  {price}  {price}"))
-        else:
+        elif style < 0.7:
+            total += int(price.replace(",", ""))
             lines.append(("I", f"{name}  {rng.randint(1, 4)}x{money(0, 9)}  {price}"))
+        elif style < 0.88:
+            ordinal += 1
+            head, tail = wrapped(name, rng)
+            lines.append(("I", f"{ordinal}. {head}"))
+            if tail:
+                lines.append(("I", tail))
+            unit = int(price.replace(",", ""))
+            count = rng.choice(["1.000", "1.000", "2.000", "0.555", "0.742", "1.214"])
+            line_total = round(unit * float(count))
+            total += line_total
+            gap = " " * rng.randint(4, 18)
+            shown = f"{line_total // 100}.{line_total % 100:02d}"
+            lines.append(("O", f"{price.replace(',', '.')} × {count}{gap}{shown}"))
+        else:
+            total += int(price.replace(",", ""))
+            lines.append(("I", f"{rng.randint(1000000, 9999999)} {name}"))
+            lines.append(("O", f"{rng.randint(1000000000000, 9999999999999)}"))
+            shown = price.replace(",", ".")
+            lines.append(("O", f"        {shown}      x1.000       {shown}"))
 
     shown = f"{total // 100},{total % 100:02d}"
     lines.append(("T", f"{rng.choice(TOTAL_WORDS)}: {shown}"))
