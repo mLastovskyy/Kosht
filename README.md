@@ -29,7 +29,7 @@ No ads, no subscriptions, no account unless you want one.
 
 The total, the shop, the date and the shopping list fill themselves in — then stay editable.
 A QR code hands over exact figures; without one, two offline recognisers read the paper.
-Our own **117 KB model**, trained on Belarusian slips, decides what each line is.
+Our own **119 KB model**, trained on Belarusian slips, decides what each line is.
 Nothing is uploaded: no keys, no services, no cloud.
 
 ---
@@ -102,7 +102,7 @@ checks, downloads and installs the update in place — no browser, nothing left 
 - **No QR, no problem.** A quick Russian model reads an ordinary photo in seconds; a stubborn slip is read again by `tessdata_best`.
 - **The model decides what each line is** — which line settles a slip that never prints "итого", which line in the header is the shop, whether a line really names a purchase. Where the slip does say "к оплате", the plain rule still wins.
 - **The photo is prepared and repaired.** Uneven light is judged dot by dot, several layout passes compete on confidence and prices found, and letters mistaken for digits (`1,4О`, `l2,50`, `З,20`) are put right without inventing a figure.
-- **The shop is read, not guessed.** A familiar chain is matched even through OCR slips — `CAHTA` and `ЕВР00ПТ` are Санта and Евроопт; an unfamiliar one is found by the largest print, a quoted trade name, a legal form, the line beside the tax number.
+- **The shop is read, not guessed.** A familiar chain is matched even through OCR slips — `CAHTA` and `ЕВР00ПТ` are Санта and Евроопт. Where a header names two firms, the trade name wins over the company that owns it: `ООО "Белгранд" магазин "Лакомка"` is Лакомка. An unfamiliar shop is found by the largest print, a quoted name, a legal form, the line beside the tax number.
 - **The shopping is read too**, in the layouts real shops print: a name wrapped over three lines, an article number and a bar code above the figures, `price × quantity   sum` below them.
 - **The figures have to agree.** Lines adding up to far more than the total mean something was misread, so the list is dropped rather than trusted; adding up to less is said out loud.
 

@@ -366,6 +366,29 @@ class ReceiptParserTest {
     }
 
     @Test
+    fun `the shop wins over the company that owns it`() {
+        val text = """
+            ООО "Белгранд" магазин "Лакомка"
+            УНП 192884561
+            г. Минск, ул. Лобанка, 14
+            Булка с маком                      1,25
+            ИТОГО                              1,25
+        """.trimIndent()
+        assertEquals("Лакомка", ReceiptParser.parse(text).merchant)
+    }
+
+    @Test
+    fun `a known chain is picked out of a header naming two firms`() {
+        val text = """
+            ЧТУП "Смартпей" ТС "Соседи"
+            УНП 191884203
+            Кефир 2,5% 0,9л                    2,15
+            ИТОГО                              2,15
+        """.trimIndent()
+        assertEquals("Соседи", ReceiptParser.parse(text).merchant)
+    }
+
+    @Test
     fun `a chain name is not read out of an ordinary word`() {
         val text = """
             ЧУП "Хозтовары"

@@ -66,7 +66,14 @@ object ReceiptParser {
         "буслік" to "Буслік",
         "буслик" to "Буслік",
         "5 элемент" to "5 элемент",
-        "электросила" to "Электросила"
+        "электросила" to "Электросила",
+        "грошык" to "Грошык",
+        "радзивилловский" to "Радзивилловский",
+        "верас" to "Верас",
+        "планета здоровья" to "Планета здоровья",
+        "белфармация" to "Белфармация",
+        "материк" to "Материк",
+        "oma" to "OMA"
     )
 
     private val notAMerchant = listOf(
@@ -405,10 +412,13 @@ object ReceiptParser {
         ?: judged?.merchant(above)
         ?: bestNamedLine(lines, above)
 
-    private fun knownChain(lines: List<String>, above: Int): String? {
-        val header = folded(lines.take(above).joinToString(" "))
+    private fun knownChain(lines: List<String>, above: Int): String? =
+        chainIn(lines.take(above).joinToString(" "))
+
+    private fun chainIn(text: String): String? {
+        val folded = folded(text)
         return knownChains.entries
-            .filter { nearlyContains(header, folded(it.key)) }
+            .filter { nearlyContains(folded, folded(it.key)) }
 
             .maxByOrNull { it.key.length }
             ?.value
@@ -524,8 +534,16 @@ object ReceiptParser {
         }
     }
 
-    private fun quotedName(line: String): String? =
-        Regex("""["«]([^"»]{2,40})["»]""").find(line)?.groupValues?.get(1)?.trim()
+    private fun quotedName(line: String): String? {
+        val quoted = quotedRegex.findAll(line)
+            .map { it.groupValues[1].trim() }
+            .filter { it.isNotEmpty() }
+            .toList()
+
+        return quoted.firstOrNull { chainIn(it) != null } ?: quoted.lastOrNull()
+    }
+
+    private val quotedRegex = Regex("""["«]([^"»]{2,40})["»]""")
 
     private const val MIN_MERCHANT_SCORE = 2
 }
