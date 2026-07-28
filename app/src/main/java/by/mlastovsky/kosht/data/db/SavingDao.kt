@@ -3,6 +3,7 @@ package by.mlastovsky.kosht.data.db
 import androidx.room.Dao
 import androidx.room.Insert
 import androidx.room.Query
+import androidx.room.Update
 import kotlinx.coroutines.flow.Flow
 
 data class SavingTotal(
@@ -27,6 +28,9 @@ interface SavingDao {
 
     @Insert
     suspend fun insert(saving: SavingEntity): Long
+
+    @Update
+    suspend fun update(saving: SavingEntity)
 
     @Query("DELETE FROM savings WHERE id = :id")
     suspend fun deleteById(id: Long)

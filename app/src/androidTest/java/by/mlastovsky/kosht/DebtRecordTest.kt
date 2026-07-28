@@ -12,6 +12,7 @@ import by.mlastovsky.kosht.data.db.SyncMeta
 import by.mlastovsky.kosht.data.db.TransactionEntity
 import by.mlastovsky.kosht.model.DebtDirection
 import by.mlastovsky.kosht.model.TransactionType
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
 import org.junit.After
 import org.junit.Assert.assertEquals
@@ -126,6 +127,19 @@ class DebtRecordTest {
         assertEquals(5_000L, back?.amountMinor)
         assertEquals(borrowedAt, back?.createdAt)
         assertEquals("Иван", back?.personName)
+    }
+
+    @Test
+    fun onlyTheDebtBornAsARecordCountsAsAlreadyWrittenDown() = runBlocking {
+        val born = owe(5_000)
+        val byHand = owe(3_000)
+        db.transactionDao().insert(record(5_000, born, delta = -5_000))
+        db.transactionDao().insert(record(1_000, byHand, delta = 1_000))
+
+        assertEquals(
+            listOf(born),
+            db.transactionDao().observeDebtsBornAsRecord().first()
+        )
     }
 
     @Test

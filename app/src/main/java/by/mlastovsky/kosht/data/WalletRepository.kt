@@ -114,6 +114,10 @@ class WalletRepository(
 
     suspend fun deleteDebt(id: Long) = debtDao.deleteById(id)
 
+    fun observeDebtsBornAsRecord(): Flow<Set<Long>> = transactionDao
+        .observeDebtsBornAsRecord()
+        .map { it.toSet() }
+
     fun observeSavings(limit: Int): Flow<List<SavingEntity>> = savingDao.observeRecent(limit)
 
     fun observeSavingsSince(from: Long): Flow<List<SavingEntity>> = savingDao.observeSince(from)
@@ -139,6 +143,11 @@ class WalletRepository(
         record(entry)
         if (goalId != null) checkGoalAchieved(goalId)
         return id
+    }
+
+    suspend fun updateSaving(saving: SavingEntity) {
+        savingDao.update(saving)
+        saving.goalId?.let { checkGoalAchieved(it) }
     }
 
     suspend fun deleteSaving(id: Long) = savingDao.deleteById(id)

@@ -61,6 +61,7 @@ import by.mlastovsky.kosht.data.db.AccountEntity
 import by.mlastovsky.kosht.data.db.CategoryEntity
 import by.mlastovsky.kosht.data.db.DebtEntity
 import by.mlastovsky.kosht.data.db.RecurringEntity
+import by.mlastovsky.kosht.data.db.SavingEntity
 import by.mlastovsky.kosht.data.db.SavingGoalEntity
 import by.mlastovsky.kosht.model.DebtDirection
 import by.mlastovsky.kosht.model.RecurringFrequency
@@ -70,11 +71,17 @@ import by.mlastovsky.kosht.ui.CategoryVisuals
 import by.mlastovsky.kosht.ui.components.CategoryActions
 import by.mlastovsky.kosht.ui.components.CategoryBadge
 import by.mlastovsky.kosht.ui.components.CategoryPickerRow
+import by.mlastovsky.kosht.ui.components.ConfirmDeleteDialog
 import by.mlastovsky.kosht.ui.components.CurrencyChips
 import by.mlastovsky.kosht.ui.components.TextInput
+import by.mlastovsky.kosht.ui.components.rememberRowScrolledTo
 import by.mlastovsky.kosht.ui.relativeDate
+import by.mlastovsky.kosht.util.Dates
 import by.mlastovsky.kosht.util.Money
+import java.time.Instant
 import java.time.LocalDate
+import java.time.ZoneOffset
+import kotlin.math.abs
 
 @Composable
 private fun AmountField(
@@ -196,6 +203,7 @@ private fun DirectionToggle(
 fun DebtActionsDialog(
     debt: DebtEntity,
     accounts: List<AccountEntity>,
+    bornAsRecord: Boolean,
     onRepay: (amountMinor: Long, note: String?, accountId: Long?) -> Unit,
     onClose: (note: String?, accountId: Long?) -> Unit,
     onEdit: () -> Unit,
@@ -203,7 +211,8 @@ fun DebtActionsDialog(
     onDismiss: () -> Unit
 ) {
     var repayText by remember { mutableStateOf("") }
-    var record by remember { mutableStateOf(true) }
+    var record by remember { mutableStateOf(!bornAsRecord) }
+    var confirmingDelete by remember { mutableStateOf(false) }
     var accountId by remember(accounts) { mutableStateOf(accounts.firstOrNull()?.id) }
     val repayMinor = Money.parseToMinor(repayText, debt.currencyCode) ?: 0L
 
@@ -247,22 +256,24 @@ fun DebtActionsDialog(
                     )
                 }
                 AmountField(repayText, { repayText = it })
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .clip(MaterialTheme.shapes.small)
-                        .clickable { record = !record }
-                ) {
-                    Checkbox(checked = record, onCheckedChange = { record = it })
-                    Text(
-                        text = stringResource(R.string.debt_record_history),
-                        style = MaterialTheme.typography.bodyMedium,
-                        modifier = Modifier.weight(1f)
-                    )
-                }
-                if (record && accounts.size > 1) {
-                    AccountChips(accounts, accountId) { accountId = it }
+                if (!bornAsRecord) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clip(MaterialTheme.shapes.small)
+                            .clickable { record = !record }
+                    ) {
+                        Checkbox(checked = record, onCheckedChange = { record = it })
+                        Text(
+                            text = stringResource(R.string.debt_record_history),
+                            style = MaterialTheme.typography.bodyMedium,
+                            modifier = Modifier.weight(1f)
+                        )
+                    }
+                    if (record && accounts.size > 1) {
+                        AccountChips(accounts, accountId) { accountId = it }
+                    }
                 }
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     TextButton(
@@ -285,7 +296,7 @@ fun DebtActionsDialog(
             TextButton(onClick = onDismiss) { Text(stringResource(R.string.action_cancel)) }
         },
         dismissButton = {
-            TextButton(onClick = onDelete) {
+            TextButton(onClick = { confirmingDelete = true }) {
                 Text(
                     stringResource(R.string.editor_delete),
                     color = MaterialTheme.colorScheme.error
@@ -293,6 +304,17 @@ fun DebtActionsDialog(
             }
         }
     )
+
+    if (confirmingDelete) {
+        ConfirmDeleteDialog(
+            name = debt.personName,
+            onConfirm = {
+                confirmingDelete = false
+                onDelete()
+            },
+            onDismiss = { confirmingDelete = false }
+        )
+    }
 }
 
 @Composable
@@ -441,6 +463,188 @@ fun AddSavingDialog(
     )
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun EditSavingDialog(
+    saving: SavingEntity,
+    goals: List<GoalUi>,
+    onConfirm: (
+        amountMinor: Long,
+        currency: String,
+        note: String,
+        date: LocalDate,
+        goalId: Long?
+    ) -> Unit,
+    onDelete: () -> Unit,
+    onDismiss: () -> Unit
+) {
+    var withdraw by remember { mutableStateOf(saving.amountMinor < 0) }
+    var amountText by remember {
+        mutableStateOf(Money.editableText(abs(saving.amountMinor), saving.currencyCode))
+    }
+    var currency by remember { mutableStateOf(saving.currencyCode) }
+    var note by remember { mutableStateOf(saving.note) }
+    var date by remember { mutableStateOf(Dates.toLocalDate(saving.timestamp)) }
+    var goalId by remember { mutableStateOf(saving.goalId) }
+    var showDatePicker by remember { mutableStateOf(false) }
+    var confirmingDelete by remember { mutableStateOf(false) }
+
+    val goal = goals.firstOrNull { it.goal.id == goalId }
+    val savedIn = goal?.goal?.currencyCode ?: currency
+    val typedMinor = Money.parseToMinor(amountText, savedIn) ?: 0L
+    val title = saving.note.ifBlank {
+        stringResource(if (withdraw) R.string.savings_withdraw else R.string.savings_deposit)
+    }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text(
+                    text = stringResource(R.string.saving_edit),
+                    modifier = Modifier.weight(1f)
+                )
+                IconButton(onClick = { confirmingDelete = true }) {
+                    Icon(
+                        imageVector = Icons.Rounded.DeleteOutline,
+                        contentDescription = stringResource(R.string.editor_delete),
+                        tint = MaterialTheme.colorScheme.error
+                    )
+                }
+            }
+        },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                SavingDirectionToggle(withdraw) { withdraw = it }
+                AmountField(amountText, { amountText = it })
+                if (goal == null) {
+                    CurrencyChips(currency) { currency = it }
+                } else {
+                    Text(
+                        text = stringResource(R.string.savings_in_currency, savedIn),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+                AssistChip(
+                    onClick = { showDatePicker = true },
+                    leadingIcon = {
+                        Icon(Icons.Rounded.Event, contentDescription = null, Modifier.size(18.dp))
+                    },
+                    label = {
+                        Text(stringResource(R.string.saving_date) + ": " + relativeDate(date))
+                    }
+                )
+                OutlinedTextField(
+                    value = note,
+                    onValueChange = { note = it.take(120) },
+                    placeholder = { Text(stringResource(R.string.editor_note_hint)) },
+                    singleLine = true,
+                    keyboardOptions = TextInput.Sentence,
+                    modifier = Modifier.fillMaxWidth()
+                )
+                if (goals.isNotEmpty()) {
+                    Text(
+                        stringResource(R.string.goals_pick),
+                        style = MaterialTheme.typography.labelLarge
+                    )
+                    LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        item {
+                            FilterChip(
+                                selected = goalId == null,
+                                onClick = { goalId = null },
+                                label = { Text(stringResource(R.string.goals_none)) }
+                            )
+                        }
+                        items(goals, key = { it.goal.id }) { option ->
+                            FilterChip(
+                                selected = goalId == option.goal.id,
+                                onClick = { goalId = option.goal.id },
+                                label = { Text(option.goal.title, maxLines = 1) }
+                            )
+                        }
+                    }
+                }
+            }
+        },
+        confirmButton = {
+            TextButton(
+                enabled = typedMinor > 0,
+                onClick = {
+                    onConfirm(
+                        if (withdraw) -typedMinor else typedMinor,
+                        savedIn,
+                        note,
+                        date,
+                        goalId
+                    )
+                }
+            ) { Text(stringResource(R.string.editor_save)) }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) { Text(stringResource(R.string.action_cancel)) }
+        }
+    )
+
+    if (showDatePicker) {
+        val pickerState = rememberDatePickerState(
+            initialSelectedDateMillis = date
+                .atStartOfDay(ZoneOffset.UTC).toInstant().toEpochMilli()
+        )
+        DatePickerDialog(
+            onDismissRequest = { showDatePicker = false },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        pickerState.selectedDateMillis?.let { millis ->
+                            date = Instant.ofEpochMilli(millis)
+                                .atZone(ZoneOffset.UTC).toLocalDate()
+                        }
+                        showDatePicker = false
+                    }
+                ) { Text(stringResource(R.string.action_apply)) }
+            },
+            dismissButton = {
+                TextButton(onClick = { showDatePicker = false }) {
+                    Text(stringResource(R.string.action_cancel))
+                }
+            }
+        ) {
+            DatePicker(state = pickerState, showModeToggle = false)
+        }
+    }
+
+    if (confirmingDelete) {
+        ConfirmDeleteDialog(
+            name = title,
+            onConfirm = {
+                confirmingDelete = false
+                onDelete()
+            },
+            onDismiss = { confirmingDelete = false }
+        )
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun SavingDirectionToggle(withdraw: Boolean, onChange: (Boolean) -> Unit) {
+    val options = listOf(
+        false to stringResource(R.string.savings_deposit),
+        true to stringResource(R.string.savings_withdraw)
+    )
+    SingleChoiceSegmentedButtonRow(Modifier.fillMaxWidth()) {
+        options.forEachIndexed { index, (option, label) ->
+            SegmentedButton(
+                selected = withdraw == option,
+                onClick = { onChange(option) },
+                shape = SegmentedButtonDefaults.itemShape(index = index, count = options.size),
+                label = { Text(label) }
+            )
+        }
+    }
+}
+
 @Composable
 fun GoalDialog(
     initial: SavingGoalEntity?,
@@ -454,6 +658,7 @@ fun GoalDialog(
         mutableStateOf(initial?.let { Money.editableText(it.targetMinor, it.currencyCode) } ?: "")
     }
     var currency by remember { mutableStateOf(initial?.currencyCode ?: defaultCurrency) }
+    var confirmingDelete by remember { mutableStateOf(false) }
     val targetMinor = Money.parseToMinor(amountText, currency) ?: 0L
 
     AlertDialog(
@@ -468,7 +673,7 @@ fun GoalDialog(
                 )
 
                 if (onDelete != null) {
-                    IconButton(onClick = onDelete) {
+                    IconButton(onClick = { confirmingDelete = true }) {
                         Icon(
                             imageVector = Icons.Rounded.DeleteOutline,
                             contentDescription = stringResource(R.string.editor_delete),
@@ -516,6 +721,18 @@ fun GoalDialog(
             TextButton(onClick = onDismiss) { Text(stringResource(R.string.action_cancel)) }
         }
     )
+
+    if (confirmingDelete && onDelete != null) {
+        ConfirmDeleteDialog(
+            name = initial?.title.orEmpty(),
+            message = stringResource(R.string.confirm_delete_goal),
+            onConfirm = {
+                confirmingDelete = false
+                onDelete()
+            },
+            onDismiss = { confirmingDelete = false }
+        )
+    }
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -643,7 +860,7 @@ fun AddRecurringDialog(
     if (showDatePicker) {
         val pickerState = rememberDatePickerState(
             initialSelectedDateMillis = firstDue
-                .atStartOfDay(java.time.ZoneOffset.UTC).toInstant().toEpochMilli()
+                .atStartOfDay(ZoneOffset.UTC).toInstant().toEpochMilli()
         )
         DatePickerDialog(
             onDismissRequest = { showDatePicker = false },
@@ -651,8 +868,8 @@ fun AddRecurringDialog(
                 TextButton(
                     onClick = {
                         pickerState.selectedDateMillis?.let { millis ->
-                            firstDue = java.time.Instant.ofEpochMilli(millis)
-                                .atZone(java.time.ZoneOffset.UTC).toLocalDate()
+                            firstDue = Instant.ofEpochMilli(millis)
+                                .atZone(ZoneOffset.UTC).toLocalDate()
                         }
                         showDatePicker = false
                     }
@@ -857,7 +1074,14 @@ fun AccountBalanceDialog(
     var name by remember { mutableStateOf(resolvedName) }
     var iconKey by remember { mutableStateOf(account.iconKey) }
     var colorArgb by remember { mutableLongStateOf(account.colorArgb) }
+    var confirmingDelete by remember { mutableStateOf(false) }
     val picture = rememberPictureChoice(account.iconPath)
+    val iconRow = rememberRowScrolledTo(
+        AccountVisuals.pickableIconKeys.indexOf(account.iconKey)
+    )
+    val colorRow = rememberRowScrolledTo(
+        CategoryVisuals.pickableColors.indexOf(account.colorArgb)
+    )
     val target = Money.parseToMinor(balanceText.replace("-", ""), currencyCode)
         ?.let { if (balanceText.startsWith("-")) -it else it }
 
@@ -889,7 +1113,7 @@ fun AccountBalanceDialog(
                 }
 
                 if (deletable && editMode) {
-                    IconButton(onClick = onDelete) {
+                    IconButton(onClick = { confirmingDelete = true }) {
                         Icon(
                             Icons.Rounded.DeleteOutline,
                             contentDescription = stringResource(R.string.editor_delete),
@@ -912,7 +1136,10 @@ fun AccountBalanceDialog(
                     )
                     PicturePickerRow(picture)
                     if (!picture.hasPicture) {
-                        LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        LazyRow(
+                            state = iconRow,
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
                             items(AccountVisuals.pickableIconKeys) { key ->
                                 CategoryBadge(
                                     iconKey = key,
@@ -925,7 +1152,10 @@ fun AccountBalanceDialog(
                                 )
                             }
                         }
-                        LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        LazyRow(
+                            state = colorRow,
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
                             items(CategoryVisuals.pickableColors) { color ->
                                 Box(
                                     modifier = Modifier
@@ -981,6 +1211,18 @@ fun AccountBalanceDialog(
             }
         }
     )
+
+    if (confirmingDelete) {
+        ConfirmDeleteDialog(
+            name = resolvedName,
+            message = stringResource(R.string.confirm_delete_account),
+            onConfirm = {
+                confirmingDelete = false
+                onDelete()
+            },
+            onDismiss = { confirmingDelete = false }
+        )
+    }
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -1103,7 +1345,7 @@ fun EditRecurringDialog(
     if (showDatePicker) {
         val pickerState = rememberDatePickerState(
             initialSelectedDateMillis = due
-                .atStartOfDay(java.time.ZoneOffset.UTC).toInstant().toEpochMilli()
+                .atStartOfDay(ZoneOffset.UTC).toInstant().toEpochMilli()
         )
         DatePickerDialog(
             onDismissRequest = { showDatePicker = false },
@@ -1111,8 +1353,8 @@ fun EditRecurringDialog(
                 TextButton(
                     onClick = {
                         pickerState.selectedDateMillis?.let { millis ->
-                            due = java.time.Instant.ofEpochMilli(millis)
-                                .atZone(java.time.ZoneOffset.UTC).toLocalDate()
+                            due = Instant.ofEpochMilli(millis)
+                                .atZone(ZoneOffset.UTC).toLocalDate()
                         }
                         showDatePicker = false
                     }

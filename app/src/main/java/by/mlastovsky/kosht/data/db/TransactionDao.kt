@@ -76,6 +76,12 @@ interface TransactionDao {
     @Query("SELECT COUNT(*) FROM transactions WHERE categoryId = :categoryId")
     suspend fun countByCategory(categoryId: Long): Int
 
+    @Query(
+        "SELECT DISTINCT debtId FROM transactions " +
+            "WHERE debtId IS NOT NULL AND debtDeltaMinor < 0"
+    )
+    fun observeDebtsBornAsRecord(): Flow<List<Long>>
+
     @Query("SELECT COUNT(*) FROM transactions WHERE transferToAccountId IS NULL")
     fun observeCount(): Flow<Int>
 

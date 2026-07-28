@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
@@ -43,6 +44,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
@@ -69,6 +71,7 @@ import by.mlastovsky.kosht.ui.components.AnimatedAmountText
 import by.mlastovsky.kosht.ui.components.rememberReorderList
 import by.mlastovsky.kosht.ui.components.CategoryActions
 import by.mlastovsky.kosht.ui.components.CategoryBadge
+import by.mlastovsky.kosht.ui.components.ConfirmDeleteDialog
 import by.mlastovsky.kosht.ui.relativeDate
 import by.mlastovsky.kosht.ui.theme.KoshtTheme
 import by.mlastovsky.kosht.ui.transfer.TransferDialog
@@ -96,6 +99,8 @@ fun WalletScreen(
     var goalInAction by remember { mutableStateOf<GoalUi?>(null) }
     var recurringToConfirm by remember { mutableStateOf<RecurringWithCategory?>(null) }
     var recurringToEdit by remember { mutableStateOf<RecurringWithCategory?>(null) }
+    var recurringToDelete by remember { mutableStateOf<RecurringWithCategory?>(null) }
+    var savingToEdit by remember { mutableStateOf<SavingEntity?>(null) }
     var showAddGoal by remember { mutableStateOf(false) }
     var showAddAccount by remember { mutableStateOf(false) }
     var showTransfer by remember { mutableStateOf(false) }
@@ -158,7 +163,8 @@ fun WalletScreen(
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(start = 16.dp, end = 8.dp, top = 12.dp),
+                    .padding(start = 16.dp, end = 8.dp, top = 12.dp)
+                    .heightIn(min = 48.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
@@ -201,7 +207,13 @@ fun WalletScreen(
                 Row(
                     modifier = Modifier
                         .zIndex(if (held) 1f else 0f)
-                        .then(if (held) Modifier else Modifier.animateItem())
+                        .then(
+                            if (held) {
+                                Modifier
+                            } else {
+                                Modifier.animateItem(fadeInSpec = null, fadeOutSpec = null)
+                            }
+                        )
                         .graphicsLayer {
                             if (!held) return@graphicsLayer
                             translationY = accountOrder.offset
@@ -248,6 +260,10 @@ fun WalletScreen(
                     )
                 }
             }
+        } else if (state.accountsWithBalances.size > 1) {
+            item(key = "accounts-hidden") {
+                EmptyHint(stringResource(R.string.accounts_hidden))
+            }
         }
 
         val due = state.recurring.filter { it.recurring.id in state.dueRecurringIds }
@@ -279,7 +295,7 @@ fun WalletScreen(
             RecurringRow(
                 item = item,
                 onToggle = { enabled -> viewModel.setRecurringEnabled(item, enabled) },
-                onDelete = { viewModel.deleteRecurring(item) },
+                onDelete = { recurringToDelete = item },
                 onClick = { recurringToEdit = item },
                 modifier = Modifier.animateItem()
             )
@@ -370,7 +386,7 @@ fun WalletScreen(
             SavingRow(
                 saving = saving,
                 rates = state.rates,
-                onDelete = { viewModel.deleteSaving(saving) },
+                onClick = { savingToEdit = saving },
                 modifier = Modifier.animateItem()
             )
         }
@@ -392,6 +408,7 @@ fun WalletScreen(
         DebtActionsDialog(
             debt = debt,
             accounts = state.pickableAccounts,
+            bornAsRecord = debt.id in state.debtsBornAsRecord,
             onRepay = { amount, note, accountId ->
                 viewModel.repayDebt(debt, amount, note, accountId)
                 debtInAction = null
@@ -559,6 +576,33 @@ fun WalletScreen(
         )
     }
 
+    recurringToDelete?.let { item ->
+        ConfirmDeleteDialog(
+            name = item.recurring.title,
+            onConfirm = {
+                viewModel.deleteRecurring(item)
+                recurringToDelete = null
+            },
+            onDismiss = { recurringToDelete = null }
+        )
+    }
+
+    savingToEdit?.let { saving ->
+        EditSavingDialog(
+            saving = saving,
+            goals = state.goals,
+            onConfirm = { amount, currency, note, date, goalId ->
+                viewModel.updateSaving(saving, amount, currency, note, date, goalId)
+                savingToEdit = null
+            },
+            onDelete = {
+                viewModel.deleteSaving(saving)
+                savingToEdit = null
+            },
+            onDismiss = { savingToEdit = null }
+        )
+    }
+
     recurringToConfirm?.let { item ->
         ConfirmRecurringDialog(
             title = item.recurring.title,
@@ -671,6 +715,8 @@ private const val ACCOUNT_KEY = "acc-"
 
 private const val HELD_SCALE = 1.03f
 
+private const val PAUSED_ALPHA = 0.45f
+
 @Composable
 private fun SectionHeader(text: String) {
     Text(
@@ -779,6 +825,7 @@ private fun RecurringRow(
     onClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
+    val fade = if (item.recurring.enabled) 1f else PAUSED_ALPHA
     Row(
         modifier = modifier
             .clickable(onClick = onClick)
@@ -791,12 +838,14 @@ private fun RecurringRow(
             iconKey = item.category.iconKey,
             color = Color(item.category.colorArgb),
             size = 40.dp,
-            iconPath = item.category.iconPath
+            iconPath = item.category.iconPath,
+            modifier = Modifier.alpha(fade)
         )
         Column(Modifier.weight(1f)) {
             Text(
                 text = item.recurring.title,
                 style = MaterialTheme.typography.bodyLarge,
+                color = MaterialTheme.colorScheme.onSurface.copy(alpha = fade),
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis
             )
@@ -806,9 +855,9 @@ private fun RecurringRow(
                     " · " + signedAmount(item),
                 style = MaterialTheme.typography.bodyMedium,
                 color = if (item.recurring.type == TransactionType.INCOME) {
-                    KoshtTheme.colors.income
+                    KoshtTheme.colors.income.copy(alpha = fade)
                 } else {
-                    MaterialTheme.colorScheme.onSurfaceVariant
+                    MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = fade)
                 },
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis
@@ -1052,7 +1101,7 @@ private fun SavingsSummary(
 private fun SavingRow(
     saving: SavingEntity,
     rates: Map<String, RateEntity>,
-    onDelete: () -> Unit,
+    onClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     val positive = saving.amountMinor >= 0
@@ -1063,6 +1112,7 @@ private fun SavingRow(
     }
     Row(
         modifier = modifier
+            .clickable(onClick = onClick)
             .fillMaxWidth()
             .padding(horizontal = 16.dp, vertical = 6.dp),
         verticalAlignment = Alignment.CenterVertically,
@@ -1119,13 +1169,6 @@ private fun SavingRow(
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
-        }
-        IconButton(onClick = onDelete) {
-            Icon(
-                Icons.Rounded.DeleteOutline,
-                contentDescription = stringResource(R.string.editor_delete),
-                tint = MaterialTheme.colorScheme.onSurfaceVariant
-            )
         }
     }
 }

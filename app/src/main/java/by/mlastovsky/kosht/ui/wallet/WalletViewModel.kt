@@ -23,6 +23,8 @@ import by.mlastovsky.kosht.model.DebtDirection
 import by.mlastovsky.kosht.model.RecurringFrequency
 import by.mlastovsky.kosht.model.TransactionType
 import by.mlastovsky.kosht.ui.components.CategoryEdit
+import by.mlastovsky.kosht.util.Dates
+import java.time.LocalDate
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharedFlow
@@ -56,6 +58,7 @@ data class WalletUiState(
     val refreshingRates: Boolean = false,
     val showRates: Boolean = true,
     val debts: List<DebtEntity> = emptyList(),
+    val debtsBornAsRecord: Set<Long> = emptySet(),
     val iOweBynMinor: Long = 0,
     val owedToMeBynMinor: Long = 0,
     val savings: List<SavingEntity> = emptyList(),
@@ -118,8 +121,14 @@ class WalletViewModel(
         }
     }
 
-    private val wallet = combine(
+    private val debts = combine(
         walletRepository.observeDebts(),
+        walletRepository.observeDebtsBornAsRecord(),
+        ::DebtData
+    )
+
+    private val wallet = combine(
+        debts,
         walletRepository.observeSavings(SAVINGS_LIMIT),
         walletRepository.observeSavingTotals(),
         walletRepository.observeRecurring(),
@@ -165,8 +174,13 @@ class WalletViewModel(
         ::ContextData
     )
 
+    private data class DebtData(
+        val all: List<DebtEntity>,
+        val bornAsRecord: Set<Long>
+    )
+
     private data class WalletData(
-        val debts: List<DebtEntity>,
+        val debts: DebtData,
         val savings: List<SavingEntity>,
         val savingTotals: List<SavingTotal>,
         val recurring: List<RecurringWithCategory>,
@@ -184,9 +198,10 @@ class WalletViewModel(
             ratesUpdatedAt = rates.values.maxOfOrNull { it.updatedAt },
             refreshingRates = refreshing,
             showRates = settings.showRates,
-            debts = data.debts,
-            iOweBynMinor = data.debts.sumInByn(DebtDirection.I_OWE, rates),
-            owedToMeBynMinor = data.debts.sumInByn(DebtDirection.OWED_TO_ME, rates),
+            debts = data.debts.all,
+            debtsBornAsRecord = data.debts.bornAsRecord,
+            iOweBynMinor = data.debts.all.sumInByn(DebtDirection.I_OWE, rates),
+            owedToMeBynMinor = data.debts.all.sumInByn(DebtDirection.OWED_TO_ME, rates),
             savings = data.savings,
             savingTotals = data.savingTotals,
             savingsBynMinor = data.savingTotals.sumOf {
@@ -418,6 +433,28 @@ class WalletViewModel(
         }
     }
 
+    fun updateSaving(
+        saving: SavingEntity,
+        amountMinor: Long,
+        currencyCode: String,
+        note: String,
+        date: LocalDate,
+        goalId: Long?
+    ) {
+        if (amountMinor == 0L) return
+        viewModelScope.launch {
+            walletRepository.updateSaving(
+                saving.copy(
+                    amountMinor = amountMinor,
+                    currencyCode = currencyCode,
+                    note = note.trim(),
+                    timestamp = Dates.momentFor(date, saving.timestamp),
+                    goalId = goalId
+                )
+            )
+        }
+    }
+
     fun deleteSaving(saving: SavingEntity) {
         viewModelScope.launch { walletRepository.deleteSaving(saving.id) }
     }
@@ -427,7 +464,7 @@ class WalletViewModel(
         amountMinor: Long,
         currencyCode: String,
         categoryId: Long,
-        firstDue: java.time.LocalDate,
+        firstDue: LocalDate,
         frequency: RecurringFrequency,
         type: TransactionType,
         accountId: Long?
@@ -481,7 +518,7 @@ class WalletViewModel(
         item: RecurringWithCategory,
         title: String,
         amountMinor: Long,
-        nextDue: java.time.LocalDate,
+        nextDue: LocalDate,
         frequency: RecurringFrequency,
         type: TransactionType,
         categoryId: Long,
