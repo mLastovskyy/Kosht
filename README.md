@@ -45,34 +45,36 @@ Nothing is uploaded: no keys, no services, no cloud.
 
 ---
 
-## 👀 See it
+## 👀 See it — in both themes
 
 <table>
   <tr>
-    <td align="center"><img src="screenshots/02_editor.png" width="230"/><br/><b>Add in seconds</b></td>
-    <td align="center"><img src="screenshots/03_history.png" width="230"/><br/><b>History that keeps up</b></td>
-    <td align="center"><img src="screenshots/05_calendar.png" width="230"/><br/><b>Heatmap of the month</b></td>
+    <td align="center"><img src="screenshots/light/02_editor.png" width="230"/><br/><b>Add in seconds</b><br/><sub>☀️ light</sub></td>
+    <td align="center"><img src="screenshots/light/03_history.png" width="230"/><br/><b>History that keeps up</b><br/><sub>☀️ light</sub></td>
+    <td align="center"><img src="screenshots/light/05_calendar.png" width="230"/><br/><b>Heatmap of the month</b><br/><sub>☀️ light</sub></td>
   </tr>
   <tr>
-    <td align="center"><img src="screenshots/06_report.png" width="230"/><br/><b>Report with tips</b></td>
-    <td align="center"><img src="screenshots/07_achievements.png" width="230"/><br/><b>Streak & challenges</b></td>
-    <td align="center"><img src="screenshots/09_settings.png" width="230"/><br/><b>Make it yours</b></td>
+    <td align="center"><img src="screenshots/06_report.png" width="230"/><br/><b>Report with tips</b><br/><sub>🌙 dark</sub></td>
+    <td align="center"><img src="screenshots/07_achievements.png" width="230"/><br/><b>Streak &amp; challenges</b><br/><sub>🌙 dark</sub></td>
+    <td align="center"><img src="screenshots/09_settings.png" width="230"/><br/><b>Make it yours</b><br/><sub>🌙 dark</sub></td>
   </tr>
 </table>
 
+Light, dark or whatever the system says — with Material You taking its colours from your wallpaper.
+
 <details>
-<summary><b>☀️ The same app in light theme</b></summary>
+<summary><b>A few more, side by side</b></summary>
 
 <table>
   <tr>
-    <td align="center"><img src="screenshots/light/01_home.png" width="230"/><br/><b>Home</b></td>
-    <td align="center"><img src="screenshots/light/04_stats.png" width="230"/><br/><b>Charts</b></td>
-    <td align="center"><img src="screenshots/light/05_calendar.png" width="230"/><br/><b>Heatmap</b></td>
+    <td align="center"><img src="screenshots/light/01_home.png" width="230"/><br/><b>Home</b> ☀️</td>
+    <td align="center"><img src="screenshots/light/04_stats.png" width="230"/><br/><b>Charts</b> ☀️</td>
+    <td align="center"><img src="screenshots/light/08_wallet.png" width="230"/><br/><b>Wallet</b> ☀️</td>
   </tr>
   <tr>
-    <td align="center"><img src="screenshots/light/06_report.png" width="230"/><br/><b>Report</b></td>
-    <td align="center"><img src="screenshots/light/08_wallet.png" width="230"/><br/><b>Wallet</b></td>
-    <td align="center"><img src="screenshots/light/09_settings.png" width="230"/><br/><b>Settings</b></td>
+    <td align="center"><img src="screenshots/02b_calculator.png" width="230"/><br/><b>Calculator</b> 🌙</td>
+    <td align="center"><img src="screenshots/03_history.png" width="230"/><br/><b>History</b> 🌙</td>
+    <td align="center"><img src="screenshots/05_calendar.png" width="230"/><br/><b>Heatmap</b> 🌙</td>
   </tr>
 </table>
 
