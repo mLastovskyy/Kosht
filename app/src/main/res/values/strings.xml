@@ -404,6 +404,9 @@
     <string name="savings_deposit">Set aside</string>
     <string name="savings_withdraw">Withdraw</string>
     <string name="wallet_empty_savings">Nothing set aside yet</string>
+    <string name="saving_edit">Edit saving</string>
+    <string name="saving_date">Date</string>
+    <string name="accounts_hidden">Your accounts are kept. Turn them back on to see their balances.</string>
     <string name="amount_hint">Amount</string>
     <string name="editor_tap_amount">Tap to enter the amount</string>
 
@@ -529,6 +532,14 @@
     <string name="action_cancel">Cancel</string>
     <string name="action_add">Add</string>
 
+    <!-- Deleting, asked first -->
+    <string name="confirm_delete_title">Delete “%1$s”?</string>
+    <string name="confirm_delete_permanent">This cannot be undone.</string>
+    <string name="confirm_delete_record">“Undo” waits along the bottom afterwards.</string>
+    <string name="confirm_delete_category">Its records move to Other.</string>
+    <string name="confirm_delete_goal">What is set aside stays — it just stops counting towards a goal.</string>
+    <string name="confirm_delete_account">Its records move to your first account.</string>
+
     <!-- In-app guide -->
     <string name="guide_title">How to use Kosht</string>
     <string name="guide_screen_of">Screen %1$d of 5</string>
@@ -536,9 +547,9 @@
     <string name="guide_group_record">WRITING IT DOWN</string>
     <string name="guide_group_more">EVERYTHING ELSE</string>
     <string name="guide_home_lines">The total balance and the totals for this month.\nAccount tiles once you keep more than one.\nRecent records: tap to edit, "See all" for History.\nUp top: the streak, the awards and your profile.</string>
-    <string name="guide_history_lines">Every record by day, with the total for the day above it.\nSearch by note and category, filters and a period.\nA basket on a record opens what it was made of.\nDeleting lives inside the record; "Undo" waits below.</string>
+    <string name="guide_history_lines">Every record by day, with the total for the day above it.\nSearch by note and category, filters and a period.\nA basket on a record opens what it was made of.\nDeleting lives inside the record, asks first; "Undo" waits below.</string>
     <string name="guide_stats_lines">A category donut with the total inside; days below it.\nTap a slice to name its category, tap a category to open the items.\nCalendar: the darker the day, the more it cost.\nReport: a week, a month, a quarter or a year.</string>
-    <string name="guide_wallet_lines">Bank rates, accounts and transfers between them.\nPayments wait for your confirmation — never charged alone.\nDebts, goals and savings.</string>
+    <string name="guide_wallet_lines">Bank rates, accounts and transfers between them.\nPayments wait for your confirmation; a switched-off one goes dim.\nDebts, goals and savings: a tap opens one for editing.</string>
     <string name="guide_settings_lines">Profile, theme, language, currency.\nAccounts, report, notifications, security.\nAt the bottom: the manual, the documents and the version.</string>
     <string name="guide_add_head">A new record</string>
     <string name="guide_add_lines">The + button on Home or in History.\nSum, category, Save.\nExpense or income — the switch, or a swipe across the sum.\nChips beside it: date, account, items.</string>

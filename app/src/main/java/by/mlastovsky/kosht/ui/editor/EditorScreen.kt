@@ -107,6 +107,7 @@ import by.mlastovsky.kosht.ui.AppViewModelProvider
 import by.mlastovsky.kosht.ui.CategoryVisuals
 import by.mlastovsky.kosht.ui.components.CategoryActions
 import by.mlastovsky.kosht.ui.components.CategoryPickerRow
+import by.mlastovsky.kosht.ui.components.ConfirmDeleteDialog
 import by.mlastovsky.kosht.ui.components.TextInput
 import by.mlastovsky.kosht.ui.components.TruncatedText
 import by.mlastovsky.kosht.ui.components.rememberBitmapFromPath
@@ -147,6 +148,9 @@ fun EditorScreen(
     var showEReceipt by remember { mutableStateOf(false) }
     var showItems by remember { mutableStateOf(false) }
     var askedOverSum by remember { mutableStateOf(false) }
+    var confirmingDelete by remember { mutableStateOf(false) }
+    var confirmingReceiptRemoval by remember { mutableStateOf(false) }
+    var confirmingPhotoRemoval by remember { mutableStateOf(false) }
     var cameraTarget by remember { mutableStateOf<Uri?>(null) }
     val scanFailedMessage = stringResource(R.string.scan_failed)
 
@@ -212,7 +216,7 @@ fun EditorScreen(
             },
             actions = {
                 if (state.isEdit) {
-                    IconButton(onClick = { viewModel.delete(onClose) }) {
+                    IconButton(onClick = { confirmingDelete = true }) {
                         Icon(
                             Icons.Rounded.DeleteOutline,
                             contentDescription = stringResource(R.string.editor_delete),
@@ -583,10 +587,7 @@ fun EditorScreen(
     if (showPhotoView && state.photoPath != null) {
         PhotoViewDialog(
             path = state.photoPath!!,
-            onRemove = {
-                viewModel.removePhoto()
-                showPhotoView = false
-            },
+            onRemove = { confirmingPhotoRemoval = true },
             onDismiss = { showPhotoView = false }
         )
     }
@@ -642,11 +643,49 @@ fun EditorScreen(
         EReceiptDialog(
             url = state.receiptUrl,
             documentPath = state.receiptDocPath,
-            onRemove = {
-                viewModel.removeEReceipt()
-                showEReceipt = false
-            },
+            onRemove = { confirmingReceiptRemoval = true },
             onDismiss = { showEReceipt = false }
+        )
+    }
+
+    if (confirmingDelete) {
+        ConfirmDeleteDialog(
+            name = state.note.ifBlank {
+                state.categories
+                    .firstOrNull { it.id == state.categoryId }
+                    ?.let { CategoryVisuals.displayName(it) }
+                    .orEmpty()
+            },
+            message = stringResource(R.string.confirm_delete_record),
+            onConfirm = {
+                confirmingDelete = false
+                viewModel.delete(onClose)
+            },
+            onDismiss = { confirmingDelete = false }
+        )
+    }
+
+    if (confirmingReceiptRemoval) {
+        ConfirmDeleteDialog(
+            name = stringResource(R.string.ereceipt_title),
+            onConfirm = {
+                confirmingReceiptRemoval = false
+                showEReceipt = false
+                viewModel.removeEReceipt()
+            },
+            onDismiss = { confirmingReceiptRemoval = false }
+        )
+    }
+
+    if (confirmingPhotoRemoval) {
+        ConfirmDeleteDialog(
+            name = stringResource(R.string.photo_receipt),
+            onConfirm = {
+                confirmingPhotoRemoval = false
+                showPhotoView = false
+                viewModel.removePhoto()
+            },
+            onDismiss = { confirmingPhotoRemoval = false }
         )
     }
 }

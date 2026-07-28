@@ -316,7 +316,14 @@ fun CategoryDialog(
     var colorArgb by remember(initial?.id) {
         mutableLongStateOf(initial?.colorArgb ?: CategoryVisuals.pickableColors.first())
     }
+    var confirmingDelete by remember { mutableStateOf(false) }
     val picture = rememberPictureChoice(initial?.iconPath)
+    val iconRow = rememberRowScrolledTo(
+        initial?.let { CategoryVisuals.pickableIconKeys.indexOf(it.iconKey) } ?: 0
+    )
+    val colorRow = rememberRowScrolledTo(
+        initial?.let { CategoryVisuals.pickableColors.indexOf(it.colorArgb) } ?: 0
+    )
 
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -343,7 +350,10 @@ fun CategoryDialog(
                         stringResource(R.string.category_icon),
                         style = MaterialTheme.typography.labelLarge
                     )
-                    LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    LazyRow(
+                        state = iconRow,
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
                         items(CategoryVisuals.pickableIconKeys) { key ->
                             CategoryBadge(
                                 iconKey = key,
@@ -360,7 +370,10 @@ fun CategoryDialog(
                         stringResource(R.string.category_color),
                         style = MaterialTheme.typography.labelLarge
                     )
-                    LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    LazyRow(
+                        state = colorRow,
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
                         items(CategoryVisuals.pickableColors) { color ->
                             val selected = color == colorArgb
                             Box(
@@ -401,7 +414,7 @@ fun CategoryDialog(
             if (onDelete == null) {
                 TextButton(onClick = onDismiss) { Text(stringResource(R.string.action_cancel)) }
             } else {
-                TextButton(onClick = onDelete) {
+                TextButton(onClick = { confirmingDelete = true }) {
                     Text(
                         stringResource(R.string.editor_delete),
                         color = MaterialTheme.colorScheme.error
@@ -410,6 +423,18 @@ fun CategoryDialog(
             }
         }
     )
+
+    if (confirmingDelete && onDelete != null) {
+        ConfirmDeleteDialog(
+            name = initialName,
+            message = stringResource(R.string.confirm_delete_category),
+            onConfirm = {
+                confirmingDelete = false
+                onDelete()
+            },
+            onDismiss = { confirmingDelete = false }
+        )
+    }
 }
 
 private const val ADD_KEY = "add"

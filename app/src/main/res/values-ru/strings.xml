@@ -408,6 +408,9 @@
     <string name="savings_deposit">Отложить</string>
     <string name="savings_withdraw">Снять</string>
     <string name="wallet_empty_savings">Пока ничего не отложено</string>
+    <string name="saving_edit">Изменить накопление</string>
+    <string name="saving_date">Дата</string>
+    <string name="accounts_hidden">Счета никуда не делись. Включите тумблер, чтобы снова видеть балансы.</string>
     <string name="amount_hint">Сумма</string>
     <string name="editor_tap_amount">Нажмите, чтобы ввести сумму</string>
 
@@ -533,6 +536,14 @@
     <string name="action_cancel">Отмена</string>
     <string name="action_add">Добавить</string>
 
+    <!-- Удаление, но сначала спросим -->
+    <string name="confirm_delete_title">Удалить «%1$s»?</string>
+    <string name="confirm_delete_permanent">Отменить это будет нельзя.</string>
+    <string name="confirm_delete_record">После удаления внизу появится «Отменить».</string>
+    <string name="confirm_delete_category">Записи категории перейдут в «Другое».</string>
+    <string name="confirm_delete_goal">Отложенное останется — просто перестанет считаться в цель.</string>
+    <string name="confirm_delete_account">Записи счёта перейдут на первый счёт.</string>
+
     <!-- Гид по приложению -->
     <string name="guide_title">Как пользоваться Kosht</string>
     <string name="guide_screen_of">Экран %1$d из 5</string>
@@ -540,9 +551,9 @@
     <string name="guide_group_record">КАК ЗАПИСАТЬ</string>
     <string name="guide_group_more">ОСТАЛЬНОЕ</string>
     <string name="guide_home_lines">Общий баланс и итоги месяца.\nПлитки счетов — когда счетов больше одного.\nНедавние записи: тап открывает правку, «Все» — Историю.\nВ шапке — серия 🔥, награды 🏆 и профиль.</string>
-    <string name="guide_history_lines">Все записи по дням, над каждым днём — его итог.\nПоиск по заметке и категории, фильтры и период.\nКорзинка у записи раскрывает её позиции.\nУдаление — внутри записи; после него внизу ждёт «Отменить».</string>
+    <string name="guide_history_lines">Все записи по дням, над каждым днём — его итог.\nПоиск по заметке и категории, фильтры и период.\nКорзинка у записи раскрывает её позиции.\nУдаление — внутри записи, сначала спросит; потом внизу ждёт «Отменить».</string>
     <string name="guide_stats_lines">Круг по категориям, в центре итог; ниже траты по дням.\nТап по дольке называет её категорию, тап по категории раскрывает товары.\nКалендарь: чем темнее день, тем больше траты.\nОтчёт — за неделю, месяц, квартал или год.</string>
-    <string name="guide_wallet_lines">Курсы НБРБ и счета с переводами между ними.\nПлатежи ждут подтверждения — сами не списываются.\nДолги, цели и накопления.</string>
+    <string name="guide_wallet_lines">Курсы НБРБ и счета с переводами между ними.\nПлатежи ждут подтверждения; выключенный — тусклый.\nДолги, цели и накопления: тап открывает правку.</string>
     <string name="guide_settings_lines">Профиль, тема, язык, валюта.\nСчета, отчёт, уведомления, безопасность.\nВнизу — руководство, документы и версия.</string>
     <string name="guide_add_head">Новая запись</string>
     <string name="guide_add_lines">Кнопка + на Главной или в Истории.\nСумма, категория, «Сохранить».\nРасход или доход — переключатель сверху либо свайп по сумме.\nЧипы рядом: дата, счёт, позиции.</string>

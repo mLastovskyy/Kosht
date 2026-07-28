@@ -41,6 +41,7 @@ import by.mlastovsky.kosht.data.db.TransactionEntity
 import by.mlastovsky.kosht.ui.AccountVisuals
 import by.mlastovsky.kosht.ui.AppViewModelProvider
 import by.mlastovsky.kosht.ui.CategoryVisuals
+import by.mlastovsky.kosht.ui.components.ConfirmDeleteDialog
 import by.mlastovsky.kosht.ui.components.TextInput
 import by.mlastovsky.kosht.ui.relativeDate
 import by.mlastovsky.kosht.util.Dates
@@ -89,6 +90,7 @@ fun TransferDialog(
         mutableStateOf(initial?.let { Dates.toLocalDate(it.timestamp) } ?: Dates.today())
     }
     var showDatePicker by remember { mutableStateOf(false) }
+    var confirmingDelete by remember { mutableStateOf(false) }
 
     val amountMinor = Money.parseToMinor(amountText, state.currencyCode) ?: 0L
     val feeMinor = if (state.feeEnabled) {
@@ -202,7 +204,7 @@ fun TransferDialog(
         },
         dismissButton = {
             if (initial != null) {
-                TextButton(onClick = { viewModel.delete(initial, onDismiss) }) {
+                TextButton(onClick = { confirmingDelete = true }) {
                     Text(
                         text = stringResource(R.string.editor_delete),
                         color = MaterialTheme.colorScheme.error
@@ -213,6 +215,18 @@ fun TransferDialog(
             }
         }
     )
+
+    if (confirmingDelete && initial != null) {
+        ConfirmDeleteDialog(
+            name = stringResource(R.string.transfer_title),
+            message = stringResource(R.string.confirm_delete_record),
+            onConfirm = {
+                confirmingDelete = false
+                viewModel.delete(initial, onDismiss)
+            },
+            onDismiss = { confirmingDelete = false }
+        )
+    }
 
     if (showDatePicker) {
         val pickerState = rememberDatePickerState(

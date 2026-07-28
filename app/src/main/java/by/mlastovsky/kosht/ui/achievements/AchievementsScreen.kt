@@ -75,6 +75,7 @@ import by.mlastovsky.kosht.ui.AppViewModelProvider
 import by.mlastovsky.kosht.ui.awards.AwardVisuals
 import by.mlastovsky.kosht.ui.components.CategoryActions
 import by.mlastovsky.kosht.ui.components.CategoryPickerRow
+import by.mlastovsky.kosht.ui.components.ConfirmDeleteDialog
 import by.mlastovsky.kosht.ui.components.CurrencyChips
 import by.mlastovsky.kosht.ui.components.TextInput
 import by.mlastovsky.kosht.ui.relativeDate
@@ -97,6 +98,7 @@ fun AchievementsScreen(
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     var showAddChallenge by remember { mutableStateOf(false) }
     var challengeToEdit by remember { mutableStateOf<ChallengeProgress?>(null) }
+    var challengeToDelete by remember { mutableStateOf<ChallengeProgress?>(null) }
     var selectedAward by remember { mutableStateOf<BadgeUi?>(null) }
     val categoryActions = remember(viewModel) {
         CategoryActions(
@@ -171,7 +173,7 @@ fun AchievementsScreen(
                     challenge = challenge,
                     currencyCode = state.currencyCode,
                     onClick = { challengeToEdit = challenge },
-                    onDelete = { viewModel.deleteChallenge(challenge) },
+                    onDelete = { challengeToDelete = challenge },
                     modifier = Modifier.animateItem()
                 )
             }
@@ -216,6 +218,17 @@ fun AchievementsScreen(
             },
             categoryActions = categoryActions,
             onDismiss = { challengeToEdit = null }
+        )
+    }
+
+    challengeToDelete?.let { challenge ->
+        ConfirmDeleteDialog(
+            name = challenge.entity.title,
+            onConfirm = {
+                viewModel.deleteChallenge(challenge)
+                challengeToDelete = null
+            },
+            onDismiss = { challengeToDelete = null }
         )
     }
 
