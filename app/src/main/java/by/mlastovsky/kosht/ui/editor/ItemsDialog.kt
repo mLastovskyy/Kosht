@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
@@ -34,14 +35,18 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import by.mlastovsky.kosht.R
 import by.mlastovsky.kosht.data.ItemDraft
 import by.mlastovsky.kosht.data.ItemSuggestions
 import by.mlastovsky.kosht.ui.components.TextInput
+import by.mlastovsky.kosht.ui.rememberMoneyColumn
 import by.mlastovsky.kosht.ui.tabular
 import by.mlastovsky.kosht.util.Money
 
@@ -91,6 +96,15 @@ fun ItemsDialog(
         .take(SUGGESTION_LIMIT)
 
     val listedMinor = items.sumOf { it.amountMinor }
+    val sumStyle = MaterialTheme.typography.bodyMedium
+        .tabular()
+        .copy(fontWeight = FontWeight.Medium)
+    val sumColumn = rememberMoneyColumn(
+        amounts = items
+            .filter { it.amountMinor > 0 }
+            .map { Money.format(it.amountMinor, currencyCode) },
+        style = sumStyle
+    )
 
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -115,6 +129,8 @@ fun ItemsDialog(
                             ItemRow(
                                 item = item,
                                 currencyCode = currencyCode,
+                                sumStyle = sumStyle,
+                                sumColumn = sumColumn,
                                 highlighted = index == editing,
                                 onClick = {
                                     editing = index
@@ -224,6 +240,8 @@ private fun ListedSummary(
 private fun ItemRow(
     item: ItemDraft,
     currencyCode: String,
+    sumStyle: TextStyle,
+    sumColumn: Dp,
     highlighted: Boolean,
     onClick: () -> Unit,
     onRemove: () -> Unit
@@ -252,14 +270,17 @@ private fun ItemRow(
                     overflow = TextOverflow.Ellipsis,
                     modifier = Modifier.weight(1f)
                 )
-                if (item.amountMinor > 0) {
-                    Text(
-                        text = Money.format(item.amountMinor, currencyCode),
-                        style = MaterialTheme.typography.bodyMedium.tabular(),
-                        fontWeight = FontWeight.Medium,
-                        maxLines = 1
-                    )
-                }
+                Text(
+                    text = if (item.amountMinor > 0) {
+                        Money.format(item.amountMinor, currencyCode)
+                    } else {
+                        ""
+                    },
+                    style = sumStyle,
+                    textAlign = TextAlign.End,
+                    maxLines = 1,
+                    modifier = Modifier.width(sumColumn)
+                )
             }
 
             val quantity = item.quantity

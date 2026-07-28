@@ -30,7 +30,10 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import by.mlastovsky.kosht.R
 import by.mlastovsky.kosht.data.db.AccountEntity
@@ -39,6 +42,7 @@ import by.mlastovsky.kosht.data.db.TransactionWithCategory
 import by.mlastovsky.kosht.model.TransactionType
 import by.mlastovsky.kosht.ui.CategoryVisuals
 import by.mlastovsky.kosht.ui.countedAt
+import by.mlastovsky.kosht.ui.rememberMoneyColumn
 import by.mlastovsky.kosht.ui.tabular
 import by.mlastovsky.kosht.ui.theme.KoshtTheme
 import by.mlastovsky.kosht.ui.transfer.transferDetails
@@ -82,6 +86,11 @@ fun TransactionRow(
 
 @Composable
 private fun ItemsPanel(items: List<TransactionItemEntity>, currencyCode: String) {
+    val sumStyle = MaterialTheme.typography.bodyMedium
+        .tabular()
+        .copy(fontWeight = FontWeight.Medium)
+    val sums = items.map { Money.format(it.amountMinor, currencyCode) }
+    val sumColumn = rememberMoneyColumn(sums, sumStyle)
     Column(
         verticalArrangement = Arrangement.spacedBy(10.dp),
         modifier = Modifier
@@ -96,14 +105,26 @@ private fun ItemsPanel(items: List<TransactionItemEntity>, currencyCode: String)
                 bottom = 12.dp
             )
     ) {
-        items.forEach { line ->
-            ItemLine(item = line, currencyCode = currencyCode)
+        items.forEachIndexed { index, line ->
+            ItemLine(
+                item = line,
+                currencyCode = currencyCode,
+                sumText = sums[index],
+                sumStyle = sumStyle,
+                sumColumn = sumColumn
+            )
         }
     }
 }
 
 @Composable
-private fun ItemLine(item: TransactionItemEntity, currencyCode: String) {
+private fun ItemLine(
+    item: TransactionItemEntity,
+    currencyCode: String,
+    sumText: String,
+    sumStyle: TextStyle,
+    sumColumn: Dp
+) {
     Column(modifier = Modifier.fillMaxWidth()) {
         Row(
             verticalAlignment = Alignment.CenterVertically,
@@ -115,10 +136,11 @@ private fun ItemLine(item: TransactionItemEntity, currencyCode: String) {
                 modifier = Modifier.weight(1f)
             )
             Text(
-                text = Money.format(item.amountMinor, currencyCode),
-                style = MaterialTheme.typography.bodyMedium.tabular(),
-                fontWeight = FontWeight.Medium,
-                maxLines = 1
+                text = sumText,
+                style = sumStyle,
+                textAlign = TextAlign.End,
+                maxLines = 1,
+                modifier = Modifier.width(sumColumn)
             )
         }
         val counted = countedAt(item.quantity, item.amountMinor, currencyCode)

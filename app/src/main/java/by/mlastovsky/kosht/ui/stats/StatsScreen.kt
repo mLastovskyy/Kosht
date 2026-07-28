@@ -19,6 +19,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
@@ -68,8 +69,10 @@ import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -90,6 +93,7 @@ import by.mlastovsky.kosht.ui.components.monthTitle
 import by.mlastovsky.kosht.ui.components.rememberFullTextReveal
 import by.mlastovsky.kosht.ui.countedAt
 import by.mlastovsky.kosht.ui.relativeDate
+import by.mlastovsky.kosht.ui.rememberMoneyColumn
 import by.mlastovsky.kosht.ui.tabular
 import by.mlastovsky.kosht.util.Money
 import java.time.LocalDate
@@ -234,6 +238,13 @@ private fun ChartsContent(state: StatsUiState) {
 
     var expandedCategory by rememberSaveable { mutableStateOf<Long?>(null) }
 
+    val openProducts = expandedCategory?.let { state.productsByCategory[it] }.orEmpty()
+    val productStyle = MaterialTheme.typography.titleSmall.tabular()
+    val productColumn = rememberMoneyColumn(
+        amounts = openProducts.map { Money.format(it.totalMinor, state.currencyCode) },
+        style = productStyle
+    )
+
     LazyColumn(
         modifier = Modifier.fillMaxSize(),
         contentPadding = PaddingValues(bottom = 96.dp)
@@ -291,6 +302,8 @@ private fun ChartsContent(state: StatsUiState) {
                         product = product,
                         currencyCode = state.currencyCode,
                         color = Color(slice.category.colorArgb),
+                        sumStyle = productStyle,
+                        sumColumn = productColumn,
                         modifier = Modifier.animateItem()
                     )
                 }
@@ -304,6 +317,8 @@ private fun ProductRowItem(
     product: ProductRow,
     currencyCode: String,
     color: Color,
+    sumStyle: TextStyle,
+    sumColumn: Dp,
     modifier: Modifier = Modifier
 ) {
     Column(
@@ -322,8 +337,10 @@ private fun ProductRowItem(
             )
             Text(
                 text = Money.format(product.totalMinor, currencyCode),
-                style = MaterialTheme.typography.titleSmall.tabular(),
-                maxLines = 1
+                style = sumStyle,
+                textAlign = TextAlign.End,
+                maxLines = 1,
+                modifier = Modifier.width(sumColumn)
             )
         }
         Text(
