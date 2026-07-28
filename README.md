@@ -113,21 +113,22 @@ checks, downloads and installs the update in place — no browser, nothing left 
 <summary><b>Records, categories and items</b></summary>
 
 - **Expense or income** is a swipe apart — the same gesture that moves the app's tabs.
-- **The category carousel** is the same everywhere: tap to pick, hold and drag to reorder (kept app-wide), hold to edit name, icon, colour — or give it a photo from the gallery. Deleting one moves its records to *Other* rather than losing them.
-- **Accounts.** One by default keeps things simple; add more and you get per-account balances, a picker in the editor and a filter in statistics. **⇄** records a transfer between your own accounts — no chart, streak or report counts it as spending.
-- **Items** — the products from a receipt or the parts of a payment. An empty sum is taken from them, suggestions offer what you wrote in this category before, and one product is one row however you spelled it. A record that carries items wears a small basket with their number under its name — never between the row and its amount, so every amount in a list stands in one column. A tap opens the shopping in a panel that lines up with the row above it: names under the name, sums under the sum, figures set in even-width digits. Statistics opens its products the same way.
+- **The category carousel** is the same everywhere: tap to pick, hold and drag to reorder (kept app-wide), hold to edit name, icon, colour — or give it a photo from the gallery. Editing one opens on what it already wears: the rows of icons and colours are scrolled to the current pair rather than starting from the beginning. Deleting one moves its records to *Other* rather than losing them.
+- **Accounts.** One by default keeps things simple; add more and you get per-account balances, a picker in the editor and a filter in statistics. Turning the switch off only hides them — the accounts and their records stay, and the Wallet says so. **⇄** records a transfer between your own accounts — no chart, streak or report counts it as spending.
+- **Items** — the products from a receipt or the parts of a payment. An empty sum is taken from them, suggestions offer what you wrote in this category before, and one product is one row however you spelled it. A record that carries items wears a small basket with their number under its name — never between the row and its amount, so every amount in a list stands in one column. A tap opens the shopping in a panel that lines up with the row above it: names under the name, sums under the sum, figures set in even-width digits. The sums keep a column of their own, as wide as the widest of them, so a price never touches the name it belongs to. Statistics and the editor's list are set the same way.
 - **Nothing is cut off silently.** A name, a note or an amount too long for its place ends in an ellipsis and spells itself out in full when tapped — in lists, in charts and on the balance card.
 - **The editor starts where you left off** — a new record opens on the account the last one moved on.
 - **Deleting lives inside the record** — open it from the list and the bin is in the header, so nothing leaves your history by a stray swipe. *Undo* still waits along the bottom afterwards, putting back everything the record had moved, debts included.
+- **Nothing is deleted on one tap.** Every bin asks first and names what is about to go — a record, an account, a category, a payment, a debt, a goal, a saving, a challenge, the receipt or the photo beside a record — and says what it takes with it.
 
 </details>
 
 <details>
 <summary><b>Wallet, currencies and challenges</b></summary>
 
-- **Debts** in any currency, with partial repayments, tied to the records that moved the money — delete the record and the debt comes back.
-- **Savings and goals.** Set aside in any currency; change a goal's name, target or currency later and what is already saved moves across at the official rate.
-- **Planned payments — outgoing or incoming.** Nothing is ever charged silently: a due payment waits for your confirmation, with the amount and the rate editable.
+- **Debts** in any currency, with partial repayments, tied to the records that moved the money — delete the record and the debt comes back. A debt that was born as a record is already written down, so its window stops asking whether to record it again or which account to take it off.
+- **Savings and goals.** Set aside in any currency; change a goal's name, target or currency later and what is already saved moves across at the official rate. A saving opens for editing on a tap: the amount, set aside or withdrawn, the currency, the note, the date it happened and the goal it counts towards.
+- **Planned payments — outgoing or incoming.** Nothing is ever charged silently: a due payment waits for your confirmation, with the amount and the rate editable. A payment switched off goes dim — name and icon both — so a paused one reads at a glance.
 - **Switch the app currency** and everything follows at the live rate — records, budget, savings, goals, debts, plans — while frozen historical equivalents stay untouched.
 - **Challenges** you set yourself: a spending limit, a no-spend stretch, or a savings target. The window is a chip or dates of your own, and a savings challenge opens a matching goal in the Wallet, so what you put aside fills both bars at once.
 
