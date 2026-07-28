@@ -34,6 +34,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -41,6 +42,7 @@ import by.mlastovsky.kosht.R
 import by.mlastovsky.kosht.data.ItemDraft
 import by.mlastovsky.kosht.data.ItemSuggestions
 import by.mlastovsky.kosht.ui.components.TextInput
+import by.mlastovsky.kosht.ui.tabular
 import by.mlastovsky.kosht.util.Money
 
 @Composable
@@ -234,42 +236,48 @@ private fun ItemRow(
         verticalAlignment = Alignment.CenterVertically
     ) {
         Column(Modifier.weight(1f)) {
-            Text(
-                text = item.name,
-                style = MaterialTheme.typography.bodyMedium,
-                color = if (highlighted) {
-                    MaterialTheme.colorScheme.primary
-                } else {
-                    MaterialTheme.colorScheme.onSurface
-                },
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis
-            )
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                Text(
+                    text = item.name,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = if (highlighted) {
+                        MaterialTheme.colorScheme.primary
+                    } else {
+                        MaterialTheme.colorScheme.onSurface
+                    },
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier.weight(1f)
+                )
+                if (item.amountMinor > 0) {
+                    Text(
+                        text = Money.format(item.amountMinor, currencyCode),
+                        style = MaterialTheme.typography.bodyMedium.tabular(),
+                        fontWeight = FontWeight.Medium,
+                        maxLines = 1
+                    )
+                }
+            }
 
             val quantity = item.quantity
             if (quantity != null && item.amountMinor > 0) {
                 Text(
                     text = formatQuantity(quantity) + " × " +
                         Money.format(unitPrice(item), currencyCode),
-                    style = MaterialTheme.typography.labelSmall,
+                    style = MaterialTheme.typography.labelSmall.tabular(),
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
         }
-        if (item.amountMinor > 0) {
-            Text(
-                text = Money.format(item.amountMinor, currencyCode),
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                maxLines = 1
-            )
-        }
-        IconButton(onClick = onRemove) {
+        IconButton(onClick = onRemove, modifier = Modifier.size(36.dp)) {
             Icon(
                 Icons.Rounded.Close,
                 contentDescription = stringResource(R.string.editor_delete),
                 tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.size(18.dp)
+                modifier = Modifier.size(16.dp)
             )
         }
     }

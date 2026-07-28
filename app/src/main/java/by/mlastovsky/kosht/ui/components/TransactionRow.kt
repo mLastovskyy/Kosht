@@ -1,6 +1,10 @@
 package by.mlastovsky.kosht.ui.components
 
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.expandVertically
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -13,9 +17,9 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.DocumentScanner
-import androidx.compose.material.icons.rounded.ShoppingBasket
 import androidx.compose.material.icons.rounded.SwapHoriz
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -26,7 +30,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import by.mlastovsky.kosht.R
 import by.mlastovsky.kosht.data.db.AccountEntity
@@ -35,6 +39,7 @@ import by.mlastovsky.kosht.data.db.TransactionWithCategory
 import by.mlastovsky.kosht.model.TransactionType
 import by.mlastovsky.kosht.ui.CategoryVisuals
 import by.mlastovsky.kosht.ui.countedAt
+import by.mlastovsky.kosht.ui.tabular
 import by.mlastovsky.kosht.ui.theme.KoshtTheme
 import by.mlastovsky.kosht.ui.transfer.transferDetails
 import by.mlastovsky.kosht.ui.transfer.transferRoute
@@ -65,46 +70,66 @@ fun TransactionRow(
             itemsShown = itemsShown,
             onItemsClick = onItemsClick
         )
-        AnimatedVisibility(visible = itemsShown && items.isNotEmpty()) {
-            Column(modifier = Modifier.padding(bottom = 6.dp)) {
-                items.forEach { line ->
-                    ItemLine(item = line, currencyCode = currencyCode)
-                }
-            }
+        AnimatedVisibility(
+            visible = itemsShown && items.isNotEmpty(),
+            enter = expandVertically() + fadeIn(),
+            exit = shrinkVertically() + fadeOut()
+        ) {
+            ItemsPanel(items = items, currencyCode = currencyCode)
+        }
+    }
+}
+
+@Composable
+private fun ItemsPanel(items: List<TransactionItemEntity>, currencyCode: String) {
+    Column(
+        verticalArrangement = Arrangement.spacedBy(10.dp),
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(start = PANEL_SIDE, end = PANEL_SIDE, bottom = 8.dp)
+            .clip(RoundedCornerShape(16.dp))
+            .background(MaterialTheme.colorScheme.surfaceContainer)
+            .padding(
+                start = TEXT_START - PANEL_SIDE,
+                end = ROW_SIDE - PANEL_SIDE,
+                top = 12.dp,
+                bottom = 12.dp
+            )
+    ) {
+        items.forEach { line ->
+            ItemLine(item = line, currencyCode = currencyCode)
         }
     }
 }
 
 @Composable
 private fun ItemLine(item: TransactionItemEntity, currencyCode: String) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(start = 72.dp, end = 16.dp, top = 2.dp, bottom = 2.dp),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(8.dp)
-    ) {
-        Column(modifier = Modifier.weight(1f)) {
+    Column(modifier = Modifier.fillMaxWidth()) {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
             TruncatedText(
                 text = item.name,
-                style = MaterialTheme.typography.bodyMedium
+                style = MaterialTheme.typography.bodyMedium,
+                modifier = Modifier.weight(1f)
             )
-            val counted = countedAt(item.quantity, item.amountMinor, currencyCode)
-            if (counted != null) {
-                Text(
-                    text = counted,
-                    style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    maxLines = 1
-                )
-            }
+            Text(
+                text = Money.format(item.amountMinor, currencyCode),
+                style = MaterialTheme.typography.bodyMedium.tabular(),
+                fontWeight = FontWeight.Medium,
+                maxLines = 1
+            )
         }
-        Text(
-            text = Money.format(item.amountMinor, currencyCode),
-            style = MaterialTheme.typography.labelLarge,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            maxLines = 1
-        )
+        val counted = countedAt(item.quantity, item.amountMinor, currencyCode)
+        if (counted != null) {
+            Text(
+                text = counted,
+                style = MaterialTheme.typography.labelSmall.tabular(),
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                maxLines = 1
+            )
+        }
     }
 }
 
@@ -133,12 +158,13 @@ private fun RecordRow(
         isIncome -> KoshtTheme.colors.income
         else -> MaterialTheme.colorScheme.onSurface
     }
+    val openItems = onItemsClick?.takeIf { items.isNotEmpty() }
 
     Row(
         modifier = Modifier
             .clickable(onClick = onClick)
             .fillMaxWidth()
-            .padding(horizontal = 16.dp, vertical = 10.dp),
+            .padding(horizontal = ROW_SIDE, vertical = 10.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(12.dp)
     ) {
@@ -177,51 +203,41 @@ private fun RecordRow(
                 transfer -> transferDetails(transaction, currencyCode)
                 else -> supportingText ?: transaction.note
             }
-            if (secondary.isNotBlank()) {
-                TruncatedText(
-                    text = secondary,
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            }
-        }
-        if (items.isNotEmpty() && onItemsClick != null) {
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                modifier = Modifier
-                    .clip(MaterialTheme.shapes.small)
-                    .clickable(onClick = onItemsClick)
-                    .padding(horizontal = 6.dp, vertical = 4.dp)
-            ) {
-                Icon(
-                    imageVector = Icons.Rounded.ShoppingBasket,
-                    contentDescription = stringResource(R.string.stats_products),
-                    tint = if (itemsShown) {
-                        MaterialTheme.colorScheme.primary
-                    } else {
-                        MaterialTheme.colorScheme.onSurfaceVariant
-                    },
-                    modifier = Modifier.size(16.dp)
-                )
-                Text(
-                    text = items.size.toString(),
-                    style = MaterialTheme.typography.labelMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.padding(start = 2.dp)
-                )
+            if (openItems != null || secondary.isNotBlank()) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(6.dp),
+                    modifier = Modifier.padding(top = 2.dp)
+                ) {
+                    if (openItems != null) {
+                        ItemsChip(
+                            count = items.size,
+                            expanded = itemsShown,
+                            onClick = openItems
+                        )
+                    }
+                    if (secondary.isNotBlank()) {
+                        TruncatedText(
+                            text = secondary,
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.weight(1f, fill = false)
+                        )
+                    }
+                }
             }
         }
         Column(horizontalAlignment = Alignment.End) {
             Text(
                 text = amountText,
-                style = MaterialTheme.typography.titleMedium,
+                style = MaterialTheme.typography.titleMedium.tabular(),
                 color = amountColor
             )
             val bynMinor = transaction.bynMinor
             if (currencyCode != "BYN" && bynMinor != null) {
                 Text(
                     text = "≈ " + Money.format(bynMinor, "BYN"),
-                    style = MaterialTheme.typography.bodySmall,
+                    style = MaterialTheme.typography.bodySmall.tabular(),
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
@@ -246,3 +262,9 @@ private fun TransferBadge() {
         )
     }
 }
+
+private val ROW_SIDE = 16.dp
+
+private val PANEL_SIDE = 8.dp
+
+private val TEXT_START = 72.dp

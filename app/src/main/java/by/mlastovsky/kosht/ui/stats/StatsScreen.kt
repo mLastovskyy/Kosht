@@ -31,7 +31,6 @@ import androidx.compose.material.icons.rounded.CalendarMonth
 import androidx.compose.material.icons.rounded.Check
 import androidx.compose.material.icons.rounded.DonutLarge
 import androidx.compose.material.icons.rounded.Insights
-import androidx.compose.material.icons.rounded.ShoppingBasket
 import androidx.compose.material.icons.rounded.Tune
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Checkbox
@@ -83,6 +82,7 @@ import by.mlastovsky.kosht.ui.CategoryVisuals
 import by.mlastovsky.kosht.ui.components.AnimatedAmountText
 import by.mlastovsky.kosht.ui.components.CategoryBadge
 import by.mlastovsky.kosht.ui.components.EmptyState
+import by.mlastovsky.kosht.ui.components.ItemsChip
 import by.mlastovsky.kosht.ui.components.MonthSelector
 import by.mlastovsky.kosht.ui.components.TransactionRow
 import by.mlastovsky.kosht.ui.components.TruncatedText
@@ -90,6 +90,7 @@ import by.mlastovsky.kosht.ui.components.monthTitle
 import by.mlastovsky.kosht.ui.components.rememberFullTextReveal
 import by.mlastovsky.kosht.ui.countedAt
 import by.mlastovsky.kosht.ui.relativeDate
+import by.mlastovsky.kosht.ui.tabular
 import by.mlastovsky.kosht.util.Money
 import java.time.LocalDate
 import java.time.YearMonth
@@ -305,39 +306,41 @@ private fun ProductRowItem(
     color: Color,
     modifier: Modifier = Modifier
 ) {
-    Row(
+    Column(
         modifier = modifier
             .fillMaxWidth()
-            .padding(start = 72.dp, end = 16.dp, top = 6.dp, bottom = 6.dp),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(12.dp)
+            .padding(start = 72.dp, end = 16.dp, top = 6.dp, bottom = 6.dp)
     ) {
-        Column(Modifier.weight(1f)) {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
             TruncatedText(
                 text = product.name,
-                style = MaterialTheme.typography.bodyLarge
+                style = MaterialTheme.typography.bodyLarge,
+                modifier = Modifier.weight(1f)
             )
             Text(
-                text = countedAt(product.quantity, product.totalMinor, currencyCode)
-                    ?: stringResource(R.string.stats_product_times, product.lines),
-                style = MaterialTheme.typography.labelSmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                text = Money.format(product.totalMinor, currencyCode),
+                style = MaterialTheme.typography.titleSmall.tabular(),
                 maxLines = 1
-            )
-            LinearProgressIndicator(
-                progress = { product.share },
-                color = color,
-                trackColor = MaterialTheme.colorScheme.surfaceContainerHigh,
-                drawStopIndicator = {},
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(top = 6.dp)
             )
         }
         Text(
-            text = Money.format(product.totalMinor, currencyCode),
-            style = MaterialTheme.typography.titleSmall,
+            text = countedAt(product.quantity, product.totalMinor, currencyCode)
+                ?: stringResource(R.string.stats_product_times, product.lines),
+            style = MaterialTheme.typography.labelSmall.tabular(),
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
             maxLines = 1
+        )
+        LinearProgressIndicator(
+            progress = { product.share },
+            color = color,
+            trackColor = MaterialTheme.colorScheme.surfaceContainerHigh,
+            drawStopIndicator = {},
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(top = 6.dp)
         )
     }
 }
@@ -699,28 +702,16 @@ private fun CategorySliceRow(
                 )
 
                 if (products > 0) {
-                    Icon(
-                        imageVector = Icons.Rounded.ShoppingBasket,
-                        contentDescription = stringResource(R.string.stats_products),
-                        tint = if (expanded) {
-                            MaterialTheme.colorScheme.primary
-                        } else {
-                            MaterialTheme.colorScheme.onSurfaceVariant
-                        },
-                        modifier = Modifier
-                            .padding(start = 6.dp)
-                            .size(16.dp)
-                    )
-                    Text(
-                        text = products.toString(),
-                        style = MaterialTheme.typography.labelMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.padding(start = 2.dp)
+                    ItemsChip(
+                        count = products,
+                        expanded = expanded,
+                        onClick = onClick,
+                        modifier = Modifier.padding(start = 6.dp)
                     )
                 }
                 Text(
                     text = "${(slice.share * 100).roundToInt()} %",
-                    style = MaterialTheme.typography.labelMedium,
+                    style = MaterialTheme.typography.labelMedium.tabular(),
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     maxLines = 1,
                     modifier = Modifier.padding(start = 8.dp)
