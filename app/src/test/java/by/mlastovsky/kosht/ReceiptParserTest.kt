@@ -66,10 +66,19 @@ class ReceiptParserTest {
     @Test
     fun `merchant drops the legal form and keeps the trade name`() {
         val text = """
+            ООО «Ромашка»
+            ИТОГО 5,00
+        """.trimIndent()
+        assertEquals("Ромашка", ReceiptParser.parse(text).merchant)
+    }
+
+    @Test
+    fun `a company is shown under the name over its door`() {
+        val text = """
             ООО «Евроторг»
             ИТОГО 5,00
         """.trimIndent()
-        assertEquals("Евроторг", ReceiptParser.parse(text).merchant)
+        assertEquals("Евроопт", ReceiptParser.parse(text).merchant)
     }
 
     @Test

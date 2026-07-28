@@ -21,6 +21,9 @@ data class ParsedItem(
     val quantity: Double? = null
 )
 
+internal val ParsedReceipt.tellsEverything: Boolean
+    get() = amountMinor != null && items.isNotEmpty()
+
 object ReceiptParser {
 
     private val totalKeywords = listOf(
@@ -35,7 +38,7 @@ object ReceiptParser {
         "внесено", "получено", "change"
     )
 
-    private val amountRegex = Regex(
+    internal val amountRegex = Regex(
         """(?<!\d)(?<!\d[.,/\-:])(\d{1,3}(?:[  ]\d{3})+|\d{1,9})[.,](\d{2})(?![\d.,/\-:])"""
     )
 
@@ -43,6 +46,17 @@ object ReceiptParser {
 
     private val knownChains = mapOf(
         "евроопт" to "Евроопт",
+        "евроторг" to "Евроопт",
+        "белвиллесден" to "Гиппо",
+        "табак-инвест" to "Корона",
+        "либретик" to "Соседи",
+        "простормаркет" to "ProStore",
+        "электросервис" to "Электросила",
+        "белоруснефть" to "Белоруснефть",
+        "а-100" to "А-100",
+        "wildberries" to "Wildberries",
+        "вайлдберриз" to "Wildberries",
+        "белпочта" to "Белпочта",
         "eurospar" to "EUROSPAR",
         "hit!" to "Хит!",
         "хит!" to "Хит!",
@@ -446,14 +460,17 @@ object ReceiptParser {
         val builder = StringBuilder(text.length)
         text.lowercase().forEach { symbol ->
             val letter = lookAlikes[symbol] ?: symbol
-            if (letter.isLetterOrDigit()) builder.append(letter)
+            when {
+                letter.isLetterOrDigit() -> builder.append(letter)
+                builder.isNotEmpty() && builder.last() != ' ' -> builder.append(' ')
+            }
         }
-        return builder.toString()
+        return builder.toString().trim()
     }
 
     private fun nearlyContains(header: String, name: String): Boolean {
+        if (name.length < FUZZY_FROM) return " $header ".contains(" $name ")
         if (header.contains(name)) return true
-        if (name.length < FUZZY_FROM) return false
         for (start in header.indices) {
             for (span in name.length - 1..name.length + 1) {
                 val end = start + span
