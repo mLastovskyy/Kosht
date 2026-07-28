@@ -1,5 +1,6 @@
 package by.mlastovsky.kosht
 
+import by.mlastovsky.kosht.data.receipt.PageRender
 import by.mlastovsky.kosht.data.receipt.QrPayload
 import by.mlastovsky.kosht.data.receipt.ReceiptParser
 import by.mlastovsky.kosht.data.receipt.ReceiptQr
@@ -31,6 +32,45 @@ class ReceiptQrTest {
         assertEquals(3, parsed.items.size)
         assertTrue(parsed.items.any { it.name.contains("Нарочанский") })
         assertEquals(2184L, parsed.items.sumOf { it.amountMinor })
+    }
+
+    @Test
+    fun `a date on a page is no reason to stop reading its script`() {
+        val html = """
+            <html><body>
+            <div>Электронный чек от 26.07.2026</div>
+            <div id="app">Загрузка…</div>
+            <script type="application/json">
+            {"seller":{"name":"ООО \"Санта Ритейл\""},
+             "topay":"9.30",
+             "items":[{"name":"Кефир Бабушкина крынка 1%","sum":"1.95"},
+                      {"name":"Печенье Слодыч 450г","sum":"7.35"}]}
+            </script></body></html>
+        """.trimIndent()
+
+        val parsed = ReceiptParser.parse(ReceiptQr.linesFromHtml(html))
+
+        assertEquals(930L, parsed.amountMinor)
+        assertEquals(2, parsed.items.size)
+        assertEquals("Санта", parsed.merchant)
+    }
+
+    @Test
+    fun `a page shows its receipt only when real figures are on it`() {
+        assertTrue(ReceiptQr.showsReceipt("<p>Хлеб 1,89</p><p>ИТОГО 4,34</p>"))
+        assertTrue(!ReceiptQr.showsReceipt("<p>Чек от 26.07.2026 19:42</p><div>Загрузка…</div>"))
+    }
+
+    @Test
+    fun `a kept page carries no script and remembers where it came from`() {
+        val html = "<html><head><title>Чек</title></head>" +
+            "<body><p>Хлеб 1,89</p><script>track()</script></body></html>"
+
+        val kept = PageRender.keepable(html, "https://echeck.example.by/r/8812ab")
+
+        assertTrue(kept.contains("""<base href="https://echeck.example.by/r/8812ab">"""))
+        assertTrue(!kept.contains("track()"))
+        assertTrue(kept.contains("Хлеб 1,89"))
     }
 
     @Test

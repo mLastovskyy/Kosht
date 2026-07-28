@@ -10,11 +10,6 @@ import com.google.zxing.RGBLuminanceSource
 import com.google.zxing.common.GlobalHistogramBinarizer
 import com.google.zxing.common.HybridBinarizer
 
-/**
- * A code on a photographed slip is small, off-centre and often washed out, so
- * one pass over the whole picture finds nothing. The picture is walked in
- * overlapping tiles and each is offered to the decoder several ways round.
- */
 object QrReader {
 
     private val hints = mapOf(
@@ -35,12 +30,20 @@ object QrReader {
 
     private fun regions(bitmap: Bitmap): Sequence<Bitmap> = sequence {
         yield(bitmap)
+        halved(bitmap)?.let { yield(it) }
         val width = bitmap.width
         val height = bitmap.height
         if (width < 320 || height < 320) return@sequence
 
         yieldAll(tiles(bitmap, 2))
         yieldAll(tiles(bitmap, 3))
+    }
+
+    private fun halved(source: Bitmap): Bitmap? {
+        if (source.width < 1400 && source.height < 1400) return null
+        return runCatching {
+            Bitmap.createScaledBitmap(source, source.width / 2, source.height / 2, true)
+        }.getOrNull()
     }
 
     private fun tiles(source: Bitmap, grid: Int): List<Bitmap> {
@@ -66,9 +69,6 @@ object QrReader {
         val pixels = IntArray(bitmap.width * bitmap.height)
         bitmap.getPixels(pixels, 0, bitmap.width, 0, 0, bitmap.width, bitmap.height)
         val source = RGBLuminanceSource(bitmap.width, bitmap.height, pixels)
-        // Every square format finds its own orientation; what a photographed
-        // slip needs is the light the other way round, printing being dark on
-        // white and screens the opposite.
         return listOf(source, source.invert()).firstNotNullOfOrNull { attempt(it) }
     }
 

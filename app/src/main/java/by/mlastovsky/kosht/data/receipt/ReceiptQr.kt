@@ -61,9 +61,17 @@ object ReceiptQr {
 
     fun linesFromHtml(html: String): List<ReceiptLine> {
         val shown = shownLines(html)
-        if (shown.any { amountLike.containsMatchIn(it.text) }) return shown
-        return shown + carriedLines(html)
+        if (figuresIn(shown) >= SHOWN_FIGURES) return shown
+        val carried = carriedLines(html)
+        if (carried.isEmpty()) return shown
+        return shown.filterNot { ReceiptParser.amountRegex.containsMatchIn(it.text) }
+            .take(HEADER_LINES) + carried
     }
+
+    fun showsReceipt(html: String): Boolean = figuresIn(shownLines(html)) >= SHOWN_FIGURES
+
+    private fun figuresIn(lines: List<ReceiptLine>): Int =
+        lines.count { ReceiptParser.amountRegex.containsMatchIn(it.text) }
 
     private fun shownLines(html: String): List<ReceiptLine> {
         val marked = html
@@ -90,8 +98,6 @@ object ReceiptQr {
 
     private val scriptBodies = Regex("(?is)<script[^>]*>(.*?)</script>")
 
-    private val amountLike = Regex("""(?<!\d)\d{1,9}[.,]\d{2}(?!\d)""")
-
     private fun jsonIn(body: String): Any? {
         val opens = listOf('{' to '}', '[' to ']')
         for ((open, close) in opens) {
@@ -107,21 +113,27 @@ object ReceiptQr {
     }
 
     private fun receiptLines(node: Any?): List<ReceiptLine> {
-        val bought = mutableListOf<ReceiptLine>()
-        val totals = mutableListOf<ReceiptLine>()
-        walk(node, bought, totals)
-        return bought + totals
+        val found = Found()
+        walk(node, found)
+        return found.shops.take(1).map { ReceiptLine(it, EMPHASIZED) } +
+            found.bought +
+            found.totals
     }
 
-    private fun walk(
-        node: Any?,
-        bought: MutableList<ReceiptLine>,
-        totals: MutableList<ReceiptLine>
-    ) {
+    private class Found {
+        val shops = mutableListOf<String>()
+        val bought = mutableListOf<ReceiptLine>()
+        val totals = mutableListOf<ReceiptLine>()
+    }
+
+    private fun walk(node: Any?, found: Found) {
         when (node) {
-            is JSONArray -> (0 until node.length()).forEach { walk(node.opt(it), bought, totals) }
+            is JSONArray -> (0 until node.length()).forEach { walk(node.opt(it), found) }
             is JSONObject -> {
                 val keys = node.keys().asSequence().toList()
+                keys.filter { key -> shopKeys.any { key.lowercase().contains(it) } }
+                    .mapNotNull { key -> namedIn(node.opt(key)) }
+                    .forEach { found.shops += it }
                 val name = keys.firstOrNull { it.lowercase() in nameKeys }
                     ?.let { node.optString(it) }
                     ?.takeIf { it.count(Char::isLetter) >= MIN_NAME_LETTERS }
@@ -132,12 +144,22 @@ object ReceiptQr {
                 val money = major(node.opt(totalKey ?: priceKey))
                 when {
                     money == null -> Unit
-                    name != null -> bought += ReceiptLine("$name  $money")
-                    totalKey != null -> totals += ReceiptLine("ИТОГО  $money")
+                    name != null -> found.bought += ReceiptLine("$name  $money")
+                    totalKey != null -> found.totals += ReceiptLine("ИТОГО  $money")
                 }
-                keys.forEach { key -> walk(node.opt(key), bought, totals) }
+                keys.forEach { key -> walk(node.opt(key), found) }
             }
         }
+    }
+
+    private fun namedIn(value: Any?): String? = when (value) {
+        is String -> value.trim().takeIf { it.count(Char::isLetter) >= MIN_NAME_LETTERS }
+        is JSONObject -> value.keys().asSequence()
+            .firstOrNull { it.lowercase() in nameKeys }
+            ?.let { value.optString(it).trim() }
+            ?.takeIf { it.count(Char::isLetter) >= MIN_NAME_LETTERS }
+
+        else -> null
     }
 
     private fun major(value: Any?): String? {
@@ -158,11 +180,20 @@ object ReceiptQr {
         "name", "title", "product", "goods", "item", "наименование", "товар", "название"
     )
 
+    private val shopKeys = listOf(
+        "shop", "store", "seller", "merchant", "organization", "orgname", "retail",
+        "магазин", "продавец", "организац", "торгов"
+    )
+
     private val totalKeys = listOf("total", "итог", "topay", "к оплате", "sumtotal")
 
     private val priceKeys = listOf("sum", "amount", "price", "cost", "сумм", "стоим", "цена")
 
     private const val MAX_CARRIED_LINES = 120
+
+    private const val SHOWN_FIGURES = 2
+
+    private const val HEADER_LINES = 12
 
     private const val MIN_NAME_LETTERS = 3
 

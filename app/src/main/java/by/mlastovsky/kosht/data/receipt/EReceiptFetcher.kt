@@ -30,27 +30,39 @@ class EReceiptFetcher(private val context: Context) {
             }
         }
 
-    private fun fetchLink(url: String, model: LineModel?): EReceipt? {
-        val document = download(url) ?: return null
-        val lines = when {
-            document.looksBinary -> emptyList()
-
-            document.contentType.contains("html", ignoreCase = true) ->
-                ReceiptQr.linesFromHtml(document.text)
-
-            else -> ReceiptLine.of(document.text)
+    private suspend fun fetchLink(url: String, model: LineModel?): EReceipt? {
+        val page = download(url) ?: return null
+        val onPage = ReceiptParser.parse(linesOf(page), model)
+        val rendered = if (onPage.tellsEverything || !page.isHtml) {
+            null
+        } else {
+            PageRender(context).html(url)
         }
-        val parsed = ReceiptParser.parse(lines, model)
-        val offered = offeredDocument(document, url)
-        val documentPath = offered?.savedPath ?: document.savedPath
-        if (offered != null) document.savedPath?.let { File(it).delete() }
+        val afterScripts = rendered
+            ?.let { ReceiptParser.parse(ReceiptQr.linesFromHtml(it), model) }
+        val parsed = afterScripts?.takeIf { it.worth() > onPage.worth() } ?: onPage
 
-        return EReceipt(parsed = parsed, sourceUrl = url, documentPath = documentPath)
+        val offered = offeredDocument(page, url)
+        val kept = offered?.savedPath
+            ?: rendered?.let { save(PageRender.keepable(it, url).toByteArray(), "text/html") }
+            ?: page.savedPath
+        if (kept != page.savedPath) page.savedPath?.let { File(it).delete() }
+
+        return EReceipt(parsed = parsed, sourceUrl = url, documentPath = kept)
     }
+
+    private fun linesOf(page: Document): List<ReceiptLine> = when {
+        page.looksBinary -> emptyList()
+        page.isHtml -> ReceiptQr.linesFromHtml(page.text)
+        else -> ReceiptLine.of(page.text)
+    }
+
+    private fun ParsedReceipt.worth(): Int =
+        (if (amountMinor != null) 4 else 0) + items.size + (if (merchant != null) 1 else 0)
 
     private fun offeredDocument(page: Document, url: String): Document? {
         if (page.looksBinary) return null
-        if (!page.contentType.contains("html", ignoreCase = true)) return null
+        if (!page.isHtml) return null
         val link = documentLink(page.text, url) ?: return null
         val downloaded = download(link, hop = 1) ?: return null
         if (!downloaded.looksBinary) {
@@ -78,14 +90,16 @@ class EReceiptFetcher(private val context: Context) {
         val contentType: String,
         val savedPath: String?,
         val looksBinary: Boolean
-    )
+    ) {
+        val isHtml: Boolean get() = contentType.contains("html", ignoreCase = true)
+    }
 
     private fun download(url: String, hop: Int = 0): Document? = runCatching {
         val connection = (URL(url).openConnection() as HttpURLConnection).apply {
             connectTimeout = 12_000
             readTimeout = 20_000
 
-            setRequestProperty("User-Agent", BROWSER_AGENT)
+            setRequestProperty("User-Agent", PageRender.BROWSER_AGENT)
             setRequestProperty(
                 "Accept",
                 "text/html,application/xhtml+xml,application/json;q=0.9,application/pdf;q=0.9"
@@ -151,8 +165,5 @@ class EReceiptFetcher(private val context: Context) {
     private companion object {
         const val MAX_BYTES = 2 * 1024 * 1024
         val HREF = Regex("""href\s*=\s*["']([^"']+)["']""", RegexOption.IGNORE_CASE)
-        const val BROWSER_AGENT =
-            "Mozilla/5.0 (Linux; Android 14) AppleWebKit/537.36 (KHTML, like Gecko) " +
-                "Chrome/124.0 Mobile Safari/537.36"
     }
 }

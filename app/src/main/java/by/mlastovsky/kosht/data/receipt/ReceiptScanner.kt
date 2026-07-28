@@ -51,13 +51,8 @@ class ReceiptScanner(
             }
     }
 
-    private val ParsedReceipt.tellsEverything: Boolean
-        get() = amountMinor != null && items.isNotEmpty()
-
     private fun readPaper(bitmap: Bitmap): ParsedReceipt {
         val quick = ReceiptParser.parse(bestReading(bitmap, Engine.QUICK), model)
-        // A slip the quick model cannot settle gets a second reading from the
-        // slow and careful one — a few more seconds against giving up on it.
         return if (quick.amountMinor != null) {
             quick
         } else {
@@ -65,11 +60,6 @@ class ReceiptScanner(
         }
     }
 
-    /**
-     * Two trained models ride along: the small one reads a decent photo in a
-     * couple of seconds, the large one takes far longer but gives a stubborn
-     * slip its best chance.
-     */
     private enum class Engine(val asset: String, val home: String, val stamp: String) {
         QUICK("tessdata", "", "rus-fast-1"),
         CAREFUL("tessdata-best", "best", "rus-best-1")
@@ -77,10 +67,6 @@ class ReceiptScanner(
 
     private data class Reading(val lines: List<ReceiptLine>, val score: Int)
 
-    /**
-     * Every attempt costs seconds, so they run cheapest first and stop as soon
-     * as one comes back with figures it is sure about.
-     */
     private fun bestReading(bitmap: Bitmap, engine: Engine): List<ReceiptLine> {
         var best = Reading(emptyList(), Int.MIN_VALUE)
         attempts(bitmap, engine).forEach { attempt ->
@@ -158,7 +144,6 @@ class ReceiptScanner(
     }.getOrDefault(emptyList())
 
     private fun ensureTrainedData(engine: Engine): File? = runCatching {
-        // Tesseract wants the folder that holds "tessdata", not the file.
         val home = if (engine.home.isEmpty()) {
             context.filesDir
         } else {
@@ -166,8 +151,6 @@ class ReceiptScanner(
         }
         val dir = File(home, "tessdata").apply { mkdirs() }
         val target = File(dir, "$LANGUAGE.traineddata")
-        // An app update can bring a different model, and the copy unpacked on
-        // disk has to follow it. The stamp beside it says which one is there.
         val stamp = File(dir, "model")
         val current = stamp.takeIf { it.exists() }?.readText()
         if (target.length() == 0L || current != engine.stamp) {
