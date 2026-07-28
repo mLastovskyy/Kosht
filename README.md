@@ -96,7 +96,7 @@ checks, downloads and installs the update in place — no browser, nothing left 
 <details>
 <summary><b>Receipt scanning, step by step</b></summary>
 
-- **QR first.** Shops that print one hand over exact figures; the electronic receipt behind the code is fetched and kept, so it opens later with no connection. A page that says nothing itself — the kind that loads its shopping with a script — no longer erases what the paper printed: the sum, the date and the shop come off the slip and the link still travels with the record.
+- **QR first.** Shops that print one hand over exact figures; the page behind the code is downloaded and kept with the record, so it opens later with no connection. When the page shows nothing itself — the kind that loads its shopping with a script — Kosht reads what the page *carries* instead: the receipt data sitting in its own scripts. If that is empty too, the sum, the date and the shop come off the paper, and the link still travels with the record.
 - **The code is hunted, not hoped for.** The photo is searched in overlapping squares — upright, upside down, inverted, two ways of deciding what is black — and Data Matrix, Aztec and bar codes are tried alongside QR.
 - **A code is trusted only once it proves itself.** Loyalty cards and adverts share the same square; a payload counts as a receipt when it carries fiscal fields or leads to a page an amount can be read from.
 - **No QR, no problem.** A quick Russian model reads an ordinary photo in seconds; a stubborn slip is read again by `tessdata_best`.

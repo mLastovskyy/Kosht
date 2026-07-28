@@ -45,13 +45,7 @@ class EReceiptFetcher(private val context: Context) {
         val documentPath = offered?.savedPath ?: document.savedPath
         if (offered != null) document.savedPath?.let { File(it).delete() }
 
-        val worthKeeping = parsed.amountMinor != null || offered != null
-        if (!worthKeeping) documentPath?.let { File(it).delete() }
-        return EReceipt(
-            parsed = parsed,
-            sourceUrl = url,
-            documentPath = documentPath.takeIf { worthKeeping }
-        )
+        return EReceipt(parsed = parsed, sourceUrl = url, documentPath = documentPath)
     }
 
     private fun offeredDocument(page: Document, url: String): Document? {

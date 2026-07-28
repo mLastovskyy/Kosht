@@ -2,6 +2,8 @@ package by.mlastovsky.kosht.data.receipt
 
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
+import org.json.JSONArray
+import org.json.JSONObject
 
 sealed interface QrPayload {
 
@@ -58,6 +60,12 @@ object ReceiptQr {
         runCatching { LocalDate.parse(raw.take(8), fiscalTime) }.getOrNull()
 
     fun linesFromHtml(html: String): List<ReceiptLine> {
+        val shown = shownLines(html)
+        if (shown.any { amountLike.containsMatchIn(it.text) }) return shown
+        return shown + carriedLines(html)
+    }
+
+    private fun shownLines(html: String): List<ReceiptLine> {
         val marked = html
             .replace(Regex("(?is)<(script|style)[^>]*>.*?</\\1>"), " ")
             .replace(Regex("(?i)<(h[1-3]|b|strong|em)(\\s[^>]*)?>"), EMPHASIS_MARK)
@@ -73,6 +81,90 @@ object ReceiptQr {
             }
             .filter { it.text.isNotEmpty() }
     }
+
+    fun carriedLines(html: String): List<ReceiptLine> = scriptBodies.findAll(html)
+        .mapNotNull { match -> jsonIn(match.groupValues[1]) }
+        .flatMap { json -> receiptLines(json).asSequence() }
+        .take(MAX_CARRIED_LINES)
+        .toList()
+
+    private val scriptBodies = Regex("(?is)<script[^>]*>(.*?)</script>")
+
+    private val amountLike = Regex("""(?<!\d)\d{1,9}[.,]\d{2}(?!\d)""")
+
+    private fun jsonIn(body: String): Any? {
+        val opens = listOf('{' to '}', '[' to ']')
+        for ((open, close) in opens) {
+            val from = body.indexOf(open)
+            val to = body.lastIndexOf(close)
+            if (from < 0 || to <= from) continue
+            val slice = body.substring(from, to + 1)
+            runCatching {
+                if (open == '{') JSONObject(slice) else JSONArray(slice)
+            }.getOrNull()?.let { return it }
+        }
+        return null
+    }
+
+    private fun receiptLines(node: Any?): List<ReceiptLine> {
+        val bought = mutableListOf<ReceiptLine>()
+        val totals = mutableListOf<ReceiptLine>()
+        walk(node, bought, totals)
+        return bought + totals
+    }
+
+    private fun walk(
+        node: Any?,
+        bought: MutableList<ReceiptLine>,
+        totals: MutableList<ReceiptLine>
+    ) {
+        when (node) {
+            is JSONArray -> (0 until node.length()).forEach { walk(node.opt(it), bought, totals) }
+            is JSONObject -> {
+                val keys = node.keys().asSequence().toList()
+                val name = keys.firstOrNull { it.lowercase() in nameKeys }
+                    ?.let { node.optString(it) }
+                    ?.takeIf { it.count(Char::isLetter) >= MIN_NAME_LETTERS }
+                val totalKey = keys
+                    .firstOrNull { key -> totalKeys.any { key.lowercase().contains(it) } }
+                val priceKey = keys
+                    .firstOrNull { key -> priceKeys.any { key.lowercase().contains(it) } }
+                val money = major(node.opt(totalKey ?: priceKey))
+                when {
+                    money == null -> Unit
+                    name != null -> bought += ReceiptLine("$name  $money")
+                    totalKey != null -> totals += ReceiptLine("ИТОГО  $money")
+                }
+                keys.forEach { key -> walk(node.opt(key), bought, totals) }
+            }
+        }
+    }
+
+    private fun major(value: Any?): String? {
+        if (value == null) return null
+        val raw = when (value) {
+            is Number -> value.toString()
+            is String -> value.trim()
+            else -> null
+        } ?: return null
+        val cleaned = raw.replace(',', '.').replace(" ", "")
+        if ('.' !in cleaned) return null
+        val whole = cleaned.substringBefore('.').toLongOrNull() ?: return null
+        val fraction = cleaned.substringAfter('.').filter { it.isDigit() }.padEnd(2, '0').take(2)
+        return "$whole,$fraction"
+    }
+
+    private val nameKeys = setOf(
+        "name", "title", "product", "goods", "item", "наименование", "товар", "название"
+    )
+
+    private val totalKeys = listOf("total", "итог", "topay", "к оплате", "sumtotal")
+
+    private val priceKeys = listOf("sum", "amount", "price", "cost", "сумм", "стоим", "цена")
+
+    private const val MAX_CARRIED_LINES = 120
+
+    private const val MIN_NAME_LETTERS = 3
 
     private const val EMPHASIS_MARK = "\u0001"
 

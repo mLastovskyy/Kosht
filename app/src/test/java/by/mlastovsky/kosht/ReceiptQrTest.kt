@@ -1,6 +1,7 @@
 package by.mlastovsky.kosht
 
 import by.mlastovsky.kosht.data.receipt.QrPayload
+import by.mlastovsky.kosht.data.receipt.ReceiptParser
 import by.mlastovsky.kosht.data.receipt.ReceiptQr
 import java.time.LocalDate
 import org.junit.Assert.assertEquals
@@ -9,6 +10,48 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class ReceiptQrTest {
+
+    @Test
+    fun `a page that carries its receipt in a script is read anyway`() {
+        val html = """
+            <html><head><title>Электронный чек</title></head>
+            <body><div id="app">Загрузка…</div>
+            <script type="application/json">
+            {"shop":{"name":"Магазин \"Маяк\""},
+             "total":"21.84",
+             "items":[{"name":"Хлеб Нарочанский","sum":"1.89","quantity":1},
+                      {"name":"Молоко Савушкин 3,2% 1л","sum":"2.45","quantity":1},
+                      {"name":"Сыр Тильзитер 45% 200г","sum":"17.50","quantity":1}]}
+            </script></body></html>
+        """.trimIndent()
+
+        val parsed = ReceiptParser.parse(ReceiptQr.linesFromHtml(html))
+
+        assertEquals(2184L, parsed.amountMinor)
+        assertEquals(3, parsed.items.size)
+        assertTrue(parsed.items.any { it.name.contains("Нарочанский") })
+        assertEquals(2184L, parsed.items.sumOf { it.amountMinor })
+    }
+
+    @Test
+    fun `a page that shows its figures is read from what it shows`() {
+        val html = """
+            <html><body>
+            <h1>Магазин "Маяк"</h1>
+            <table>
+              <tr><td>Хлеб Нарочанский</td><td>1,89</td></tr>
+              <tr><td>Молоко Савушкин</td><td>2,45</td></tr>
+            </table>
+            <p>Итого к оплате 4,34</p>
+            <script>window.junk = {"total":"999.99"}</script>
+            </body></html>
+        """.trimIndent()
+
+        val parsed = ReceiptParser.parse(ReceiptQr.linesFromHtml(html))
+
+        assertEquals(434L, parsed.amountMinor)
+        assertEquals("Маяк", parsed.merchant)
+    }
 
     @Test
     fun `a link on a receipt is something to follow`() {
