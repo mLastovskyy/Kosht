@@ -138,8 +138,6 @@
     <string name="filter_period">Period</string>
     <string name="transaction_deleted">Transaction deleted</string>
     <string name="undo">Undo</string>
-    <string name="history_delete_title">Delete this record?</string>
-    <string name="history_delete_text">The record leaves your history.</string>
 
     <!-- Statistics -->
     <string name="stats_total">Total</string>
@@ -538,7 +536,7 @@
     <string name="guide_group_record">WRITING IT DOWN</string>
     <string name="guide_group_more">EVERYTHING ELSE</string>
     <string name="guide_home_lines">The total balance and the totals for this month.\nAccount tiles once you keep more than one.\nRecent records: tap to edit, "See all" for History.\nUp top: the streak, the awards and your profile.</string>
-    <string name="guide_history_lines">Every record by day, with the total for the day above it.\nSearch by note and category, filters and a period.\nA swipe left reveals the bin, tapping it asks first.\n"Undo" waits along the bottom afterwards.</string>
+    <string name="guide_history_lines">Every record by day, with the total for the day above it.\nSearch by note and category, filters and a period.\nA basket on a record opens what it was made of.\nDeleting lives inside the record; "Undo" waits below.</string>
     <string name="guide_stats_lines">A category donut with the total inside; days below it.\nTap a slice to name its category, tap a category to open the items.\nCalendar: the darker the day, the more it cost.\nReport: a week, a month, a quarter or a year.</string>
     <string name="guide_wallet_lines">Bank rates, accounts and transfers between them.\nPayments wait for your confirmation — never charged alone.\nDebts, goals and savings.</string>
     <string name="guide_settings_lines">Profile, theme, language, currency.\nAccounts, report, notifications, security.\nAt the bottom: the manual, the documents and the version.</string>

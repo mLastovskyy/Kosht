@@ -3,7 +3,6 @@ package by.mlastovsky.kosht.ui.history
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import by.mlastovsky.kosht.data.AccountRepository
-import by.mlastovsky.kosht.data.DeletionEvents
 import by.mlastovsky.kosht.data.SettingsRepository
 import by.mlastovsky.kosht.data.TransactionRepository
 import by.mlastovsky.kosht.data.db.AccountEntity
@@ -23,7 +22,6 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
-import kotlinx.coroutines.launch
 
 data class DayGroup(
     val date: LocalDate,
@@ -160,10 +158,4 @@ class HistoryViewModel(
     fun clearDateRange() = filters.update { it.copy(rangeStart = null, rangeEnd = null) }
 
     fun setQuery(query: String) = filters.update { it.copy(query = query.take(60)) }
-
-    fun delete(item: TransactionWithCategory) {
-        viewModelScope.launch {
-            DeletionEvents.report(repository.remove(item.transaction))
-        }
-    }
 }

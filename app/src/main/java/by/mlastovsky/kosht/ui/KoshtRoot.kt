@@ -170,8 +170,7 @@ fun KoshtRoot(
                         Routes.HISTORY -> HistoryScreen(
                             onTransactionClick = { id ->
                                 navController.navigate(Routes.editor(id))
-                            },
-                            onScreen = pagerState.currentPage == page
+                            }
                         )
 
                         Routes.STATS -> StatsScreen(

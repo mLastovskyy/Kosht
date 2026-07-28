@@ -117,7 +117,7 @@ checks, downloads and installs the update in place — no browser, nothing left 
 - **Items** — the products from a receipt or the parts of a payment. An empty sum is taken from them, suggestions offer what you wrote in this category before, and one product is one row however you spelled it. A record that carries items shows a basket with their number wherever it appears — on Home and in History a tap on it opens the shopping right under the row, the same way statistics does it.
 - **Nothing is cut off silently.** A name, a note or an amount too long for its place ends in an ellipsis and spells itself out in full when tapped — in lists, in charts and on the balance card.
 - **The editor starts where you left off** — a new record opens on the account the last one moved on.
-- **History** deletes in two deliberate moves — swipe, then tap the bin, which asks — and *Undo* still waits along the bottom, putting back everything the record had moved, debts included.
+- **Deleting lives inside the record** — open it from the list and the bin is in the header, so nothing leaves your history by a stray swipe. *Undo* still waits along the bottom afterwards, putting back everything the record had moved, debts included.
 
 </details>
 

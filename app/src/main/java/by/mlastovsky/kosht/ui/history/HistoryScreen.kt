@@ -1,24 +1,16 @@
 package by.mlastovsky.kosht.ui.history
 
-import androidx.compose.animation.core.animate
-import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.gestures.Orientation
-import androidx.compose.foundation.gestures.draggable
-import androidx.compose.foundation.gestures.rememberDraggableState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
@@ -28,7 +20,6 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Close
 import androidx.compose.material.icons.rounded.DateRange
-import androidx.compose.material.icons.rounded.DeleteOutline
 import androidx.compose.material.icons.rounded.Search
 import androidx.compose.material.icons.rounded.SearchOff
 import androidx.compose.material3.AlertDialog
@@ -43,30 +34,21 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.rememberDateRangePickerState
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.alpha
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalLocale
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import by.mlastovsky.kosht.R
 import by.mlastovsky.kosht.data.db.CategoryEntity
 import by.mlastovsky.kosht.data.db.TransactionEntity
-import by.mlastovsky.kosht.data.db.TransactionWithCategory
 import by.mlastovsky.kosht.model.TransactionType
 import by.mlastovsky.kosht.ui.AppViewModelProvider
 import by.mlastovsky.kosht.ui.CategoryVisuals
@@ -83,12 +65,10 @@ import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneOffset
 import java.time.format.DateTimeFormatter
-import kotlin.math.roundToInt
 
 @Composable
 fun HistoryScreen(
     onTransactionClick: (Long) -> Unit,
-    onScreen: Boolean = true,
     viewModel: HistoryViewModel = viewModel(factory = AppViewModelProvider.Factory)
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
@@ -98,14 +78,8 @@ fun HistoryScreen(
     var transferInAction by remember {
         mutableStateOf<TransactionEntity?>(null)
     }
-    var revealedId by remember { mutableStateOf<Long?>(null) }
     var openedItemsId by remember { mutableStateOf<Long?>(null) }
-    var askedToDelete by remember { mutableStateOf<TransactionWithCategory?>(null) }
     val listState = rememberLazyListState()
-    val busyList = listState.isScrollInProgress
-    LaunchedEffect(onScreen, busyList) {
-        if (!onScreen || busyList) revealedId = null
-    }
 
     Box(Modifier.fillMaxSize()) {
         Column(
@@ -250,40 +224,28 @@ fun HistoryScreen(
                             )
                         }
                         items(group.items, key = { it.transaction.id }) { item ->
-                            val revealed = revealedId == item.transaction.id
-                            RevealRow(
-                                revealed = revealed,
-                                onRevealChange = { open ->
-                                    revealedId = if (open) item.transaction.id else null
+                            TransactionRow(
+                                item = item,
+                                currencyCode = state.currencyCode,
+                                onClick = {
+                                    if (item.transaction.isTransfer) {
+                                        transferInAction = item.transaction
+                                    } else {
+                                        onTransactionClick(item.transaction.id)
+                                    }
                                 },
-                                onDelete = { askedToDelete = item },
+                                accounts = state.accounts,
+                                items = state.itemsByRecord[item.transaction.id].orEmpty(),
+                                itemsShown = openedItemsId == item.transaction.id,
+                                onItemsClick = {
+                                    openedItemsId = if (openedItemsId == item.transaction.id) {
+                                        null
+                                    } else {
+                                        item.transaction.id
+                                    }
+                                },
                                 modifier = Modifier.animateItem()
-                            ) {
-                                val lines = state.itemsByRecord[item.transaction.id].orEmpty()
-                                TransactionRow(
-                                    item = item,
-                                    currencyCode = state.currencyCode,
-                                    onClick = {
-                                        when {
-                                            revealedId != null -> revealedId = null
-                                            item.transaction.isTransfer ->
-                                                transferInAction = item.transaction
-                                            else -> onTransactionClick(item.transaction.id)
-                                        }
-                                    },
-                                    accounts = state.accounts,
-                                    items = lines,
-                                    itemsShown = openedItemsId == item.transaction.id,
-                                    onItemsClick = {
-                                        openedItemsId = if (openedItemsId == item.transaction.id) {
-                                            null
-                                        } else {
-                                            item.transaction.id
-                                        }
-                                    },
-                                    modifier = Modifier.background(MaterialTheme.colorScheme.background)
-                                )
-                            }
+                            )
                         }
                     }
                 }
@@ -295,17 +257,6 @@ fun HistoryScreen(
         TransferDialog(
             initial = transfer,
             onDismiss = { transferInAction = null }
-        )
-    }
-
-    askedToDelete?.let { item ->
-        DeleteConfirmDialog(
-            onConfirm = {
-                viewModel.delete(item)
-                askedToDelete = null
-                revealedId = null
-            },
-            onDismiss = { askedToDelete = null }
         )
     }
 
@@ -465,95 +416,3 @@ private fun DayHeader(
     }
 }
 
-@Composable
-private fun RevealRow(
-    revealed: Boolean,
-    onRevealChange: (Boolean) -> Unit,
-    onDelete: () -> Unit,
-    modifier: Modifier = Modifier,
-    content: @Composable () -> Unit
-) {
-    val travel = with(LocalDensity.current) { REVEAL_WIDTH.toPx() }
-    var shift by remember { mutableFloatStateOf(0f) }
-    LaunchedEffect(revealed) {
-        val target = if (revealed) -travel else 0f
-        if (shift != target) animate(shift, target) { value, _ -> shift = value }
-    }
-    val dragState = rememberDraggableState { delta ->
-        shift = (shift + delta).coerceIn(-travel, 0f)
-    }
-
-    val shown = (-shift / travel).coerceIn(0f, 1f)
-
-    Box(modifier) {
-        Box(
-            modifier = Modifier
-                .matchParentSize()
-                .padding(horizontal = PANEL_INSET, vertical = 4.dp)
-                .clip(MaterialTheme.shapes.large)
-                .background(MaterialTheme.colorScheme.errorContainer)
-        ) {
-            Box(
-                modifier = Modifier
-                    .align(Alignment.CenterEnd)
-                    .fillMaxHeight()
-                    .width(REVEAL_WIDTH - PANEL_INSET)
-                    .clickable(onClick = onDelete),
-                contentAlignment = Alignment.Center
-            ) {
-                Icon(
-                    imageVector = Icons.Rounded.DeleteOutline,
-                    contentDescription = stringResource(R.string.editor_delete),
-                    tint = MaterialTheme.colorScheme.onErrorContainer,
-                    modifier = Modifier
-                        .size(22.dp)
-                        .scale(0.8f + 0.2f * shown)
-                        .alpha(shown)
-                )
-            }
-        }
-        Box(
-            modifier = Modifier
-                .offset { IntOffset(shift.roundToInt(), 0) }
-                .draggable(
-                    state = dragState,
-                    orientation = Orientation.Horizontal,
-                    onDragStopped = {
-                        val open = shift < -travel / 2f
-                        onRevealChange(open)
-                        animate(shift, if (open) -travel else 0f) { value, _ -> shift = value }
-                    }
-                )
-        ) {
-            content()
-        }
-    }
-}
-
-private val REVEAL_WIDTH = 76.dp
-
-private val PANEL_INSET = 12.dp
-
-@Composable
-private fun DeleteConfirmDialog(
-    onConfirm: () -> Unit,
-    onDismiss: () -> Unit
-) {
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        icon = { Icon(Icons.Rounded.DeleteOutline, contentDescription = null) },
-        title = { Text(stringResource(R.string.history_delete_title)) },
-        text = { Text(stringResource(R.string.history_delete_text)) },
-        confirmButton = {
-            TextButton(onClick = onConfirm) {
-                Text(
-                    text = stringResource(R.string.editor_delete),
-                    color = MaterialTheme.colorScheme.error
-                )
-            }
-        },
-        dismissButton = {
-            TextButton(onClick = onDismiss) { Text(stringResource(R.string.action_cancel)) }
-        }
-    )
-}
