@@ -1,28 +1,62 @@
-# 💚 Kosht — Personal Finance, Done Right
+<div align="center">
 
-**Track spending in seconds. See where your money goes. Actually save.**
+<img src="docs/store/icon-512.png" width="104" alt="Kosht"/>
 
-Kosht is a beautifully crafted personal finance app for Android that turns money tracking from a chore into a habit you'll enjoy. No subscriptions, no ads, and nothing you have to sign up for — an account exists only if you want the same figures on a second phone.
+# Kosht
+
+### Money tracking that takes seconds — and never leaves your phone
+
+Snap a receipt, get a record. See where the month went. Save on purpose.
+No ads, no subscriptions, no account unless you want one.
+
+[![Latest release](https://img.shields.io/github/v/release/mLastovskyy/Kosht?style=flat-square&color=176B4E&label=download)](../../releases)
+[![Build](https://img.shields.io/github/actions/workflow/status/mLastovskyy/Kosht/release.yml?style=flat-square&color=176B4E&label=build)](../../actions)
+![Android 8.0+](https://img.shields.io/badge/Android-8.0%2B-176B4E?style=flat-square&logo=android&logoColor=white)
+![Kotlin + Compose](https://img.shields.io/badge/Kotlin-Compose-176B4E?style=flat-square&logo=kotlin&logoColor=white)
+![Offline first](https://img.shields.io/badge/works-offline-176B4E?style=flat-square)
+
+<img src="screenshots/01_home.png" width="230" alt="Home"/>
+<img src="screenshots/04_stats.png" width="230" alt="Statistics"/>
+<img src="screenshots/08_wallet.png" width="230" alt="Wallet"/>
+
+</div>
 
 ---
 
-## ✨ Highlights
+## 📸 Photograph a receipt. Get a record.
+
+<img src="docs/flow.svg" width="100%" alt="A slip is scanned, read on the phone, and saved as a record"/>
+
+The total, the shop, the date and the shopping list fill themselves in — then stay editable.
+A QR code hands over exact figures; without one, two offline recognisers read the paper.
+Our own **117 KB model**, trained on Belarusian slips, decides what each line is.
+Nothing is uploaded: no keys, no services, no cloud.
+
+---
+
+## ✨ Why people keep using it
+
+|  |  |
+|---|---|
+| ⚡ **Three taps, no friction**<br/>The calculator opens with the record. Type `12,50+3,90`, pick a category, save. | 🧺 **What the money was for**<br/>Items inside a record — from a receipt or by hand — turn a category into an answer. |
+| 💱 **Currencies that stay honest**<br/>Official NBRB rates, a BYN equivalent everywhere, and the rate you paid frozen into history. | 👛 **A wallet, not just a ledger**<br/>Accounts and transfers, debts with repayments, savings, goals, planned payments you confirm. |
+| 🏆 **Habits, gently**<br/>An under-budget streak, challenges you set yourself, 30 awards that arrive on their own. | 📊 **Statistics three ways**<br/>A donut that answers a tap, a heatmap of your expensive days, and a report for any period. |
+| 🔐 **A lock of your own**<br/>A 4–8 digit code that is never stored in the clear, plus fingerprint entry and slower guessing. | ☁️ **Two phones, one truth**<br/>Optional account: per-record merge, deletions travel, offline is the normal case. |
+
+---
+
+## 👀 See it
 
 <table>
   <tr>
-    <td align="center"><img src="screenshots/01_home.png" width="260"/><br/><b>Everything at a glance</b></td>
-    <td align="center"><img src="screenshots/02_editor.png" width="260"/><br/><b>Add a record in 3 taps</b></td>
-    <td align="center"><img src="screenshots/03_history.png" width="260"/><br/><b>Powerful history & filters</b></td>
+    <td align="center"><img src="screenshots/02_editor.png" width="230"/><br/><b>Add in seconds</b></td>
+    <td align="center"><img src="screenshots/03_history.png" width="230"/><br/><b>History that keeps up</b></td>
+    <td align="center"><img src="screenshots/05_calendar.png" width="230"/><br/><b>Heatmap of the month</b></td>
   </tr>
   <tr>
-    <td align="center"><img src="screenshots/04_stats.png" width="260"/><br/><b>Charts that make sense</b></td>
-    <td align="center"><img src="screenshots/05_calendar.png" width="260"/><br/><b>Spending heatmap calendar</b></td>
-    <td align="center"><img src="screenshots/06_report.png" width="260"/><br/><b>Monthly report & tips</b></td>
-  </tr>
-  <tr>
-    <td align="center"><img src="screenshots/07_achievements.png" width="260"/><br/><b>Streaks, challenges, badges</b></td>
-    <td align="center"><img src="screenshots/08_wallet.png" width="260"/><br/><b>Debts, savings & live FX</b></td>
-    <td align="center"><img src="screenshots/09_settings.png" width="260"/><br/><b>Make it truly yours</b></td>
+    <td align="center"><img src="screenshots/06_report.png" width="230"/><br/><b>Report with tips</b></td>
+    <td align="center"><img src="screenshots/07_achievements.png" width="230"/><br/><b>Streak & challenges</b></td>
+    <td align="center"><img src="screenshots/09_settings.png" width="230"/><br/><b>Make it yours</b></td>
   </tr>
 </table>
 
@@ -31,14 +65,14 @@ Kosht is a beautifully crafted personal finance app for Android that turns money
 
 <table>
   <tr>
-    <td align="center"><img src="screenshots/light/01_home.png" width="260"/><br/><b>Home</b></td>
-    <td align="center"><img src="screenshots/light/04_stats.png" width="260"/><br/><b>Charts</b></td>
-    <td align="center"><img src="screenshots/light/05_calendar.png" width="260"/><br/><b>Heatmap</b></td>
+    <td align="center"><img src="screenshots/light/01_home.png" width="230"/><br/><b>Home</b></td>
+    <td align="center"><img src="screenshots/light/04_stats.png" width="230"/><br/><b>Charts</b></td>
+    <td align="center"><img src="screenshots/light/05_calendar.png" width="230"/><br/><b>Heatmap</b></td>
   </tr>
   <tr>
-    <td align="center"><img src="screenshots/light/06_report.png" width="260"/><br/><b>Report</b></td>
-    <td align="center"><img src="screenshots/light/08_wallet.png" width="260"/><br/><b>Wallet</b></td>
-    <td align="center"><img src="screenshots/light/09_settings.png" width="260"/><br/><b>Settings &amp; account</b></td>
+    <td align="center"><img src="screenshots/light/06_report.png" width="230"/><br/><b>Report</b></td>
+    <td align="center"><img src="screenshots/light/08_wallet.png" width="230"/><br/><b>Wallet</b></td>
+    <td align="center"><img src="screenshots/light/09_settings.png" width="230"/><br/><b>Settings</b></td>
   </tr>
 </table>
 
@@ -46,132 +80,79 @@ Kosht is a beautifully crafted personal finance app for Android that turns money
 
 ---
 
-## 🚀 Key Features
+## 📥 Get it
 
-### ⚡ Lightning-fast expense tracking
-A clean editor, smart category carousel and haptic feedback make adding a transaction take literal seconds. The amount sits in a card at the top of the screen, the categories under it, and one wrapping row of labelled chips holds everything else: the date, the account the money leaves, the shopping list, the scanner, the receipt and the photo. Expense and Income are a swipe apart — the same gesture that moves the app's own tabs.
+**[Download the latest APK →](../../releases)** · Android 8.0+ · Russian and English
 
-### ⇢ Which account the money leaves
-Keep more than one account and every record says which one it moved on — a chip in the editor, in a new record and in an old one alike, so a payment charged to the wrong card is two taps from being right.
-
-### 🎨 Categories that bend to you
-The carousel is the same wherever a category is chosen — the editor, a planned payment, a spending challenge — and everywhere it does the same three things. **Tap** picks one. **Press and hold, then drag** moves it: the handful you actually use end up under your thumb, and the order is kept everywhere at once. **Press and hold without moving** opens it — name, icon, color, or the trash, which moves its records to *Other* rather than losing them. An icon from the set is not the only option: pick a photo from the gallery — a payment app's logo, a shop's — and it fills the circle everywhere the category appears. A picture brings its own colors, so the palette steps aside while one is set. A name too long for its tile is cut with an ellipsis and spelled out in full when you tap it. Accounts take pictures the same way — a card's own art instead of a generic icon. The **New** circle at the end creates one on the spot, so a missing category never sends you off to settings and back.
-
-### 🧮 Calculator, zero taps away
-Adding a record drops you straight into a roomy bottom-sheet calculator — the editor itself stays uncluttered, and tapping the amount brings it back any time. Type `12,50+3,90+8`, hit the smart **=** to evaluate (with proper operator precedence), and **Apply** writes the sum into the amount field.
-
-### 💳 Multiple accounts
-Cards, cash, whatever you use. One account by default keeps the app dead simple; add more and Kosht unlocks per-account balances on Home, an account picker in the editor, an account choice when confirming a planned payment and an account filter in Statistics. Tap an account to set its real balance, or use the pencil to rename it and change its icon and color.
-
-### ⇄ Transfers between your own accounts
-Cash out of a card, or one card topping up another, is not spending — the money is still yours. The **⇄** button in the Accounts block records it as a transfer: the amount leaves one account and lands on the other, your total balance does not move, and no chart, category, streak, challenge or report counts it as income or expense. In the lists it reads "Card → Cash" with its own icon.
-
-Switch on *Settings → Interface → Transfer fee* and the dialog gains a fee field for the times moving money costs something: the fee comes off the source account on top of the amount, and it is the one part that really does leave your pocket — so the total balance drops by exactly that much, and the row says "fee 1,50". Tap a transfer anywhere to correct or delete it.
-
-### 🧺 What the money was actually for
-Any record can list its items — the products from a receipt, or the parts of a payment like rent and utilities. It is optional, and it is where the interesting questions get answered. A record with no sum of its own takes it from the items; a sum you typed is left alone, and if the items come to more than it, saving asks you first.
-
-- **Suggestions that fit.** The chips offer what you have written in *this* category before, plus the handful of things such a payment usually consists of: Housing suggests rent, utilities, internet; Groceries suggests bread, milk, coffee. Tapping one keeps the spelling identical, which is what makes the numbers add up later.
-- **Quantity × price**, the way a receipt spells it: two at 1,75 is a line of 3,50.
-- **Read off the receipt by itself** where the slip prints its lines, quantities included — discounts, VAT and card details are not items and are left out.
-- **The figures have to agree.** Lines adding up to far more than the receipt total mean something was misread, so the list is dropped rather than trusted; adding up to less is said out loud ("5 items · 41,20 of 45,30 — the rest could not be read"). Nothing is ever invented to make the arithmetic work.
-- **Statistics → Charts:** a category whose records list items carries a basket with a count — tap it and the category opens up into what was actually bought, each item's bar drawn in that category's own colour. Income counts too: a salary splits into the pay and the bonus as readily as a receipt splits into products.
-- **One product, one row.** Names are added up on their settled form — case, stray spaces and the ё/е that half the keyboards skip are ignored — so "молоко", "Молоко  " and "МОЛОКО" are one line with one total, including everything written down before any of this existed.
-
-### 📸 Receipt scanning — QR first, OCR always
-Snap a receipt and Kosht reads the total, date and store for you. When the QR leads to a page that offers the receipt as a file, the file itself is downloaded and attached to the record, not the page around it.
-
-- **QR codes come first.** Shops that print one hand over exact figures instead of guessed ones — and on the short slips that carry nothing but a QR, it is the only thing there is to read. The electronic receipt behind the code is fetched and kept, so it opens later even with no connection.
-- **The code is hunted, not hoped for.** It is rarely in the middle of a photo, so the picture is searched in overlapping squares, each offered to the decoder the right way up, upside down and inverted, through two different ways of deciding what is black — and Data Matrix, Aztec and bar codes are tried alongside QR.
-- **A code is only trusted once it proves itself.** Loyalty cards, Wi-Fi passwords and adverts share the same square shape; a payload counts as a receipt only when it carries fiscal fields or leads to a page an amount can actually be read from.
-- **No QR, no problem.** The photo goes through on-device recognition instead — 100% offline, nothing uploaded, no keys and no services.
-- **Two trained readers, not one.** The quick Russian model handles an ordinary photo in a couple of seconds; a slip it cannot settle is read again by `tessdata_best`, the most accurate model Tesseract publishes — several seconds more, instead of "could not read the receipt".
-- **An AI model of our own decides what each line is.** 77 KB of weights, trained on Belarusian slips and on the mistakes recognition makes on them, shipped inside the APK and run on the phone. It answers what rules cannot: which line settles a slip that never prints "итого", which line in the header is the shop, whether a line that looks like a purchase really names one. Where the slip does say "к оплате", the plain rule still wins.
-- **The photo is prepared, read several ways, and repaired.** A slip photographed by hand is lit unevenly, so every dot is judged against the paper around it instead of one brightness for the whole frame; a small photo is enlarged. The page is then recognised in several passes with different layout assumptions, scored on confidence and on how many prices came out, and the best one is kept. Afterwards the letters recognition mistakes for digits are put right: `1,4О`, `l2,50` and `З,20` are prices, and only tokens already shaped like an amount are touched, so names keep their letters, dates stay dates and no figure is ever invented.
-- **The shop is read, not guessed.** A familiar chain is matched by name; an unfamiliar one is found the way a person finds it — the largest print at the top of the slip, a trade name in quotes, a legal form, the line beside the tax number. Addresses, cashiers, document headers and scanning noise are ruled out, and when nothing looks like a name — or the line is longer than a note field takes — it is left empty rather than filled with half a line from the receipt.
-- **The shopping itself is read too**, when the slip lists it: name, price and quantity per line, straight into the record's item list (see below). The layouts real shops print are all handled — a name wrapped over two or three lines, an article number and a bar code above the figures, and the `price × quantity   sum` row that follows it.
-- **A scanned record says so.** A small scanner mark stays with it in the editor and in every list, so months later you still know the figures were not typed by hand.
-
-Either way a review dialog shows what was read, and every field stays editable before you save.
-
-### ☁️ Your money on every device — only if you ask
-Sign up and records, categories, accounts, debts, goals, challenges and awards live in the cloud too, so a second phone shows the same figures the moment you sign in there.
-
-Signing up is an email, a six-digit code that Kosht mails you (good for five minutes, counted down on screen), and a password — set only once the address is proven. Forgot it? The same code sets a new one. Address already taken, address unknown, wrong password, expired code: each says what happened and offers the door that fits.
-
-- **Per-record merge.** Two phones edited offline both keep their work; "newest wins" only ever applies within one and the same record.
-- **Deletions travel too**, so something you removed on one device does not come back from the other.
-- **Offline is the normal case.** Keep adding records with no connection — everything goes up the moment the internet returns.
-- **Settings → Account** is one row: the address, when it last synced, and a sync button that turns into a spinner while it works. Tap the row for the full address, the exact time and the state of automatic sync.
-- **Your settings travel too** — currency, theme, interface and notification switches, the daily budget, the report you built and your name and nickname, so a second phone looks and behaves like the first. The interface language stays with the device.
-- **Receipt photos stay on the device unless you say otherwise.** Switching *Sync receipt photos* on is a consent of its own, recorded as one: the images then live in a private bucket in your own folder, which no other account can read, write or delete. Switching it off deletes the uploaded copies and keeps the originals here.
-
-### 🗂 History that does not lose anything
-Months walk back with the arrows or a period picker, search runs over notes and category names, and every day carries its own total. Deleting takes two deliberate moves: **swipe a row left** and a bin appears, **tap the bin** and it asks. Then *Undo* still waits along the bottom — and it puts back everything the record had moved, debts included.
-
-### 📊 Statistics three ways
-- **Charts** — an animated category donut, daily spending bars, and a category that opens up into the items behind it when its records list any
-- **Calendar heatmap** — instantly spot your expensive days
-- **Report, on your terms** — set the window (week, month, quarter, year) and the visible metric rows once in Settings, then just walk back through past periods with the arrows; every metric is compared with the previous period of the same length. Plus personalized rule-based tips ("Groceries take 45% of spending — try a weekly limit challenge")
-
-### 💱 Multi-currency done right
-- **Live official rates** from the National Bank, refreshed automatically or by hand — with the update time always visible
-- Amounts in foreign currency show their **BYN equivalent everywhere**: debts, savings, recurring charges
-- Every expense **freezes the rate at the moment you paid**, so history never drifts when rates move
-- **Switch the app currency** and the whole app follows at the live rate in one tap: records, the daily budget, balance corrections, challenge limits, savings, goals, debts and recurring charges — including the ones entered in a third currency, which cross through BYN. Frozen historical equivalents stay untouched, and a currency the National Bank does not publish is left alone rather than multiplied by nothing (or turn auto-convert off — your choice)
-- Foreign-currency recurring payments let you set the **exact rate you were charged**
-
-### 👛 The Wallet
-- **Debts** — who owes whom, in any currency, with partial repayments; tap one to repay, close or delete it, and the pencil corrects the debt itself — person, direction, sum, currency, note. Money that changes hands lands in the history too: an expense for what you owed, income for what was owed to you, marked as the debt closed or a part of it — with a tick to clear when the debt was settled outside the app, and, with several accounts, the account it moved on. It works from the other end as well: file income under **Debt**, say who it is owed to, and the debt opens itself on the Wallet tab carrying your note. The record and the debt stay tied together afterwards: delete the record that repaid a debt and the debt comes back with that amount and the day it started, delete the one that opened a debt and the debt leaves with it — and *Undo* puts both sides back
-- **Savings** — a journal of every "set aside" moment, with per-currency totals. Set aside in **any** currency and Kosht converts it into the currency the savings are counted in at the National Bank rate — then leaves that figure editable, because the bank's arithmetic and the official rate rarely agree to the last kopeck and what actually left the account is what belongs in the record. Savings are counted apart from your accounts, so nothing else moves unless you say so: tick **Take it off an account** and the sum really leaves the account you pick, and comes back onto it when you withdraw
-- **Savings goals** — name a goal, set a target, watch the progress bar fill 🎉. Tap a goal to change any of it later: the name, the target, even the currency — and what is already set aside toward it moves across at the official rate, so the progress bar keeps meaning what it says
-- **Planned payments — outgoing or incoming** — a salary is as regular as a subscription, and the dialog reads that way: a bill has a title, an amount to charge and a charge date, a salary a source, a sum and the date it lands. Pick expense or income, the date, the frequency, the category and the account it moves on; nothing happens silently, you always confirm. The confirmation says which way the money goes, starts from the account the plan names, and lets you set the exact rate for a foreign currency.
-
-### 🏆 Gamification that helps, not annoys
-- **Under-budget streak** — days in a row you stayed within your daily budget (auto-calculated or set your own)
-- **Custom challenges** — "spend under 100 on eating out this week", "no-spend weekend", "save 200 this month" — you configure, Kosht tracks, and a tap re-opens any challenge for editing
-- **30 awards**, from first steps to a year inside the budget, laid out as swipeable pages — a thousand records, five thousand saved, a perfect month without a single day over budget, three months in a row in the black, twenty challenges completed. Tap one to see how to earn it, how far along you are ("6 / 10"), and the day you earned it — once earned, it is yours forever
-- **You hear about it when it happens.** An award unlocks the moment it is deserved, whatever screen you are on: a congratulation appears over the app and a quiet note lands in the shade. No screen to go and check
-
-### 🔔 Smart notifications (all optional)
-An evening nudge only if nothing is logged, planned payments awaiting confirmation, a Monday money digest, and awards as you earn them. Each arrives with the phone's notification sound and a short vibration — a notification nobody hears is a notification nobody acts on — while staying out of the way otherwise: no heads-up popups over what you are doing, and Android's own per-channel settings can quiet any of them down again. A tap takes you straight into the app.
-
-### 🎨 Made for you
-Light & dark themes, Material You dynamic colors, English & Russian interface, a profile with photo or built-in avatars — one of them is dealt out at random on the very first launch, so the app has a face from the start, and tapping the avatar anywhere, on Home as well as in Settings, opens the same profile dialog — and interface toggles to hide anything you don't need. The five main screens answer to a thumb as well as to a tap: swipe between Home, History, Statistics, Wallet and Settings. Without an account nothing ever leaves the phone; with one, only you can read it.
-
-### 🔐 A lock of your own, if you want one
-Switch on *Settings → Security → App lock*, make up a code of 4 to 8 digits, and Kosht asks for it before it opens.
-
-- **The code is never shown and never stored.** It is typed on the app's own keypad and drawn as dots, not digits; what is kept is a deliberately slow one-way digest of it with a random salt of its own — so a copy of the app's files is not a copy of the code, and nobody can look it up or mail it back to you.
-- **Biometrics where a phone keeps them.** If the phone has a finger or a face on file, the sensor key sits *in the keypad itself, bottom left*, and the system prompt comes up by itself the moment the lock appears — dismiss it and the code still works. Switching the option on asks for the finger once, to prove it works before you rely on it.
-- **Guessing gets slower, fast.** Four wrong codes are free; from the fifth the keypad waits, and each try after that waits longer — half a minute, a minute, five, fifteen — counted on disk, so force-closing the app does not hand the attempts back. A finger never waits: a fingerprint is not a guess.
-- **You decide what "away" means.** Type the number of minutes yourself, or tap *As soon as you leave*. Either way a screen Kosht opened itself — the camera, the gallery, the install-permission page — is not treated as leaving, because photographing a receipt should not cost you a code.
-- **The task switcher stops keeping a picture** of the app while the lock is on, so the balance is not readable over a shoulder there either. And the code stays on this phone: it lives apart from the settings that sync, so a second device never receives it and sets its own.
-
-### 🔒 Consent you can actually withdraw
-Collecting an email address makes this an operator of personal data under the Belarusian law of 07.05.2021 No. 99-З, and the app is built to match rather than to look like it does.
-
-- **The Terms and the Personal data policy** are real documents, shipped as PDFs and kept where the app they describe is — Settings → About, alongside the manual. A tap writes the PDF into your phone's Downloads and opens it, so it stays yours to read, print or forward, and the same links sit on the sign-up form before you agree to anything.
-- **Consent is an append-only ledger**, not a flag. What has to be provable is when someone agreed and to which wording, so nothing in it can be updated or deleted — not even by the account that owns it.
-- **Advertising consent is separate, unticked, and never a condition** of having an account. Switch it off in Settings or from the unsubscribe link, which works without signing in.
-- **Every right is where you would look for it**: the documents under About, the mailing switch among the notifications, and *Delete account and data* at the foot of the Account block — with a confirmation, because it cannot be undone. A copy of everything held about you is served on request to the address in the policy, within fifteen days.
-- **A new edition tells you about itself.** When either document changes, the app says so on the next launch and offers both right there rather than leaving you to notice in Settings; signed in, the acknowledgement joins the same ledger. The published pages are the very documents the app hands out — [the policy](https://mlastovskyy.github.io/Kosht/legal/privacy-policy.html) and [the terms](https://mlastovskyy.github.io/Kosht/legal/terms.html), same text as the PDFs, no "website version".
-
-### 📖 Learn it in minutes
-Six cards on the very first launch say what the app is: how a record is made, that a photographed receipt is read by the model on the phone, that the five screens are one swipe apart, what lives in the Wallet, which categories move something besides a total, and where the streak and the manual are. Skip it and it never comes back on its own — *Settings → About → Quick tour* plays it again.
-
-An illustrated **guide lives right inside Settings**, and a full **PDF manual** with screenshots is one tap away — it downloads to your phone rather than just flashing up (also in [`docs/MANUAL.pdf`](docs/MANUAL.pdf)).
+Every push to `master` builds a signed APK. After that Kosht keeps itself current: **Settings → Version**
+checks, downloads and installs the update in place — no browser, nothing left in Downloads, records untouched.
 
 ---
 
-## 📦 Download & Updates
+## 🔍 The details, if you want them
 
-Every push to `master` automatically builds a fresh APK, and Kosht updates itself.
+<details>
+<summary><b>Receipt scanning, step by step</b></summary>
 
-Tap **Settings → Version**: it either confirms you are up to date or **downloads and installs the update without leaving the app** — no browser, nothing left behind in Downloads, and your records stay exactly where they are. Android asks once for permission to let Kosht install its own updates; offline the check simply says it is unavailable. Builds are still on the **[Releases](../../releases)** page if you prefer to grab them by hand.
+- **QR first.** Shops that print one hand over exact figures; the electronic receipt behind the code is fetched and kept, so it opens later with no connection.
+- **The code is hunted, not hoped for.** The photo is searched in overlapping squares — upright, upside down, inverted, two ways of deciding what is black — and Data Matrix, Aztec and bar codes are tried alongside QR.
+- **A code is trusted only once it proves itself.** Loyalty cards and adverts share the same square; a payload counts as a receipt when it carries fiscal fields or leads to a page an amount can be read from.
+- **No QR, no problem.** A quick Russian model reads an ordinary photo in seconds; a stubborn slip is read again by `tessdata_best`.
+- **The model decides what each line is** — which line settles a slip that never prints "итого", which line in the header is the shop, whether a line really names a purchase. Where the slip does say "к оплате", the plain rule still wins.
+- **The photo is prepared and repaired.** Uneven light is judged dot by dot, several layout passes compete on confidence and prices found, and letters mistaken for digits (`1,4О`, `l2,50`, `З,20`) are put right without inventing a figure.
+- **The shop is read, not guessed.** A familiar chain is matched even through OCR slips — `CAHTA` and `ЕВР00ПТ` are Санта and Евроопт; an unfamiliar one is found by the largest print, a quoted trade name, a legal form, the line beside the tax number.
+- **The shopping is read too**, in the layouts real shops print: a name wrapped over three lines, an article number and a bar code above the figures, `price × quantity   sum` below them.
+- **The figures have to agree.** Lines adding up to far more than the total mean something was misread, so the list is dropped rather than trusted; adding up to less is said out loud.
 
-> Every published build is signed with the same key, and CI refuses to publish one that is not. An update signed differently is one Android will not install over the old app — Kosht now says so plainly instead of failing with a system error.
+</details>
 
-Requires Android 8.0+.
+<details>
+<summary><b>Records, categories and items</b></summary>
 
-*See [PUBLISHING.md](PUBLISHING.md) for the Google Play / AppGallery release guide.*
+- **Expense or income** is a swipe apart — the same gesture that moves the app's tabs.
+- **The category carousel** is the same everywhere: tap to pick, hold and drag to reorder (kept app-wide), hold to edit name, icon, colour — or give it a photo from the gallery. Deleting one moves its records to *Other* rather than losing them.
+- **Accounts.** One by default keeps things simple; add more and you get per-account balances, a picker in the editor and a filter in statistics. **⇄** records a transfer between your own accounts — no chart, streak or report counts it as spending.
+- **Items** — the products from a receipt or the parts of a payment. An empty sum is taken from them, suggestions offer what you wrote in this category before, and one product is one row however you spelled it.
+- **History** deletes in two deliberate moves — swipe, then tap the bin, which asks — and *Undo* still waits along the bottom, putting back everything the record had moved, debts included.
+
+</details>
+
+<details>
+<summary><b>Wallet, currencies and challenges</b></summary>
+
+- **Debts** in any currency, with partial repayments, tied to the records that moved the money — delete the record and the debt comes back.
+- **Savings and goals.** Set aside in any currency; change a goal's name, target or currency later and what is already saved moves across at the official rate.
+- **Planned payments — outgoing or incoming.** Nothing is ever charged silently: a due payment waits for your confirmation, with the amount and the rate editable.
+- **Switch the app currency** and everything follows at the live rate — records, budget, savings, goals, debts, plans — while frozen historical equivalents stay untouched.
+- **Challenges** you set yourself: a spending limit, a no-spend stretch, or a savings target. The window is a chip or dates of your own, and a savings challenge opens a matching goal in the Wallet, so what you put aside fills both bars at once.
+
+</details>
+
+<details>
+<summary><b>Privacy, lock and consent</b></summary>
+
+- **Without an account nothing leaves the phone.** With one, records, categories, accounts, debts, goals, challenges, awards and your settings match on every phone of yours; the interface language and the lock code stay local.
+- **Receipt photos are a separate switch** — off by default, kept in your own private bucket when on, deleted there when off.
+- **The app lock** is a code of your own, never stored in the clear, with fingerprint entry, waits that grow after wrong guesses, and no preview in the task switcher.
+- **Consent is an append-only ledger**, advertising consent is separate and never a condition, and *Delete account and data* is at the foot of the Account block. [Privacy policy](https://mlastovskyy.github.io/Kosht/legal/privacy-policy.html) · [Terms](https://mlastovskyy.github.io/Kosht/legal/terms.html)
+
+</details>
+
+<details>
+<summary><b>Built with</b></summary>
+
+Kotlin · Jetpack Compose (Material 3) · Room · DataStore · WorkManager · Biometric · ZXing · Tesseract through `tesseract4android`, carrying both the fast and the `best` Russian model · a hand-rolled softmax line classifier trained by [`scripts/train-receipt-model.py`](scripts/train-receipt-model.py) · Supabase for the optional account.
+
+`.\gradlew.bat assembleDebug` builds it; `.\gradlew.bat testDebugUnitTest` runs the tests. Signing and Supabase values come from `.env` (see [`.env.example`](.env.example)).
+
+</details>
+
+---
+
+<div align="center">
+
+📖 **[Full PDF manual with screenshots](docs/MANUAL.pdf)** — also inside the app, Settings → About
+
+Built around the Belarusian wallet 💚 — BYN, NBRB rates, the slips our shops actually print.
+
+</div>
