@@ -142,6 +142,14 @@ class TransactionRepository(
     fun observeItemsBetween(from: Long, to: Long): Flow<List<ItemInContext>> =
         itemDao.observeBetween(from, to)
 
+    suspend fun lastUsedAccountId(): Long? = transactionDao.lastUsedAccountId()
+
+    fun observeItemsByRecord(from: Long, to: Long): Flow<Map<Long, List<TransactionItemEntity>>> =
+        itemDao.observeForRange(from, to).map { rows -> rows.groupBy { it.transactionId } }
+
+    fun observeItemsOfRecent(limit: Int): Flow<Map<Long, List<TransactionItemEntity>>> =
+        itemDao.observeForRecent(limit).map { rows -> rows.groupBy { it.transactionId } }
+
     fun observeItemNames(categoryId: Long): Flow<List<String>> =
         itemDao.observeNamesIn(categoryId).map { names ->
             names.distinctBy { ItemNames.key(it) }

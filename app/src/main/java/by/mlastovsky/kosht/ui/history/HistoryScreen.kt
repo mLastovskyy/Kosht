@@ -99,6 +99,7 @@ fun HistoryScreen(
         mutableStateOf<TransactionEntity?>(null)
     }
     var revealedId by remember { mutableStateOf<Long?>(null) }
+    var openedItemsId by remember { mutableStateOf<Long?>(null) }
     var askedToDelete by remember { mutableStateOf<TransactionWithCategory?>(null) }
     val listState = rememberLazyListState()
     val busyList = listState.isScrollInProgress
@@ -258,6 +259,7 @@ fun HistoryScreen(
                                 onDelete = { askedToDelete = item },
                                 modifier = Modifier.animateItem()
                             ) {
+                                val lines = state.itemsByRecord[item.transaction.id].orEmpty()
                                 TransactionRow(
                                     item = item,
                                     currencyCode = state.currencyCode,
@@ -270,6 +272,15 @@ fun HistoryScreen(
                                         }
                                     },
                                     accounts = state.accounts,
+                                    items = lines,
+                                    itemsShown = openedItemsId == item.transaction.id,
+                                    onItemsClick = {
+                                        openedItemsId = if (openedItemsId == item.transaction.id) {
+                                            null
+                                        } else {
+                                            item.transaction.id
+                                        }
+                                    },
                                     modifier = Modifier.background(MaterialTheme.colorScheme.background)
                                 )
                             }

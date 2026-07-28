@@ -10,6 +10,7 @@ import by.mlastovsky.kosht.data.TransactionRepository
 import by.mlastovsky.kosht.data.UserProfile
 import by.mlastovsky.kosht.data.db.AccountEntity
 import by.mlastovsky.kosht.data.db.RateEntity
+import by.mlastovsky.kosht.data.db.TransactionItemEntity
 import by.mlastovsky.kosht.data.db.TransactionWithCategory
 import by.mlastovsky.kosht.model.TransactionType
 import by.mlastovsky.kosht.util.Dates
@@ -28,6 +29,8 @@ data class HomeUiState(
     val monthIncomeMinor: Long = 0,
     val monthExpenseMinor: Long = 0,
     val recent: List<TransactionWithCategory> = emptyList(),
+
+    val itemsByRecord: Map<Long, List<TransactionItemEntity>> = emptyMap(),
     val currencyCode: String = SettingsRepository.DEFAULT_CURRENCY,
     val profile: UserProfile? = null,
     val streakDays: Int = 0,
@@ -77,8 +80,13 @@ class HomeViewModel(
         )
     }
 
+    private data class Recent(
+        val records: List<TransactionWithCategory>,
+        val itemsByRecord: Map<Long, List<TransactionItemEntity>>
+    )
+
     private data class HomeContext(
-        val recent: List<TransactionWithCategory>,
+        val recent: Recent,
         val settings: AppSettings,
         val rates: Map<String, RateEntity>,
         val profile: UserProfile,
@@ -102,8 +110,14 @@ class HomeViewModel(
         }
     }
 
-    private val context = combine(
+    private val recent = combine(
         repository.observeRecent(RECENT_LIMIT),
+        repository.observeItemsOfRecent(RECENT_LIMIT),
+        ::Recent
+    )
+
+    private val context = combine(
+        recent,
         settingsRepository.settings,
         ratesRepository.rates,
         settingsRepository.profile,
@@ -129,7 +143,8 @@ class HomeViewModel(
             balanceBynMinor = bynEquivalent,
             monthIncomeMinor = t.income,
             monthExpenseMinor = t.expense,
-            recent = ctx.recent,
+            recent = ctx.recent.records,
+            itemsByRecord = ctx.recent.itemsByRecord,
             currencyCode = settings.currencyCode,
             profile = ctx.profile,
             streakDays = Streak.budgetStreak(t.spendByDay, budget, t.firstRecordDay),

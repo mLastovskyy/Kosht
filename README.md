@@ -96,7 +96,7 @@ checks, downloads and installs the update in place — no browser, nothing left 
 <details>
 <summary><b>Receipt scanning, step by step</b></summary>
 
-- **QR first.** Shops that print one hand over exact figures; the electronic receipt behind the code is fetched and kept, so it opens later with no connection.
+- **QR first.** Shops that print one hand over exact figures; the electronic receipt behind the code is fetched and kept, so it opens later with no connection. A page that says nothing itself — the kind that loads its shopping with a script — no longer erases what the paper printed: the sum, the date and the shop come off the slip and the link still travels with the record.
 - **The code is hunted, not hoped for.** The photo is searched in overlapping squares — upright, upside down, inverted, two ways of deciding what is black — and Data Matrix, Aztec and bar codes are tried alongside QR.
 - **A code is trusted only once it proves itself.** Loyalty cards and adverts share the same square; a payload counts as a receipt when it carries fiscal fields or leads to a page an amount can be read from.
 - **No QR, no problem.** A quick Russian model reads an ordinary photo in seconds; a stubborn slip is read again by `tessdata_best`.
@@ -114,7 +114,9 @@ checks, downloads and installs the update in place — no browser, nothing left 
 - **Expense or income** is a swipe apart — the same gesture that moves the app's tabs.
 - **The category carousel** is the same everywhere: tap to pick, hold and drag to reorder (kept app-wide), hold to edit name, icon, colour — or give it a photo from the gallery. Deleting one moves its records to *Other* rather than losing them.
 - **Accounts.** One by default keeps things simple; add more and you get per-account balances, a picker in the editor and a filter in statistics. **⇄** records a transfer between your own accounts — no chart, streak or report counts it as spending.
-- **Items** — the products from a receipt or the parts of a payment. An empty sum is taken from them, suggestions offer what you wrote in this category before, and one product is one row however you spelled it.
+- **Items** — the products from a receipt or the parts of a payment. An empty sum is taken from them, suggestions offer what you wrote in this category before, and one product is one row however you spelled it. A record that carries items shows a basket with their number wherever it appears — on Home and in History a tap on it opens the shopping right under the row, the same way statistics does it.
+- **Nothing is cut off silently.** A name, a note or an amount too long for its place ends in an ellipsis and spells itself out in full when tapped — in lists, in charts and on the balance card.
+- **The editor starts where you left off** — a new record opens on the account the last one moved on.
 - **History** deletes in two deliberate moves — swipe, then tap the bin, which asks — and *Undo* still waits along the bottom, putting back everything the record had moved, debts included.
 
 </details>
@@ -133,7 +135,7 @@ checks, downloads and installs the update in place — no browser, nothing left 
 <details>
 <summary><b>Privacy, lock and consent</b></summary>
 
-- **Without an account nothing leaves the phone.** With one, records, categories, accounts, debts, goals, challenges, awards and your settings match on every phone of yours; the interface language and the lock code stay local.
+- **Without an account nothing leaves the phone.** With one, records, categories, accounts, debts, goals, challenges, awards and your settings match on every phone of yours; the interface language and the lock code stay local. The profile is a nickname and a face — one name, the one Kosht greets you by and signs the report with.
 - **Receipt photos are a separate switch** — off by default, kept in your own private bucket when on, deleted there when off.
 - **The app lock** is a code of your own, never stored in the clear, with fingerprint entry, waits that grow after wrong guesses, and no preview in the task switcher.
 - **Consent is an append-only ledger**, advertising consent is separate and never a condition, and *Delete account and data* is at the foot of the Account block. [Privacy policy](https://mlastovskyy.github.io/Kosht/legal/privacy-policy.html) · [Terms](https://mlastovskyy.github.io/Kosht/legal/terms.html)

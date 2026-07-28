@@ -229,7 +229,8 @@ class EditorViewModel(
             receiptDocPath = d.receiptDocPath,
             pendingScan = extras.pending,
             accounts = extras.accounts,
-            accountId = d.accountId ?: extras.accounts.firstOrNull()?.id,
+            accountId = d.accountId?.takeIf { id -> extras.accounts.any { it.id == id } }
+                ?: extras.accounts.firstOrNull()?.id,
             multiAccount = settings.multiAccount,
             scanned = d.scanned,
             isTransfer = d.isTransfer,
@@ -276,7 +277,8 @@ class EditorViewModel(
                     return@launch
                 }
             }
-            draft.update { it.copy(loaded = true) }
+            val lastAccountId = repository.lastUsedAccountId()
+            draft.update { it.copy(loaded = true, accountId = lastAccountId) }
         }
     }
 

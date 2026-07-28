@@ -347,7 +347,6 @@ object SyncPayloads {
         .put("reportPeriod", row.settings.reportPeriod)
         .put("autoCalculator", row.settings.autoCalculator)
         .put("syncPhotos", row.settings.syncPhotos)
-        .put("profileName", row.profileName)
         .put("profileNickname", row.profileNickname)
         .put("profileEmoji", row.profileEmoji)
 
@@ -396,8 +395,8 @@ object SyncPayloads {
                 autoCalculator = json.optBoolean("autoCalculator", defaults.autoCalculator),
                 syncPhotos = json.optBoolean("syncPhotos", defaults.syncPhotos)
             ),
-            profileName = json.stringOrNull("profileName").orEmpty(),
-            profileNickname = json.stringOrNull("profileNickname").orEmpty(),
+            profileNickname = json.stringOrNull("profileNickname")?.takeIf { it.isNotBlank() }
+                ?: json.stringOrNull("profileName").orEmpty(),
             profileEmoji = json.stringOrNull("profileEmoji")
         )
     }

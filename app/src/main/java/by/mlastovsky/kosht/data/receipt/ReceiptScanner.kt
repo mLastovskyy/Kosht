@@ -29,25 +29,40 @@ class ReceiptScanner(
 
     suspend fun scan(uri: Uri): ScannedReceipt? = withContext(Dispatchers.Default) {
         val bitmap = decodeDownscaled(uri, MAX_DIMENSION) ?: return@withContext null
-        QrReader.decode(bitmap)?.let { payload ->
-            eReceipts.resolve(payload, model)?.let { receipt ->
-                return@withContext ScannedReceipt(
-                    parsed = receipt.parsed,
-                    sourceUrl = receipt.sourceUrl,
-                    documentPath = receipt.documentPath
-                )
-            }
+        val electronic = QrReader.decode(bitmap)?.let { eReceipts.resolve(it, model) }
+        if (electronic != null && electronic.parsed.tellsEverything) {
+            return@withContext ScannedReceipt(
+                parsed = electronic.parsed,
+                sourceUrl = electronic.sourceUrl,
+                documentPath = electronic.documentPath
+            )
         }
 
+        val paper = readPaper(bitmap)
+        val parsed = ReceiptParser.combined(electronic?.parsed, paper)
+        parsed
+            ?.takeIf { it.amountMinor != null || electronic?.sourceUrl != null }
+            ?.let {
+                ScannedReceipt(
+                    parsed = it,
+                    sourceUrl = electronic?.sourceUrl,
+                    documentPath = electronic?.documentPath
+                )
+            }
+    }
+
+    private val ParsedReceipt.tellsEverything: Boolean
+        get() = amountMinor != null && items.isNotEmpty()
+
+    private fun readPaper(bitmap: Bitmap): ParsedReceipt {
         val quick = ReceiptParser.parse(bestReading(bitmap, Engine.QUICK), model)
         // A slip the quick model cannot settle gets a second reading from the
         // slow and careful one — a few more seconds against giving up on it.
-        val parsed = if (quick.amountMinor != null) {
+        return if (quick.amountMinor != null) {
             quick
         } else {
             ReceiptParser.parse(bestReading(bitmap, Engine.CAREFUL), model)
         }
-        parsed.takeIf { it.amountMinor != null }?.let { ScannedReceipt(it) }
     }
 
     /**

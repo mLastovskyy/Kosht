@@ -46,6 +46,12 @@ interface TransactionDao {
     suspend fun getById(id: Long): TransactionWithCategory?
 
     @Query(
+        "SELECT accountId FROM transactions WHERE accountId IS NOT NULL " +
+            "AND transferToAccountId IS NULL ORDER BY timestamp DESC, id DESC LIMIT 1"
+    )
+    suspend fun lastUsedAccountId(): Long?
+
+    @Query(
         "SELECT COALESCE(SUM(amountMinor), 0) FROM transactions " +
             "WHERE type = :type AND transferToAccountId IS NULL " +
             "AND timestamp >= :from AND timestamp < :to"

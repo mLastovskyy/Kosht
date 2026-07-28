@@ -60,6 +60,7 @@ import by.mlastovsky.kosht.ui.components.AnimatedAmountText
 import by.mlastovsky.kosht.ui.components.Avatar
 import by.mlastovsky.kosht.ui.components.EmptyState
 import by.mlastovsky.kosht.ui.components.TransactionRow
+import by.mlastovsky.kosht.ui.components.rememberFullTextReveal
 import by.mlastovsky.kosht.ui.profile.ProfileDialog
 import by.mlastovsky.kosht.ui.relativeDate
 import by.mlastovsky.kosht.ui.theme.KoshtTheme
@@ -86,6 +87,7 @@ fun HomeScreen(
     }
 
     var showProfile by remember { mutableStateOf(false) }
+    var openedItemsId by remember { mutableStateOf<Long?>(null) }
 
     LazyColumn(
         modifier = Modifier
@@ -253,6 +255,15 @@ fun HomeScreen(
                     relativeDate(Dates.toLocalDate(item.transaction.timestamp))
                 },
                 accounts = state.accounts,
+                items = state.itemsByRecord[item.transaction.id].orEmpty(),
+                itemsShown = openedItemsId == item.transaction.id,
+                onItemsClick = {
+                    openedItemsId = if (openedItemsId == item.transaction.id) {
+                        null
+                    } else {
+                        item.transaction.id
+                    }
+                },
                 modifier = Modifier.animateItem()
             )
         }
@@ -305,10 +316,15 @@ private fun BalanceCard(
                 style = MaterialTheme.typography.labelLarge,
                 color = MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.8f)
             )
+            val balanceReveal = rememberFullTextReveal()
             AnimatedAmountText(
                 text = Money.format(balanceMinor, currencyCode),
                 style = MaterialTheme.typography.displaySmall,
-                color = MaterialTheme.colorScheme.onPrimary
+                color = MaterialTheme.colorScheme.onPrimary,
+                reveal = balanceReveal,
+                modifier = Modifier.clickable(enabled = balanceReveal.truncated) {
+                    balanceReveal.reveal()
+                }
             )
             if (balanceBynMinor != null) {
                 Text(
@@ -346,10 +362,12 @@ private fun MonthStat(
     iconTint: Color,
     modifier: Modifier = Modifier
 ) {
+    val reveal = rememberFullTextReveal()
     Row(
         modifier = modifier
             .clip(MaterialTheme.shapes.large)
             .background(MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.14f))
+            .clickable(enabled = reveal.truncated) { reveal.reveal() }
             .padding(horizontal = 12.dp, vertical = 10.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(8.dp)
@@ -377,7 +395,8 @@ private fun MonthStat(
             AnimatedAmountText(
                 text = amountText,
                 style = MaterialTheme.typography.titleSmall,
-                color = MaterialTheme.colorScheme.onPrimary
+                color = MaterialTheme.colorScheme.onPrimary,
+                reveal = reveal
             )
         }
     }

@@ -115,6 +115,18 @@ object ReceiptParser {
     fun parse(text: String, model: LineModel? = null): ParsedReceipt =
         parse(ReceiptLine.of(text), model)
 
+    fun combined(electronic: ParsedReceipt?, paper: ParsedReceipt?): ParsedReceipt? {
+        if (electronic == null) return paper
+        if (paper == null) return electronic
+        val amount = electronic.amountMinor ?: paper.amountMinor
+        return ParsedReceipt(
+            amountMinor = amount,
+            date = electronic.date ?: paper.date,
+            merchant = electronic.merchant ?: paper.merchant,
+            items = reconciled(electronic.items.ifEmpty { paper.items }, amount)
+        )
+    }
+
     fun parse(lines: List<ReceiptLine>, model: LineModel? = null): ParsedReceipt {
         val cleaned = OcrDigits.repair(lines)
             .map { it.copy(text = it.text.trim()) }

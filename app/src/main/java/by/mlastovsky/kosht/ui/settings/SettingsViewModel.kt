@@ -130,8 +130,8 @@ class SettingsViewModel(
     val profile: StateFlow<UserProfile?> = settingsRepository.profile
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), null)
 
-    fun saveProfile(name: String, nickname: String) {
-        viewModelScope.launch { settingsRepository.setProfile(name, nickname) }
+    fun saveProfile(nickname: String) {
+        viewModelScope.launch { settingsRepository.setProfile(nickname) }
     }
 
     fun setProfilePhoto(uri: Uri) {

@@ -42,8 +42,8 @@
     <string name="auto_convert">Convert on currency change</string>
     <string name="auto_convert_desc">At the NBRB rate</string>
     <string name="settings_profile">Profile</string>
-    <string name="profile_name">Name</string>
     <string name="profile_nickname">Nickname</string>
+    <string name="profile_nickname_hint">Kosht greets you by it and puts it on the report</string>
     <string name="profile_default_name">User</string>
     <string name="profile_edit_hint">Tap to set up your profile</string>
     <string name="profile_photo_hint">Tap the avatar to pick a photo, press and hold to remove it</string>

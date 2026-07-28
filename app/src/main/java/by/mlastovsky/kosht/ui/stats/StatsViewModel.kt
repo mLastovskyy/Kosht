@@ -361,7 +361,7 @@ class StatsViewModel(
             daysWithoutSpending = daysWithoutSpending,
             topSlice = topSlice,
             tips = tips,
-            userName = profile.name.ifBlank { profile.nickname },
+            userName = profile.nickname,
             periodStart = start,
             periodEnd = end
         )

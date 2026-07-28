@@ -42,7 +42,6 @@ fun ProfileDialog(
     val current = profile ?: return
     val defaultName = stringResource(R.string.profile_default_name)
 
-    var name by remember(current.name) { mutableStateOf(current.name) }
     var nickname by remember(current.nickname) { mutableStateOf(current.nickname) }
     var confirmRemovePhoto by remember { mutableStateOf(false) }
     val photoLauncher = rememberLauncherForActivityResult(
@@ -86,7 +85,7 @@ fun ProfileDialog(
 
                 Avatar(
                     photoPath = current.photoPath,
-                    fallbackText = nickname.ifBlank { name.ifBlank { defaultName } },
+                    fallbackText = nickname.ifBlank { defaultName },
                     size = 72.dp,
                     modifier = Modifier.combinedClickable(
                         onClick = {
@@ -119,17 +118,10 @@ fun ProfileDialog(
                     }
                 }
                 OutlinedTextField(
-                    value = name,
-                    onValueChange = { name = it.take(40) },
-                    label = { Text(stringResource(R.string.profile_name)) },
-                    singleLine = true,
-                    keyboardOptions = TextInput.Name,
-                    modifier = Modifier.fillMaxWidth()
-                )
-                OutlinedTextField(
                     value = nickname,
                     onValueChange = { nickname = it.take(24) },
                     label = { Text(stringResource(R.string.profile_nickname)) },
+                    supportingText = { Text(stringResource(R.string.profile_nickname_hint)) },
                     singleLine = true,
                     keyboardOptions = TextInput.Name,
                     modifier = Modifier.fillMaxWidth()
@@ -139,7 +131,7 @@ fun ProfileDialog(
         confirmButton = {
             TextButton(
                 onClick = {
-                    viewModel.save(name, nickname)
+                    viewModel.save(nickname)
                     onDismiss()
                 }
             ) { Text(stringResource(R.string.editor_save)) }

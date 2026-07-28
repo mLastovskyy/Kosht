@@ -4,9 +4,18 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.platform.LocalLocale
 import androidx.compose.ui.res.stringResource
 import by.mlastovsky.kosht.R
+import by.mlastovsky.kosht.ui.editor.formatQuantity
 import by.mlastovsky.kosht.util.Dates
+import by.mlastovsky.kosht.util.Money
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
+import kotlin.math.roundToLong
+
+fun countedAt(quantity: Double?, amountMinor: Long, currencyCode: String): String? {
+    if (quantity == null || quantity <= 0.0 || amountMinor <= 0) return null
+    val unit = (amountMinor / quantity).roundToLong()
+    return formatQuantity(quantity) + " × " + Money.format(unit, currencyCode)
+}
 
 @Composable
 fun relativeDate(date: LocalDate): String {

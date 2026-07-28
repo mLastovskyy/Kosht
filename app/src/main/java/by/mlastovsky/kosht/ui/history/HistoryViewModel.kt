@@ -9,6 +9,7 @@ import by.mlastovsky.kosht.data.TransactionRepository
 import by.mlastovsky.kosht.data.db.AccountEntity
 import by.mlastovsky.kosht.data.db.CategoryEntity
 import by.mlastovsky.kosht.data.db.TransactionEntity
+import by.mlastovsky.kosht.data.db.TransactionItemEntity
 import by.mlastovsky.kosht.data.db.TransactionWithCategory
 import by.mlastovsky.kosht.model.TransactionType
 import by.mlastovsky.kosht.util.Dates
@@ -43,7 +44,9 @@ data class HistoryUiState(
     val categories: List<CategoryEntity> = emptyList(),
     val currencyCode: String = SettingsRepository.DEFAULT_CURRENCY,
 
-    val accounts: List<AccountEntity> = emptyList()
+    val accounts: List<AccountEntity> = emptyList(),
+
+    val itemsByRecord: Map<Long, List<TransactionItemEntity>> = emptyMap()
 ) {
     val isCurrentMonth: Boolean
         get() = month == YearMonth.now()
@@ -70,7 +73,12 @@ class HistoryViewModel(
 
     private val filters = MutableStateFlow(Filters())
 
-    private val periodTransactions = filters
+    private data class Period(
+        val transactions: List<TransactionWithCategory>,
+        val itemsByRecord: Map<Long, List<TransactionItemEntity>>
+    )
+
+    private val period = filters
         .flatMapLatest { f ->
             val (from, to) = if (f.rangeStart != null) {
                 val end = f.rangeEnd ?: f.rangeStart
@@ -79,17 +87,21 @@ class HistoryViewModel(
                 val range = Dates.monthRange(f.month)
                 range.first to range.last + 1
             }
-            repository.observeBetween(from, to)
+            combine(
+                repository.observeBetween(from, to),
+                repository.observeItemsByRecord(from, to),
+                ::Period
+            )
         }
 
     val uiState: StateFlow<HistoryUiState> = combine(
         filters,
-        periodTransactions,
+        period,
         repository.observeCategories(),
         settingsRepository.settings,
         accountRepository.observeAccounts()
-    ) { f, transactions, categories, settings, accounts ->
-        val filtered = transactions
+    ) { f, shown, categories, settings, accounts ->
+        val filtered = shown.transactions
 
             .filter { !it.transaction.isTransfer || (f.type == null && f.categoryId == null) }
             .filter { f.type == null || it.transaction.type == f.type }
@@ -120,7 +132,8 @@ class HistoryViewModel(
             groups = groups,
             categories = categories,
             currencyCode = settings.currencyCode,
-            accounts = accounts
+            accounts = accounts,
+            itemsByRecord = shown.itemsByRecord
         )
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), HistoryUiState())
 

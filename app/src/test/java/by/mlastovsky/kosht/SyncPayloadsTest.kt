@@ -245,7 +245,6 @@ class SyncPayloadsTest {
     private val untouched = SyncedSettings(
         updatedAt = 0,
         settings = defaults,
-        profileName = "",
         profileNickname = "",
         profileEmoji = null
     )
@@ -267,7 +266,6 @@ class SyncPayloadsTest {
                 autoCalculator = false,
                 syncPhotos = true
             ),
-            profileName = "Максим",
             profileNickname = "mLastovskyy",
             profileEmoji = "emoji:🦊"
         )
@@ -275,10 +273,20 @@ class SyncPayloadsTest {
         val arrived = SyncPayloads.toSettings(SyncPayloads.of(mine), 500, untouched)
 
         assertEquals(mine.settings, arrived.settings)
-        assertEquals("Максим", arrived.profileName)
         assertEquals("mLastovskyy", arrived.profileNickname)
         assertEquals("emoji:🦊", arrived.profileEmoji)
         assertEquals(500L, arrived.updatedAt)
+    }
+
+    @Test
+    fun `a name from an older build arrives as the nickname`() {
+        val payload = SyncPayloads.of(untouched)
+        payload.remove("profileNickname")
+        payload.put("profileName", "Максим")
+
+        val arrived = SyncPayloads.toSettings(payload, 500, untouched)
+
+        assertEquals("Максим", arrived.profileNickname)
     }
 
     @Test

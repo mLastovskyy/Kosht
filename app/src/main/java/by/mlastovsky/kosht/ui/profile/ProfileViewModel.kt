@@ -23,8 +23,8 @@ class ProfileViewModel(
         .map { it as UserProfile? }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), null)
 
-    fun save(name: String, nickname: String) {
-        viewModelScope.launch { settingsRepository.setProfile(name, nickname) }
+    fun save(nickname: String) {
+        viewModelScope.launch { settingsRepository.setProfile(nickname) }
     }
 
     fun setPhoto(uri: Uri) {

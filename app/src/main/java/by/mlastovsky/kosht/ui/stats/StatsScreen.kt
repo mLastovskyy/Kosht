@@ -88,7 +88,7 @@ import by.mlastovsky.kosht.ui.components.TransactionRow
 import by.mlastovsky.kosht.ui.components.TruncatedText
 import by.mlastovsky.kosht.ui.components.monthTitle
 import by.mlastovsky.kosht.ui.components.rememberFullTextReveal
-import by.mlastovsky.kosht.ui.editor.formatQuantity
+import by.mlastovsky.kosht.ui.countedAt
 import by.mlastovsky.kosht.ui.relativeDate
 import by.mlastovsky.kosht.util.Money
 import java.time.LocalDate
@@ -313,26 +313,17 @@ private fun ProductRowItem(
         horizontalArrangement = Arrangement.spacedBy(12.dp)
     ) {
         Column(Modifier.weight(1f)) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                TruncatedText(
-                    text = product.name,
-                    style = MaterialTheme.typography.bodyLarge,
-                    modifier = Modifier.weight(1f)
-                )
-                Text(
-
-                    text = product.quantity?.let { quantity ->
-                        formatQuantity(quantity) + " × " +
-                            Money.format(
-                                Math.round(product.totalMinor / quantity),
-                                currencyCode
-                            )
-                    } ?: stringResource(R.string.stats_product_times, product.lines),
-                    style = MaterialTheme.typography.labelMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    maxLines = 1
-                )
-            }
+            TruncatedText(
+                text = product.name,
+                style = MaterialTheme.typography.bodyLarge
+            )
+            Text(
+                text = countedAt(product.quantity, product.totalMinor, currencyCode)
+                    ?: stringResource(R.string.stats_product_times, product.lines),
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                maxLines = 1
+            )
             LinearProgressIndicator(
                 progress = { product.share },
                 color = color,
@@ -704,7 +695,7 @@ private fun CategorySliceRow(
                     style = MaterialTheme.typography.bodyLarge,
                     reveal = reveal,
                     revealOnClick = false,
-                    modifier = Modifier.weight(1f, fill = false)
+                    modifier = Modifier.weight(1f)
                 )
 
                 if (products > 0) {
@@ -727,11 +718,12 @@ private fun CategorySliceRow(
                         modifier = Modifier.padding(start = 2.dp)
                     )
                 }
-                Spacer(Modifier.weight(1f))
                 Text(
                     text = "${(slice.share * 100).roundToInt()} %",
                     style = MaterialTheme.typography.labelMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    maxLines = 1,
+                    modifier = Modifier.padding(start = 8.dp)
                 )
             }
             LinearProgressIndicator(

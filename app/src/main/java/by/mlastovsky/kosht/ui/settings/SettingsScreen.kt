@@ -168,11 +168,7 @@ fun SettingsScreen(
                         style = MaterialTheme.typography.titleMedium
                     )
                 },
-                supportingContent = {
-                    Text(
-                        p.name.ifBlank { stringResource(R.string.profile_edit_hint) }
-                    )
-                },
+                supportingContent = { Text(stringResource(R.string.profile_edit_hint)) },
                 leadingContent = {
                     Avatar(
                         photoPath = p.photoPath,

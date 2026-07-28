@@ -45,6 +45,21 @@ interface TransactionItemDao {
     fun observeBetween(from: Long, to: Long): Flow<List<ItemInContext>>
 
     @Query(
+        "SELECT i.* FROM transaction_items i " +
+            "JOIN transactions t ON t.id = i.transactionId " +
+            "WHERE t.timestamp >= :from AND t.timestamp < :to " +
+            "ORDER BY i.transactionId ASC, i.position ASC, i.id ASC"
+    )
+    fun observeForRange(from: Long, to: Long): Flow<List<TransactionItemEntity>>
+
+    @Query(
+        "SELECT i.* FROM transaction_items i WHERE i.transactionId IN " +
+            "(SELECT id FROM transactions ORDER BY timestamp DESC, id DESC LIMIT :limit) " +
+            "ORDER BY i.transactionId ASC, i.position ASC, i.id ASC"
+    )
+    fun observeForRecent(limit: Int): Flow<List<TransactionItemEntity>>
+
+    @Query(
         "SELECT i.name FROM transaction_items i " +
             "JOIN transactions t ON t.id = i.transactionId " +
             "WHERE t.categoryId = :categoryId " +

@@ -42,8 +42,8 @@
     <string name="auto_convert">Пересчёт при смене валюты</string>
     <string name="auto_convert_desc">По курсу НБРБ</string>
     <string name="settings_profile">Профиль</string>
-    <string name="profile_name">Имя</string>
     <string name="profile_nickname">Никнейм</string>
+    <string name="profile_nickname_hint">Так Kosht здоровается и подписывает отчёт</string>
     <string name="profile_default_name">User</string>
     <string name="profile_edit_hint">Нажмите, чтобы настроить профиль</string>
     <string name="profile_photo_hint">Нажмите на аватар, чтобы выбрать фото; удерживайте, чтобы убрать</string>

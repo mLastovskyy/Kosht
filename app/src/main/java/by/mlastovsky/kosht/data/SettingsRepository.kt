@@ -58,20 +58,17 @@ data class SyncedSettings(
 
     val updatedAt: Long,
     val settings: AppSettings,
-    val profileName: String,
     val profileNickname: String,
 
     val profileEmoji: String?
 )
 
 data class UserProfile(
-    val name: String,
     val nickname: String,
     val photoPath: String?
 ) {
 
-    fun displayName(fallback: String): String =
-        nickname.ifBlank { name.ifBlank { fallback } }
+    fun displayName(fallback: String): String = nickname.ifBlank { fallback }
 }
 
 class SettingsRepository(private val context: Context) {
@@ -107,7 +104,7 @@ class SettingsRepository(private val context: Context) {
         val notifyAwards = booleanPreferencesKey("notify_awards")
         val notificationsAsked = booleanPreferencesKey("notifications_asked")
         val tourSeen = booleanPreferencesKey("tour_seen")
-        val profileName = stringPreferencesKey("profile_name")
+        val retiredProfileName = stringPreferencesKey("profile_name")
         val profileNickname = stringPreferencesKey("profile_nickname")
         val profilePhotoPath = stringPreferencesKey("profile_photo_path")
         val avatarSeeded = booleanPreferencesKey("avatar_seeded")
@@ -180,16 +177,16 @@ class SettingsRepository(private val context: Context) {
 
     val profile: Flow<UserProfile> = context.dataStore.data.map { prefs ->
         UserProfile(
-            name = prefs[Keys.profileName] ?: "",
-            nickname = prefs[Keys.profileNickname] ?: "",
+            nickname = prefs[Keys.profileNickname]?.takeIf { it.isNotBlank() }
+                ?: prefs[Keys.retiredProfileName].orEmpty(),
             photoPath = prefs[Keys.profilePhotoPath]?.takeIf { it.isNotBlank() }
         )
     }
 
-    suspend fun setProfile(name: String, nickname: String) {
+    suspend fun setProfile(nickname: String) {
         bumped {
-            it[Keys.profileName] = name.trim().take(40)
             it[Keys.profileNickname] = nickname.trim().take(24)
+            it.remove(Keys.retiredProfileName)
         }
     }
 
@@ -279,7 +276,6 @@ class SettingsRepository(private val context: Context) {
         return SyncedSettings(
             updatedAt = prefs[Keys.updatedAt] ?: 0L,
             settings = current,
-            profileName = user.name,
             profileNickname = user.nickname,
             profileEmoji = user.photoPath?.takeIf {
                 it.startsWith(EMOJI_AVATAR_PREFIX)
@@ -308,8 +304,8 @@ class SettingsRepository(private val context: Context) {
             prefs[Keys.reportPeriod] = incoming.reportPeriod
             prefs[Keys.autoCalculator] = incoming.autoCalculator
             prefs[Keys.syncPhotos] = incoming.syncPhotos
-            prefs[Keys.profileName] = remote.profileName
             prefs[Keys.profileNickname] = remote.profileNickname
+            prefs.remove(Keys.retiredProfileName)
 
             val localPhoto = prefs[Keys.profilePhotoPath].orEmpty()
             val localIsPicture = localPhoto.isNotBlank() &&

@@ -416,6 +416,50 @@ class ReceiptParserTest {
     }
 
     @Test
+    fun `a slip that keeps its shopping behind a QR still gives up its total`() {
+        val text = """
+            Магазин "Маяк"
+            г. Минск, ул. В. Хоружей, 29
+            *********************************
+            Оставьте свой отзыв об обслуживании
+            +375-29-144-70-00 (Viber)
+            Касса 4
+            УНП 191178504            РН СККО 119034764
+            НЕ ЯВЛЯЕТСЯ ПЛАТЕЖНЫМ ДОКУМЕНТОМ
+            Платежный документ № док.00100789
+            Чек продажи 2648-4-4316538
+            Итого к оплате                    21.84
+            Для просмотра Вашего чека, сканируйте QR
+            Электронный чек - забота о природе
+        """.trimIndent()
+        val parsed = ReceiptParser.parse(text)
+        assertEquals(2184L, parsed.amountMinor)
+        assertEquals("Маяк", parsed.merchant)
+        assertEquals(emptyList<Any>(), parsed.items)
+    }
+
+    @Test
+    fun `an electronic receipt that names no sum keeps what the paper said`() {
+        val electronic = ReceiptParser.parse(
+            """
+                Электронный чек
+                Магазин "Маяк"
+                Загрузка…
+            """.trimIndent()
+        )
+        val paper = ReceiptParser.parse(
+            """
+                Магазин "Маяк"
+                Касса 4
+                Итого к оплате                    21.84
+            """.trimIndent()
+        )
+        val combined = ReceiptParser.combined(electronic, paper)
+        assertEquals(2184L, combined?.amountMinor)
+        assertEquals("Маяк", combined?.merchant)
+    }
+
+    @Test
     fun `a heading in an electronic receipt names the shop`() {
         val html = """
             <html><body>

@@ -19,10 +19,14 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.PlainTooltip
 import androidx.compose.material3.Text
+import androidx.compose.material3.TooltipBox
+import androidx.compose.material3.TooltipDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -107,29 +111,47 @@ fun CurrencyChips(
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AnimatedAmountText(
     text: String,
     style: TextStyle,
     modifier: Modifier = Modifier,
     color: Color = Color.Unspecified,
-    maxLines: Int = 1
+    maxLines: Int = 1,
+    reveal: FullTextReveal? = null
 ) {
-    AnimatedContent(
-        targetState = text,
-        transitionSpec = {
-            (slideInVertically { height -> -height / 2 } + fadeIn()) togetherWith
-                (slideOutVertically { height -> height / 2 } + fadeOut())
-        },
-        label = "amount"
-    ) { value ->
-        Text(
-            text = value,
-            style = style,
-            color = color,
-            maxLines = maxLines,
-            overflow = TextOverflow.Ellipsis,
-            modifier = modifier
+    val amount: @Composable () -> Unit = {
+        AnimatedContent(
+            targetState = text,
+            transitionSpec = {
+                (slideInVertically { height -> -height / 2 } + fadeIn()) togetherWith
+                    (slideOutVertically { height -> height / 2 } + fadeOut())
+            },
+            label = "amount"
+        ) { value ->
+            Text(
+                text = value,
+                style = style,
+                color = color,
+                maxLines = maxLines,
+                overflow = TextOverflow.Ellipsis,
+                onTextLayout = { layout ->
+                    if (value == text) reveal?.truncated = layout.hasVisualOverflow
+                },
+                modifier = modifier
+            )
+        }
+    }
+    if (reveal == null) {
+        amount()
+    } else {
+        TooltipBox(
+            positionProvider = TooltipDefaults.rememberPlainTooltipPositionProvider(),
+            tooltip = { PlainTooltip { Text(text) } },
+            state = reveal.tooltipState(),
+            enableUserInput = false,
+            content = { amount() }
         )
     }
 }
