@@ -284,8 +284,18 @@ class WalletViewModel(
     private fun inAppCurrency(amountMinor: Long, from: String): Long? {
         val to = uiState.value.currencyCode
         if (from == to) return amountMinor
-        val rate = suggestedRate(from, to) ?: return null
+        val rate = withdrawRateFor(from, to) ?: suggestedRate(from, to) ?: return null
         return Math.round(amountMinor * rate)
+    }
+
+    private fun withdrawRateFor(from: String, to: String): Double? {
+        val state = uiState.value
+        val rate = state.withdrawRate ?: return null
+        return when {
+            from == state.withdrawRateCurrency && to == "BYN" -> rate
+            from == "BYN" && to == state.withdrawRateCurrency -> 1.0 / rate
+            else -> null
+        }
     }
 
     fun deleteDebt(debt: DebtEntity) {
