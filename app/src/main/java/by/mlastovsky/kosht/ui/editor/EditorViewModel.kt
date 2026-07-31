@@ -15,6 +15,8 @@ import by.mlastovsky.kosht.data.TransactionRepository
 import by.mlastovsky.kosht.data.WalletRepository
 import by.mlastovsky.kosht.data.db.AccountEntity
 import by.mlastovsky.kosht.data.db.CategoryEntity
+import by.mlastovsky.kosht.data.db.DebtEntity
+import by.mlastovsky.kosht.data.db.SavingGoalEntity
 import by.mlastovsky.kosht.data.db.TransactionEntity
 import by.mlastovsky.kosht.data.receipt.ReceiptScanner
 import by.mlastovsky.kosht.model.DebtDirection
@@ -71,6 +73,14 @@ data class EditorUiState(
     val debtCategory: Boolean = false,
     val debtPerson: String = "",
 
+    val savingsCategory: Boolean = false,
+    val goals: List<SavingGoalEntity> = emptyList(),
+    val savingGoalId: Long? = null,
+
+    val debtRepayCategory: Boolean = false,
+    val debts: List<DebtEntity> = emptyList(),
+    val repayDebtId: Long? = null,
+
     val isTransfer: Boolean = false,
 
     val autoCalculator: Boolean = true,
@@ -119,7 +129,7 @@ data class PendingScan(
 class EditorViewModel(
     savedStateHandle: SavedStateHandle,
     private val repository: TransactionRepository,
-    settingsRepository: SettingsRepository,
+    private val settingsRepository: SettingsRepository,
     private val receiptScanner: ReceiptScanner,
     private val photoStore: PhotoStore,
     private val ratesRepository: RatesRepository,
@@ -148,6 +158,10 @@ class EditorViewModel(
         val amountFromItems: Boolean = false,
 
         val debtPerson: String = "",
+
+        val savingGoalId: Long? = null,
+
+        val repayDebtId: Long? = null,
 
         val original: TransactionEntity? = null
     )
@@ -203,16 +217,33 @@ class EditorViewModel(
         ::Aux
     )
 
+    private data class WalletOptions(
+        val goals: List<SavingGoalEntity>,
+        val debts: List<DebtEntity>
+    )
+
+    private val walletOptions = combine(
+        walletRepository.observeGoals(),
+        walletRepository.observeDebts()
+    ) { goals, debts ->
+        WalletOptions(
+            goals = goals.filter { it.achievedAt == null },
+            debts = debts.filter { it.direction == DebtDirection.I_OWE }
+        )
+    }
+
     val uiState: StateFlow<EditorUiState> = combine(
         draft,
         categoriesForType,
         settingsRepository.settings,
-        aux
-    ) { d, categories, settings, extras ->
+        aux,
+        walletOptions
+    ) { d, categories, settings, extras, options ->
         val effectiveCategoryId = when {
             d.categoryId != null && categories.any { it.id == d.categoryId } -> d.categoryId
             else -> categories.firstOrNull()?.id
         }
+        val selectedKey = categories.firstOrNull { it.id == effectiveCategoryId }?.key
         EditorUiState(
             loaded = d.loaded,
             isEdit = d.original != null,
@@ -238,10 +269,14 @@ class EditorViewModel(
             itemSuggestions = extras.itemHints.names,
             itemCategoryKey = extras.itemHints.categoryKey,
 
-            debtCategory = d.original == null &&
-                categories.firstOrNull { it.id == effectiveCategoryId }?.key ==
-                CategorySeed.DEBT_INCOME,
+            debtCategory = d.original == null && selectedKey == CategorySeed.DEBT_INCOME,
             debtPerson = d.debtPerson,
+            savingsCategory = d.original == null && selectedKey == CategorySeed.SAVINGS_EXPENSE,
+            goals = options.goals,
+            savingGoalId = d.savingGoalId?.takeIf { id -> options.goals.any { it.id == id } },
+            debtRepayCategory = d.original == null && selectedKey == CategorySeed.DEBT_EXPENSE,
+            debts = options.debts,
+            repayDebtId = d.repayDebtId?.takeIf { id -> options.debts.any { it.id == id } },
             autoCalculator = settings.autoCalculator,
             calcInput = extras.calcInput
         )
@@ -359,12 +394,8 @@ class EditorViewModel(
     fun onDigit(digit: Char) {
         calcInput.update { input ->
             val operand = lastOperand(input)
-            val fractionDigits = Money.fractionDigits(currentCurrency())
-            val decimalIndex = operand.indexOf('.')
             when {
-                decimalIndex >= 0 && operand.length - decimalIndex - 1 >= fractionDigits ->
-                    input
-                decimalIndex < 0 && operand.trimStart('0').length >= MAX_INTEGER_DIGITS ->
+                !operand.contains('.') && operand.trimStart('0').length >= MAX_INTEGER_DIGITS ->
                     input
                 operand == "0" -> input.dropLast(1) + digit
                 else -> input + digit
@@ -373,7 +404,6 @@ class EditorViewModel(
     }
 
     fun onDecimal() {
-        if (Money.fractionDigits(currentCurrency()) == 0) return
         calcInput.update { input ->
             val operand = lastOperand(input)
             when {
@@ -540,6 +570,14 @@ class EditorViewModel(
         draft.update { it.copy(debtPerson = name.take(DEBT_PERSON_MAX)) }
     }
 
+    fun selectSavingGoal(id: Long?) {
+        draft.update { it.copy(savingGoalId = id) }
+    }
+
+    fun selectRepayDebt(id: Long?) {
+        draft.update { it.copy(repayDebtId = id) }
+    }
+
     fun save(onDone: () -> Unit) {
         val state = uiState.value
         val amountMinor = Expr
@@ -569,16 +607,35 @@ class EditorViewModel(
                 )
                 repository.saveItems(original.id, draft.value.items)
             } else {
-                val debtId = if (state.debtCategory && state.debtPerson.isNotBlank()) {
-                    walletRepository.addDebt(
+                var debtId: Long? = null
+                var debtDeltaMinor = 0L
+                if (state.debtCategory && state.debtPerson.isNotBlank()) {
+                    debtId = walletRepository.addDebt(
                         personName = state.debtPerson,
                         direction = DebtDirection.I_OWE,
                         amountMinor = amountMinor,
                         currencyCode = state.currencyCode,
                         note = state.note.trim()
                     )
+                    debtDeltaMinor = -amountMinor
+                }
+                val repayTarget = if (state.debtRepayCategory) {
+                    state.debts.firstOrNull { it.id == state.repayDebtId }
                 } else {
                     null
+                }
+                if (repayTarget != null) {
+                    val repaidTotal = convertMinor(
+                        amountMinor,
+                        state.currencyCode,
+                        repayTarget.currencyCode
+                    )
+                    if (repaidTotal != null && repaidTotal > 0) {
+                        val repaid = repaidTotal.coerceAtMost(repayTarget.amountMinor)
+                        walletRepository.repayDebt(repayTarget, repaid)
+                        debtId = repayTarget.id
+                        debtDeltaMinor = repaid
+                    }
                 }
                 val id = repository.addTransaction(
                     TransactionEntity(
@@ -595,13 +652,42 @@ class EditorViewModel(
                         receiptDocPath = draft.value.receiptDocPath,
                         scanned = draft.value.scanned,
                         debtId = debtId,
-                        debtDeltaMinor = if (debtId == null) 0 else -amountMinor
+                        debtDeltaMinor = debtDeltaMinor
                     )
                 )
                 repository.saveItems(id, draft.value.items)
+                if (state.savingsCategory) {
+                    val goal = state.goals.firstOrNull { it.id == state.savingGoalId }
+                    val savedCurrency = goal?.currencyCode ?: state.currencyCode
+                    val savedMinor = convertMinor(amountMinor, state.currencyCode, savedCurrency)
+                    if (savedMinor != null && savedMinor > 0) {
+                        walletRepository.addSaving(
+                            amountMinor = savedMinor,
+                            currencyCode = savedCurrency,
+                            note = state.note.trim(),
+                            goalId = goal?.id
+                        )
+                    }
+                }
             }
             onDone()
         }
+    }
+
+    private suspend fun convertMinor(amountMinor: Long, from: String, to: String): Long? {
+        if (from == to) return amountMinor
+        val settings = settingsRepository.settings.first()
+        val withdrawRate = settings.withdrawRate
+        if (withdrawRate != null) {
+            if (from == settings.withdrawRateCurrency && to == "BYN") {
+                return Math.round(amountMinor * withdrawRate)
+            }
+            if (from == "BYN" && to == settings.withdrawRateCurrency) {
+                return Math.round(amountMinor / withdrawRate)
+            }
+        }
+        val rates = ratesRepository.rates.first()
+        return RatesRepository.convertMinor(amountMinor, from, to, rates)
     }
 
     private suspend fun resolveBynMinor(

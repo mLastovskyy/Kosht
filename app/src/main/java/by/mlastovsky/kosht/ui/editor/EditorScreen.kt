@@ -32,6 +32,8 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
@@ -55,6 +57,7 @@ import androidx.compose.material3.DatePicker
 import androidx.compose.material3.DatePickerDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilledTonalIconButton
+import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
@@ -386,6 +389,29 @@ fun EditorScreen(
                 )
             }
 
+            AnimatedVisibility(visible = state.savingsCategory && state.goals.isNotEmpty()) {
+                LinkChips(
+                    label = stringResource(R.string.goals_pick),
+                    noneLabel = stringResource(R.string.goals_none),
+                    options = state.goals.map { it.id to it.title },
+                    selectedId = state.savingGoalId,
+                    onSelect = viewModel::selectSavingGoal
+                )
+            }
+
+            AnimatedVisibility(visible = state.debtRepayCategory && state.debts.isNotEmpty()) {
+                LinkChips(
+                    label = stringResource(R.string.editor_repay_pick),
+                    noneLabel = stringResource(R.string.editor_repay_none),
+                    options = state.debts.map {
+                        it.id to
+                            "${it.personName} · ${Money.format(it.amountMinor, it.currencyCode)}"
+                    },
+                    selectedId = state.repayDebtId,
+                    onSelect = viewModel::selectRepayDebt
+                )
+            }
+
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -694,6 +720,44 @@ private fun newCameraUri(context: android.content.Context): Uri {
     val dir = File(context.cacheDir, "receipts").apply { mkdirs() }
     val file = File(dir, "receipt_${System.currentTimeMillis()}.jpg")
     return FileProvider.getUriForFile(context, context.packageName + ".fileprovider", file)
+}
+
+@Composable
+private fun LinkChips(
+    label: String,
+    noneLabel: String,
+    options: List<Pair<Long, String>>,
+    selectedId: Long?,
+    onSelect: (Long?) -> Unit
+) {
+    Column(Modifier.padding(vertical = 6.dp)) {
+        Text(
+            text = label,
+            style = MaterialTheme.typography.labelLarge,
+            modifier = Modifier.padding(horizontal = 16.dp)
+        )
+        LazyRow(
+            contentPadding = PaddingValues(horizontal = 16.dp),
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            item {
+                FilterChip(
+                    selected = selectedId == null,
+                    onClick = { onSelect(null) },
+                    label = { Text(noneLabel, maxLines = 1) }
+                )
+            }
+            items(options, key = { it.first }) { (id, title) ->
+                FilterChip(
+                    selected = selectedId == id,
+                    onClick = { onSelect(id) },
+                    label = {
+                        Text(title, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                    }
+                )
+            }
+        }
+    }
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
