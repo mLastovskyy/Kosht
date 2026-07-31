@@ -177,6 +177,7 @@ fun LockScreen(
             onDigit = viewModel::typeDigit,
             onBackspace = viewModel::backspace,
             enabled = waitMillis == 0L && !entry.busy,
+            dimmed = waitMillis > 0L,
             onBiometric = if (fingerReady) askForFinger else null,
             modifier = Modifier.widthIn(max = 340.dp)
         )

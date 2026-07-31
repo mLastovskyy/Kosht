@@ -31,6 +31,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.layout
@@ -105,6 +106,7 @@ fun PinKeypad(
     onDigit: (Char) -> Unit,
     onBackspace: () -> Unit,
     enabled: Boolean = true,
+    dimmed: Boolean = false,
     onBiometric: (() -> Unit)? = null,
     modifier: Modifier = Modifier
 ) {
@@ -121,6 +123,7 @@ fun PinKeypad(
                     PinKey(
                         modifier = Modifier.weight(1f),
                         enabled = enabled,
+                        dimmed = dimmed,
                         background = MaterialTheme.colorScheme.surfaceContainer,
                         onClick = { onDigit(digit) }
                     ) {
@@ -142,6 +145,7 @@ fun PinKeypad(
                     modifier = Modifier.weight(1f),
 
                     enabled = true,
+                    dimmed = false,
                     background = MaterialTheme.colorScheme.primaryContainer,
                     onClick = onBiometric
                 ) {
@@ -157,6 +161,7 @@ fun PinKeypad(
             PinKey(
                 modifier = Modifier.weight(1f),
                 enabled = enabled,
+                dimmed = dimmed,
                 background = MaterialTheme.colorScheme.surfaceContainer,
                 onClick = { onDigit('0') }
             ) {
@@ -169,6 +174,7 @@ fun PinKeypad(
             PinKey(
                 modifier = Modifier.weight(1f),
                 enabled = enabled,
+                dimmed = dimmed,
                 background = Color.Transparent,
                 onClick = onBackspace
             ) {
@@ -186,17 +192,19 @@ fun PinKeypad(
 private fun PinKey(
     modifier: Modifier = Modifier,
     enabled: Boolean,
+    dimmed: Boolean,
     background: Color,
     onClick: () -> Unit,
     content: @Composable () -> Unit
 ) {
     val view = LocalView.current
-    val presses = remember(enabled) { MutableInteractionSource() }
+    val presses = remember { MutableInteractionSource() }
     Box(
         modifier = modifier
             .height(64.dp)
+            .alpha(if (dimmed) 0.4f else 1f)
             .clip(MaterialTheme.shapes.medium)
-            .background(if (enabled) background else background.copy(alpha = 0.4f))
+            .background(background)
             .clickable(
                 interactionSource = presses,
                 indication = ripple(),
