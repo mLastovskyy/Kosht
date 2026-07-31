@@ -3,17 +3,27 @@ package by.mlastovsky.kosht.ui.awards
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.TrendingUp
 import androidx.compose.material.icons.rounded.AccountBalance
+import androidx.compose.material.icons.rounded.AccountBalanceWallet
+import androidx.compose.material.icons.rounded.Apps
 import androidx.compose.material.icons.rounded.AutoAwesome
+import androidx.compose.material.icons.rounded.Beenhere
 import androidx.compose.material.icons.rounded.CalendarMonth
 import androidx.compose.material.icons.rounded.CameraAlt
+import androidx.compose.material.icons.rounded.CameraRoll
+import androidx.compose.material.icons.rounded.Castle
 import androidx.compose.material.icons.rounded.Category
 import androidx.compose.material.icons.rounded.CheckCircle
 import androidx.compose.material.icons.rounded.Collections
+import androidx.compose.material.icons.rounded.DarkMode
 import androidx.compose.material.icons.rounded.Diamond
 import androidx.compose.material.icons.rounded.EmojiEvents
 import androidx.compose.material.icons.rounded.EmojiFlags
 import androidx.compose.material.icons.rounded.EventAvailable
+import androidx.compose.material.icons.rounded.FitnessCenter
 import androidx.compose.material.icons.rounded.Flag
+import androidx.compose.material.icons.rounded.Grade
+import androidx.compose.material.icons.rounded.Handshake
+import androidx.compose.material.icons.rounded.HourglassFull
 import androidx.compose.material.icons.rounded.Insights
 import androidx.compose.material.icons.rounded.LocalFireDepartment
 import androidx.compose.material.icons.rounded.MilitaryTech
@@ -22,11 +32,13 @@ import androidx.compose.material.icons.rounded.Paid
 import androidx.compose.material.icons.rounded.Payments
 import androidx.compose.material.icons.rounded.PhotoLibrary
 import androidx.compose.material.icons.rounded.PriceCheck
+import androidx.compose.material.icons.rounded.RocketLaunch
 import androidx.compose.material.icons.rounded.Savings
 import androidx.compose.material.icons.rounded.Shield
 import androidx.compose.material.icons.rounded.Star
 import androidx.compose.material.icons.rounded.Stars
 import androidx.compose.material.icons.rounded.TaskAlt
+import androidx.compose.material.icons.rounded.Timeline
 import androidx.compose.material.icons.rounded.Verified
 import androidx.compose.material.icons.rounded.Whatshot
 import androidx.compose.material.icons.rounded.WorkspacePremium
@@ -65,6 +77,18 @@ object AwardVisuals {
         "goal_ten" -> Icons.Rounded.Stars
         "challenge_twenty" -> Icons.Rounded.Shield
         "thousand" -> Icons.Rounded.AutoAwesome
+        "night100" -> Icons.Rounded.DarkMode
+        "categories20" -> Icons.Rounded.Apps
+        "photo500" -> Icons.Rounded.CameraRoll
+        "debt_free" -> Icons.Rounded.Handshake
+        "goal_25" -> Icons.Rounded.Grade
+        "challenge_fifty" -> Icons.Rounded.FitnessCenter
+        "surplus_year" -> Icons.Rounded.Timeline
+        "perfect_year" -> Icons.Rounded.Beenhere
+        "treasury" -> Icons.Rounded.AccountBalanceWallet
+        "five_thousand" -> Icons.Rounded.RocketLaunch
+        "three_years" -> Icons.Rounded.HourglassFull
+        "millionaire" -> Icons.Rounded.Castle
         else -> Icons.Rounded.Verified
     }
 
@@ -98,6 +122,18 @@ object AwardVisuals {
         "goal_ten" -> R.string.badge_goal_ten
         "challenge_twenty" -> R.string.badge_challenge_twenty
         "thousand" -> R.string.badge_thousand
+        "night100" -> R.string.badge_night100
+        "categories20" -> R.string.badge_categories20
+        "photo500" -> R.string.badge_photo500
+        "debt_free" -> R.string.badge_debt_free
+        "goal_25" -> R.string.badge_goal_25
+        "challenge_fifty" -> R.string.badge_challenge_fifty
+        "surplus_year" -> R.string.badge_surplus_year
+        "perfect_year" -> R.string.badge_perfect_year
+        "treasury" -> R.string.badge_treasury
+        "five_thousand" -> R.string.badge_five_thousand
+        "three_years" -> R.string.badge_three_years
+        "millionaire" -> R.string.badge_millionaire
         else -> R.string.badge_streak365
     }
 
@@ -131,6 +167,18 @@ object AwardVisuals {
         "goal_ten" -> R.string.badge_goal_ten_desc
         "challenge_twenty" -> R.string.badge_challenge_twenty_desc
         "thousand" -> R.string.badge_thousand_desc
+        "night100" -> R.string.badge_night100_desc
+        "categories20" -> R.string.badge_categories20_desc
+        "photo500" -> R.string.badge_photo500_desc
+        "debt_free" -> R.string.badge_debt_free_desc
+        "goal_25" -> R.string.badge_goal_25_desc
+        "challenge_fifty" -> R.string.badge_challenge_fifty_desc
+        "surplus_year" -> R.string.badge_surplus_year_desc
+        "perfect_year" -> R.string.badge_perfect_year_desc
+        "treasury" -> R.string.badge_treasury_desc
+        "five_thousand" -> R.string.badge_five_thousand_desc
+        "three_years" -> R.string.badge_three_years_desc
+        "millionaire" -> R.string.badge_millionaire_desc
         else -> R.string.badge_streak365_desc
     }
 }

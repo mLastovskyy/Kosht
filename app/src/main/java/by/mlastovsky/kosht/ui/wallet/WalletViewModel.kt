@@ -53,6 +53,8 @@ data class GoalUi(
 data class WalletUiState(
     val loaded: Boolean = false,
     val currencyCode: String = SettingsRepository.DEFAULT_CURRENCY,
+    val withdrawRate: Double? = null,
+    val withdrawRateCurrency: String = "",
     val rates: Map<String, RateEntity> = emptyMap(),
     val ratesUpdatedAt: Long? = null,
     val refreshingRates: Boolean = false,
@@ -194,6 +196,8 @@ class WalletViewModel(
             accountsWithBalances = accountsWithBalances,
             loaded = true,
             currencyCode = settings.currencyCode,
+            withdrawRate = settings.withdrawRate,
+            withdrawRateCurrency = settings.withdrawRateCurrency,
             rates = rates,
             ratesUpdatedAt = rates.values.maxOfOrNull { it.updatedAt },
             refreshingRates = refreshing,

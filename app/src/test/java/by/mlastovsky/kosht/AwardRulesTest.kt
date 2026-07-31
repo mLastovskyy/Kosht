@@ -75,6 +75,45 @@ class AwardRulesTest {
         assertTrue("big_saver" in met(AwardStats(savedBynMinor = 100_000)))
         assertFalse("fortune" in met(AwardStats(savedBynMinor = 100_000)))
         assertTrue("fortune" in met(AwardStats(savedBynMinor = 500_000)))
+        assertFalse("treasury" in met(AwardStats(savedBynMinor = 500_000)))
+        assertTrue("treasury" in met(AwardStats(savedBynMinor = 2_000_000)))
+        assertFalse("millionaire" in met(AwardStats(savedBynMinor = 2_000_000)))
+        assertTrue("millionaire" in met(AwardStats(savedBynMinor = 10_000_000)))
+    }
+
+    @Test
+    fun `the hardest awards stay locked until their own thresholds`() {
+        val nearly = AwardStats(
+            txCount = 4999,
+            nightCount = 99,
+            photoCount = 499,
+            expenseCategoriesUsed = 19,
+            debtsClosed = 9,
+            goalsAchieved = 24,
+            challenges = done(49),
+            surplusMonthsInRow = 11,
+            perfectMonths = 11,
+            monthsTracked = 35
+        )
+        val locked = setOf(
+            "five_thousand", "night100", "photo500", "categories20", "debt_free",
+            "goal_25", "challenge_fifty", "surplus_year", "perfect_year", "three_years"
+        )
+        assertTrue(met(nearly).none { it in locked })
+
+        val enough = AwardStats(
+            txCount = 5000,
+            nightCount = 100,
+            photoCount = 500,
+            expenseCategoriesUsed = 20,
+            debtsClosed = 10,
+            goalsAchieved = 25,
+            challenges = done(50),
+            surplusMonthsInRow = 12,
+            perfectMonths = 12,
+            monthsTracked = 36
+        )
+        assertTrue(met(enough).containsAll(locked))
     }
 
     @Test

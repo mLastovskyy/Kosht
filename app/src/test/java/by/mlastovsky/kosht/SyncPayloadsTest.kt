@@ -236,8 +236,8 @@ class SyncPayloadsTest {
         convertOnCurrencyChange = true,
         multiAccount = false,
         transferFee = false,
-        reportFields = setOf("SPENT", "INCOME"),
-        reportPeriod = "MONTH",
+        withdrawRateCurrency = "",
+        withdrawRateText = "",
         autoCalculator = true,
         syncPhotos = false
     )
@@ -261,8 +261,8 @@ class SyncPayloadsTest {
                 dailyBudgetMinor = 4500,
                 showGreeting = false,
                 multiAccount = true,
-                reportFields = setOf("NET", "AVG_DAY", "FREE_DAYS"),
-                reportPeriod = "WEEK",
+                withdrawRateCurrency = "USD",
+                withdrawRateText = "3.25",
                 autoCalculator = false,
                 syncPhotos = true
             ),
@@ -293,16 +293,16 @@ class SyncPayloadsTest {
     fun `a field the other version never sent keeps its local value`() {
         val partial = SyncPayloads.of(untouched.copy(settings = defaults))
         partial.remove("notifyAwards")
-        partial.remove("reportPeriod")
+        partial.remove("dailyBudgetMinor")
 
         val mine = untouched.copy(
-            settings = defaults.copy(notifyAwards = false, reportPeriod = "YEAR")
+            settings = defaults.copy(notifyAwards = false, dailyBudgetMinor = 7700)
         )
         val arrived = SyncPayloads.toSettings(partial, 900, mine)
 
         // Missing is not the same as "switch it off".
         assertFalse(arrived.settings.notifyAwards)
-        assertEquals("YEAR", arrived.settings.reportPeriod)
+        assertEquals(7700L, arrived.settings.dailyBudgetMinor)
     }
 
     @Test

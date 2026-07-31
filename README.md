@@ -40,7 +40,7 @@ Nothing is uploaded: no keys, no services, no cloud.
 |---|---|
 | ⚡ **Three taps, no friction**<br/>The calculator opens with the record. Type `12,50+3,90`, pick a category, save. | 🧺 **What the money was for**<br/>Items inside a record — from a receipt or by hand — turn a category into an answer. |
 | 💱 **Currencies that stay honest**<br/>Official NBRB rates, a BYN equivalent everywhere, and the rate you paid frozen into history. | 👛 **A wallet, not just a ledger**<br/>Accounts and transfers, debts with repayments, savings, goals, planned payments you confirm. |
-| 🏆 **Habits, gently**<br/>An under-budget streak, challenges you set yourself, 30 awards that arrive on their own. | 📊 **Statistics three ways**<br/>A donut that answers a tap, a heatmap of your expensive days, and a report for any period. |
+| 🏆 **Habits, gently**<br/>An under-budget streak, challenges you set yourself, 44 awards that arrive on their own. | 📊 **Statistics that answer back**<br/>A donut and a daily chart that name what you tap, plus a heatmap of your expensive days. |
 | 🔐 **A lock of your own**<br/>A 4–8 digit code that is never stored in the clear, plus fingerprint entry and slower guessing. | ☁️ **Two phones, one truth**<br/>Optional account: per-record merge, deletions travel, offline is the normal case. |
 
 ---
@@ -54,7 +54,7 @@ Nothing is uploaded: no keys, no services, no cloud.
     <td align="center"><img src="screenshots/light/05_calendar.png" width="230"/><br/><b>Heatmap of the month</b><br/><sub>☀️ light</sub></td>
   </tr>
   <tr>
-    <td align="center"><img src="screenshots/06_report.png" width="230"/><br/><b>Report with tips</b><br/><sub>🌙 dark</sub></td>
+    <td align="center"><img src="screenshots/04_stats.png" width="230"/><br/><b>Charts that answer a tap</b><br/><sub>🌙 dark</sub></td>
     <td align="center"><img src="screenshots/07_achievements.png" width="230"/><br/><b>Streak &amp; challenges</b><br/><sub>🌙 dark</sub></td>
     <td align="center"><img src="screenshots/09_settings.png" width="230"/><br/><b>Make it yours</b><br/><sub>🌙 dark</sub></td>
   </tr>
@@ -114,7 +114,8 @@ checks, downloads and installs the update in place — no browser, nothing left 
 
 - **Expense or income** is a swipe apart — the same gesture that moves the app's tabs.
 - **The category carousel** is the same everywhere: tap to pick, hold and drag to reorder (kept app-wide), hold to edit name, icon, colour — or give it a photo from the gallery. Editing one opens on what it already wears: the rows of icons and colours are scrolled to the current pair rather than starting from the beginning. Deleting one moves its records to *Other* rather than losing them.
-- **Accounts.** One by default keeps things simple; add more and you get per-account balances, a picker in the editor and a filter in statistics. Turning the switch off only hides them — the accounts and their records stay, and the Wallet says so. **⇄** records a transfer between your own accounts — no chart, streak or report counts it as spending.
+- **Accounts.** One by default keeps things simple; add more and you get per-account balances, a picker in the editor and a filter in statistics. Turning the switch off only hides them — the accounts and their records stay. **⇄** records a transfer between your own accounts — no chart or streak counts it as spending.
+- **A record can move the Wallet with it.** Pick *To savings* and the editor offers your open goals, so saving is one record instead of two entries; pick *Debt repayment* and it offers the debts you owe, closing as much of the chosen one as the record covers.
 - **Items** — the products from a receipt or the parts of a payment. An empty sum is taken from them, suggestions offer what you wrote in this category before, and one product is one row however you spelled it. A record that carries items wears a small basket with their number under its name — never between the row and its amount, so every amount in a list stands in one column. A tap opens the shopping in a panel that lines up with the row above it: names under the name, sums under the sum, figures set in even-width digits. The sums keep a column of their own, as wide as the widest of them, so a price never touches the name it belongs to. Statistics and the editor's list are set the same way.
 - **Nothing is cut off silently.** A name, a note or an amount too long for its place ends in an ellipsis and spells itself out in full when tapped — in lists, in charts and on the balance card.
 - **The editor starts where you left off** — a new record opens on the account the last one moved on.
@@ -130,6 +131,7 @@ checks, downloads and installs the update in place — no browser, nothing left 
 - **Savings and goals.** Set aside in any currency; change a goal's name, target or currency later and what is already saved moves across at the official rate. A saving opens for editing on a tap: the amount, set aside or withdrawn, the currency, the note, the date it happened and the goal it counts towards.
 - **Planned payments — outgoing or incoming.** Nothing is ever charged silently: a due payment waits for your confirmation, with the amount and the rate editable. A payment switched off goes dim — name and icon both — so a paused one reads at a glance.
 - **Switch the app currency** and everything follows at the live rate — records, budget, savings, goals, debts, plans — while frozen historical equivalents stay untouched.
+- **The rate you actually get.** Banks rarely hand over the NBRB figure, so *Settings → Cash withdrawal rate* takes yours; converted savings then use it, and every dialog that converts still shows the rate as an editable field with the note keeping what you agreed to.
 - **Challenges** you set yourself: a spending limit, a no-spend stretch, or a savings target. The window is a chip or dates of your own, and a savings challenge opens a matching goal in the Wallet, so what you put aside fills both bars at once.
 
 </details>
@@ -137,7 +139,7 @@ checks, downloads and installs the update in place — no browser, nothing left 
 <details>
 <summary><b>Privacy, lock and consent</b></summary>
 
-- **Without an account nothing leaves the phone.** With one, records, categories, accounts, debts, goals, challenges, awards and your settings match on every phone of yours; the interface language and the lock code stay local. The profile is a nickname and a face — one name, the one Kosht greets you by and signs the report with.
+- **Without an account nothing leaves the phone.** With one, records, categories, accounts, debts, goals, challenges, awards and your settings match on every phone of yours; the interface language and the lock code stay local. The profile is a nickname and a face — one name, the one Kosht greets you by.
 - **Receipt photos are a separate switch** — off by default, kept in your own private bucket when on, deleted there when off.
 - **The app lock** is a code of your own, never stored in the clear, with fingerprint entry, waits that grow after wrong guesses, and no preview in the task switcher.
 - **Consent is an append-only ledger**, advertising consent is separate and never a condition, and *Delete account and data* is at the foot of the Account block. [Privacy policy](https://mlastovskyy.github.io/Kosht/legal/privacy-policy.html) · [Terms](https://mlastovskyy.github.io/Kosht/legal/terms.html)

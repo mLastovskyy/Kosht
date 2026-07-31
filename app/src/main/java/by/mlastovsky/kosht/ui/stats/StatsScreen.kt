@@ -1,4 +1,4 @@
-package by.mlastovsky.kosht.ui.stats
+﻿package by.mlastovsky.kosht.ui.stats
 
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.FastOutSlowInEasing
@@ -11,44 +11,29 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.rounded.KeyboardArrowLeft
-import androidx.compose.material.icons.automirrored.rounded.KeyboardArrowRight
-import androidx.compose.material.icons.rounded.ArrowDropDown
 import androidx.compose.material.icons.rounded.CalendarMonth
-import androidx.compose.material.icons.rounded.Check
 import androidx.compose.material.icons.rounded.DonutLarge
-import androidx.compose.material.icons.rounded.Insights
-import androidx.compose.material.icons.rounded.Tune
-import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.Checkbox
-import androidx.compose.material3.DropdownMenu
-import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilledIconToggleButton
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.SegmentedButton
 import androidx.compose.material3.SegmentedButtonDefaults
 import androidx.compose.material3.SingleChoiceSegmentedButtonRow
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -69,10 +54,8 @@ import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -89,17 +72,13 @@ import by.mlastovsky.kosht.ui.components.ItemsChip
 import by.mlastovsky.kosht.ui.components.MonthSelector
 import by.mlastovsky.kosht.ui.components.TransactionRow
 import by.mlastovsky.kosht.ui.components.TruncatedText
-import by.mlastovsky.kosht.ui.components.monthTitle
 import by.mlastovsky.kosht.ui.components.rememberFullTextReveal
 import by.mlastovsky.kosht.ui.countedAt
 import by.mlastovsky.kosht.ui.relativeDate
-import by.mlastovsky.kosht.ui.rememberMoneyColumn
 import by.mlastovsky.kosht.ui.tabular
 import by.mlastovsky.kosht.util.Money
 import java.time.LocalDate
 import java.time.YearMonth
-import java.time.format.DateTimeFormatter
-import java.util.Locale
 import kotlin.math.atan2
 import kotlin.math.roundToInt
 
@@ -121,42 +100,25 @@ fun StatsScreen(
             .fillMaxSize()
             .statusBarsPadding()
     ) {
-        if (viewMode == 2) {
-
-            ReportPeriodBar(
-                state = state,
-                onPrevious = viewModel::previousReportPeriod,
-                onNext = viewModel::nextReportPeriod
-            )
-        } else {
-            MonthSelector(
-                month = state.month,
-                nextEnabled = !state.isCurrentMonth,
-                onPrevious = viewModel::previousMonth,
-                onNext = viewModel::nextMonth
-            )
-        }
+        MonthSelector(
+            month = state.month,
+            nextEnabled = !state.isCurrentMonth,
+            onPrevious = viewModel::previousMonth,
+            onNext = viewModel::nextMonth
+        )
 
         Row(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(horizontal = 16.dp),
-
-            horizontalArrangement = if (viewMode == 2) {
-                Arrangement.End
-            } else {
-                Arrangement.Start
-            },
+            horizontalArrangement = Arrangement.Start,
             verticalAlignment = Alignment.CenterVertically
         ) {
-
-            if (viewMode != 2) {
-                TypeToggle(
-                    type = state.type,
-                    onTypeChange = viewModel::setType,
-                    modifier = Modifier.weight(1f)
-                )
-            }
+            TypeToggle(
+                type = state.type,
+                onTypeChange = viewModel::setType,
+                modifier = Modifier.weight(1f)
+            )
             FilledIconToggleButton(
                 checked = viewMode == 0,
                 onCheckedChange = { viewMode = 0 }
@@ -173,15 +135,6 @@ fun StatsScreen(
                 Icon(
                     Icons.Rounded.CalendarMonth,
                     contentDescription = stringResource(R.string.stats_view_calendar)
-                )
-            }
-            FilledIconToggleButton(
-                checked = viewMode == 2,
-                onCheckedChange = { viewMode = 2 }
-            ) {
-                Icon(
-                    Icons.Rounded.Insights,
-                    contentDescription = stringResource(R.string.stats_view_report)
                 )
             }
         }
@@ -212,7 +165,7 @@ fun StatsScreen(
             }
         }
 
-        if (state.loaded && !state.hasData && viewMode != 2) {
+        if (state.loaded && !state.hasData) {
             EmptyState(
                 icon = Icons.Rounded.DonutLarge,
                 title = stringResource(R.string.stats_no_data_title),
@@ -226,7 +179,6 @@ fun StatsScreen(
                     onDaySelect = { selectedEpochDay = it.toEpochDay() },
                     onTransactionClick = onTransactionClick
                 )
-                2 -> ReportContent(state = state)
                 else -> ChartsContent(state = state)
             }
         }
@@ -237,13 +189,9 @@ fun StatsScreen(
 private fun ChartsContent(state: StatsUiState) {
 
     var expandedCategory by rememberSaveable { mutableStateOf<Long?>(null) }
-
-    val openProducts = expandedCategory?.let { state.productsByCategory[it] }.orEmpty()
-    val productStyle = MaterialTheme.typography.titleSmall.tabular()
-    val productColumn = rememberMoneyColumn(
-        amounts = openProducts.map { Money.format(it.totalMinor, state.currencyCode) },
-        style = productStyle
-    )
+    var selectedBar by rememberSaveable(state.month.toString(), state.type) {
+        mutableStateOf(-1)
+    }
 
     LazyColumn(
         modifier = Modifier.fillMaxSize(),
@@ -270,11 +218,37 @@ private fun ChartsContent(state: StatsUiState) {
                     daily = state.daily,
                     chartKey = "${state.month}-${state.type}",
                     color = MaterialTheme.colorScheme.primary,
+                    selected = selectedBar.takeIf { it in state.daily.indices },
+                    onSelect = { index ->
+                        selectedBar = if (index == selectedBar) -1 else index
+                    },
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(96.dp)
                         .padding(vertical = 8.dp)
                 )
+                val chosenDay = selectedBar.takeIf { it in state.daily.indices }
+                if (chosenDay != null) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            text = relativeDate(state.month.atDay(chosenDay + 1)),
+                            style = MaterialTheme.typography.labelMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                            modifier = Modifier.weight(1f)
+                        )
+                        Text(
+                            text = Money.format(state.daily[chosenDay], state.currencyCode),
+                            style = MaterialTheme.typography.labelMedium.tabular(),
+                            color = MaterialTheme.colorScheme.primary,
+                            maxLines = 1
+                        )
+                    }
+                }
             }
         }
         state.slices.forEach { slice ->
@@ -302,8 +276,6 @@ private fun ChartsContent(state: StatsUiState) {
                         product = product,
                         currencyCode = state.currencyCode,
                         color = Color(slice.category.colorArgb),
-                        sumStyle = productStyle,
-                        sumColumn = productColumn,
                         modifier = Modifier.animateItem()
                     )
                 }
@@ -317,8 +289,6 @@ private fun ProductRowItem(
     product: ProductRow,
     currencyCode: String,
     color: Color,
-    sumStyle: TextStyle,
-    sumColumn: Dp,
     modifier: Modifier = Modifier
 ) {
     Column(
@@ -326,23 +296,10 @@ private fun ProductRowItem(
             .fillMaxWidth()
             .padding(start = 72.dp, end = 16.dp, top = 6.dp, bottom = 6.dp)
     ) {
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(12.dp)
-        ) {
-            TruncatedText(
-                text = product.name,
-                style = MaterialTheme.typography.bodyLarge,
-                modifier = Modifier.weight(1f)
-            )
-            Text(
-                text = Money.format(product.totalMinor, currencyCode),
-                style = sumStyle,
-                textAlign = TextAlign.End,
-                maxLines = 1,
-                modifier = Modifier.width(sumColumn)
-            )
-        }
+        TruncatedText(
+            text = product.name,
+            style = MaterialTheme.typography.bodyLarge
+        )
         Text(
             text = countedAt(product.quantity, product.totalMinor, currencyCode)
                 ?: stringResource(R.string.stats_product_times, product.lines),
@@ -425,55 +382,6 @@ private fun CalendarContent(
                 )
             }
         }
-    }
-}
-
-@Composable
-private fun ReportPeriodBar(
-    state: StatsUiState,
-    onPrevious: () -> Unit,
-    onNext: () -> Unit
-) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = 8.dp, vertical = 4.dp),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        IconButton(onClick = onPrevious) {
-            Icon(Icons.AutoMirrored.Rounded.KeyboardArrowLeft, contentDescription = null)
-        }
-        Text(
-            text = reportPeriodTitle(state),
-            style = MaterialTheme.typography.titleLarge,
-            textAlign = TextAlign.Center,
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis,
-            modifier = Modifier.weight(1f)
-        )
-        IconButton(onClick = onNext, enabled = state.reportShift < 0) {
-            Icon(Icons.AutoMirrored.Rounded.KeyboardArrowRight, contentDescription = null)
-        }
-    }
-}
-
-@Composable
-private fun reportPeriodTitle(state: StatsUiState): String {
-    val report = state.report ?: return ""
-    val start = report.periodStart
-    val end = report.periodEnd
-    return when (state.reportPeriod) {
-        ReportPeriod.WEEK -> {
-            val formatter = DateTimeFormatter.ofPattern("d MMM", Locale.getDefault())
-            start.format(formatter) + " – " + end.format(formatter)
-        }
-        ReportPeriod.MONTH -> monthTitle(YearMonth.from(start))
-        ReportPeriod.QUARTER -> stringResource(
-            R.string.report_quarter_label,
-            (start.monthValue - 1) / 3 + 1,
-            start.year
-        )
-        ReportPeriod.YEAR -> start.year.toString()
     }
 }
 
@@ -637,6 +545,8 @@ private fun DailyBarChart(
     daily: List<Long>,
     chartKey: String,
     color: Color,
+    selected: Int?,
+    onSelect: (Int) -> Unit,
     modifier: Modifier = Modifier
 ) {
     val progress = remember { Animatable(0f) }
@@ -647,7 +557,16 @@ private fun DailyBarChart(
     val trackColor = MaterialTheme.colorScheme.surfaceContainerHigh
     val max = (daily.maxOrNull() ?: 0L).coerceAtLeast(1L)
 
-    Canvas(modifier = modifier) {
+    Canvas(
+        modifier = modifier.pointerInput(daily) {
+            detectTapGestures { at ->
+                if (daily.isEmpty()) return@detectTapGestures
+                val slot = size.width / daily.size.toFloat()
+                val index = (at.x / slot).toInt().coerceIn(0, daily.lastIndex)
+                if (daily[index] > 0) onSelect(index)
+            }
+        }
+    ) {
         if (daily.isEmpty()) return@Canvas
         val slot = size.width / daily.size
         val barWidth = slot * 0.62f
@@ -664,7 +583,11 @@ private fun DailyBarChart(
                 val barHeight =
                     (value.toFloat() / max) * (size.height - 8.dp.toPx()) * progress.value
                 drawRoundRect(
-                    color = color,
+                    color = if (selected == null || selected == index) {
+                        color
+                    } else {
+                        color.copy(alpha = 0.35f)
+                    },
                     topLeft = Offset(x, size.height - barHeight),
                     size = Size(barWidth, barHeight),
                     cornerRadius = CornerRadius(corner)

@@ -50,7 +50,6 @@ object AppViewModelProvider {
             StatsViewModel(
                 app().container.transactionRepository,
                 app().container.settingsRepository,
-                app().container.walletRepository,
                 app().container.accountRepository
             )
         }

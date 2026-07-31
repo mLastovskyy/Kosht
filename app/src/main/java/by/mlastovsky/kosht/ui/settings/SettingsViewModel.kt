@@ -14,10 +14,8 @@ import by.mlastovsky.kosht.data.UpdateInstaller
 import by.mlastovsky.kosht.data.UpdateStatus
 import by.mlastovsky.kosht.data.UserProfile
 import by.mlastovsky.kosht.model.AppLanguage
-import by.mlastovsky.kosht.model.ReportField
 import by.mlastovsky.kosht.model.ThemeMode
 import by.mlastovsky.kosht.ui.components.EMOJI_AVATAR_PREFIX
-import by.mlastovsky.kosht.ui.stats.ReportPeriod
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -221,14 +219,8 @@ class SettingsViewModel(
         viewModelScope.launch { settingsRepository.setTransferFee(value) }
     }
 
-    fun setReportPeriod(period: ReportPeriod) {
-        viewModelScope.launch { settingsRepository.setReportPeriod(period.name) }
-    }
-
-    fun setReportFields(fields: Set<ReportField>) {
-        viewModelScope.launch {
-            settingsRepository.setReportFields(fields.map { it.name }.toSet())
-        }
+    fun setWithdrawRate(currencyCode: String, rateText: String) {
+        viewModelScope.launch { settingsRepository.setWithdrawRate(currencyCode, rateText) }
     }
 
     companion object {

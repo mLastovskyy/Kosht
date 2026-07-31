@@ -81,6 +81,7 @@ import by.mlastovsky.kosht.util.Money
 import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneOffset
+import java.util.Locale
 import kotlin.math.abs
 
 @Composable
@@ -324,6 +325,8 @@ fun AddSavingDialog(
     goals: List<GoalUi>,
     accounts: List<AccountEntity>,
     rateOf: (from: String, to: String) -> Double?,
+    withdrawRate: Double?,
+    withdrawRateCurrency: String,
     onConfirm: (
         amountMinor: Long,
         currency: String,
@@ -346,18 +349,29 @@ fun AddSavingDialog(
     val savedIn = selectedGoal?.goal?.currencyCode ?: defaultCurrency
     val typedMinor = Money.parseToMinor(amountText, currency) ?: 0L
     val converting = currency != savedIn
+    var rateText by remember { mutableStateOf("") }
     var convertedText by remember { mutableStateOf("") }
 
-    LaunchedEffect(typedMinor, currency, savedIn) {
-        convertedText = if (!converting || typedMinor <= 0) {
+    LaunchedEffect(currency, savedIn) {
+        rateText = if (!converting) {
             ""
         } else {
-            val rate = rateOf(currency, savedIn)
-            if (rate == null || rate <= 0.0) {
-                ""
-            } else {
-                Money.editableText(Math.round(typedMinor * rate), savedIn)
+            val preferred = when {
+                withdrawRate != null && currency == withdrawRateCurrency && savedIn == "BYN" ->
+                    withdrawRate
+                withdrawRate != null && currency == "BYN" && savedIn == withdrawRateCurrency ->
+                    1.0 / withdrawRate
+                else -> rateOf(currency, savedIn)
             }
+            preferred?.let { rateLabel(it) }.orEmpty()
+        }
+    }
+    LaunchedEffect(typedMinor, rateText, currency, savedIn) {
+        val rate = rateText.replace(',', '.').toDoubleOrNull()
+        convertedText = if (!converting || typedMinor <= 0 || rate == null || rate <= 0.0) {
+            ""
+        } else {
+            Money.editableText(Math.round(typedMinor * rate), savedIn)
         }
     }
     val amountMinor = if (converting) {
@@ -404,6 +418,16 @@ fun AddSavingDialog(
 
                 if (converting) {
                     OutlinedTextField(
+                        value = rateText,
+                        onValueChange = { rateText = it.take(10) },
+                        label = {
+                            Text(stringResource(R.string.savings_rate, currency, savedIn))
+                        },
+                        singleLine = true,
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                    OutlinedTextField(
                         value = convertedText,
                         onValueChange = { convertedText = it.take(12) },
                         label = { Text(stringResource(R.string.savings_in_currency, savedIn)) },
@@ -446,10 +470,16 @@ fun AddSavingDialog(
             TextButton(
                 enabled = amountMinor > 0,
                 onClick = {
+                    val rateNote = if (converting && rateText.isNotBlank()) {
+                        "1 $currency = ${rateText.replace(',', '.')} $savedIn"
+                    } else {
+                        null
+                    }
                     onConfirm(
                         if (withdraw) -amountMinor else amountMinor,
                         savedIn,
-                        note,
+                        listOfNotNull(note.trim().takeIf { it.isNotEmpty() }, rateNote)
+                            .joinToString(" · "),
                         if (withdraw) null else goalId,
                         deduct,
                         accountId
@@ -462,6 +492,9 @@ fun AddSavingDialog(
         }
     )
 }
+
+private fun rateLabel(rate: Double): String =
+    String.format(Locale.US, "%.4f", rate).trimEnd('0').trimEnd('.')
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable

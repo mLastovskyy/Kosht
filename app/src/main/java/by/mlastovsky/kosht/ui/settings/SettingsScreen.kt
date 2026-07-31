@@ -1,4 +1,4 @@
-package by.mlastovsky.kosht.ui.settings
+﻿package by.mlastovsky.kosht.ui.settings
 
 import android.Manifest
 import android.os.Build
@@ -37,7 +37,6 @@ import androidx.compose.material.icons.rounded.CloudOff
 import androidx.compose.material.icons.rounded.CloudQueue
 import androidx.compose.material.icons.rounded.CloudSync
 import androidx.compose.material.icons.rounded.CurrencyExchange
-import androidx.compose.material.icons.rounded.DateRange
 import androidx.compose.material.icons.rounded.DeleteForever
 import androidx.compose.material.icons.rounded.DeleteOutline
 import androidx.compose.material.icons.rounded.Dialpad
@@ -53,6 +52,7 @@ import androidx.compose.material.icons.rounded.NotificationsActive
 import androidx.compose.material.icons.rounded.Palette
 import androidx.compose.material.icons.rounded.Payments
 import androidx.compose.material.icons.rounded.PersonAddAlt
+import androidx.compose.material.icons.rounded.PriceChange
 import androidx.compose.material.icons.rounded.PhotoLibrary
 import androidx.compose.material.icons.rounded.PrivacyTip
 import androidx.compose.material.icons.rounded.Repeat
@@ -61,10 +61,8 @@ import androidx.compose.material.icons.rounded.Summarize
 import androidx.compose.material.icons.rounded.SwapHoriz
 import androidx.compose.material.icons.rounded.Sync
 import androidx.compose.material.icons.rounded.Timer
-import androidx.compose.material.icons.rounded.Tune
 import androidx.compose.material.icons.rounded.WavingHand
 import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.Checkbox
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
@@ -105,7 +103,6 @@ import by.mlastovsky.kosht.data.UpdateStatus
 import by.mlastovsky.kosht.data.lock.Biometrics
 import by.mlastovsky.kosht.model.AppLanguage
 import by.mlastovsky.kosht.model.LockTimeout
-import by.mlastovsky.kosht.model.ReportField
 import by.mlastovsky.kosht.model.ThemeMode
 import by.mlastovsky.kosht.ui.AppViewModelProvider
 import by.mlastovsky.kosht.ui.account.AccountViewModel
@@ -120,7 +117,6 @@ import by.mlastovsky.kosht.ui.components.rememberDocumentOpener
 import by.mlastovsky.kosht.ui.lock.AppLockViewModel
 import by.mlastovsky.kosht.ui.lock.PinSetupSheet
 import by.mlastovsky.kosht.ui.profile.ProfileDialog
-import by.mlastovsky.kosht.ui.stats.ReportPeriod
 import by.mlastovsky.kosht.util.Money
 import java.util.Currency
 import java.util.Locale
@@ -138,13 +134,12 @@ fun SettingsScreen(
     var showThemeDialog by remember { mutableStateOf(false) }
     var showCurrencyDialog by remember { mutableStateOf(false) }
     var showLanguageDialog by remember { mutableStateOf(false) }
+    var showWithdrawRate by remember { mutableStateOf(false) }
     val context = LocalContext.current
     val activity = LocalActivity.current
 
     val profile by viewModel.profile.collectAsStateWithLifecycle()
     var showProfileDialog by remember { mutableStateOf(false) }
-    var showReportPeriod by remember { mutableStateOf(false) }
-    var showReportFields by remember { mutableStateOf(false) }
     val defaultName = stringResource(R.string.profile_default_name)
 
     Column(
@@ -308,62 +303,36 @@ fun SettingsScreen(
                 checked = current.transferFee,
                 onChange = viewModel::setTransferFee
             )
-        }
-
-        SectionHeader(stringResource(R.string.settings_report))
-
-        SettingsCard {
-            val activePeriod = remember(current.reportPeriod) {
-                ReportPeriod.entries
-                    .firstOrNull { it.name == current.reportPeriod }
-                    ?: ReportPeriod.MONTH
-            }
-            val activeFields = remember(current.reportFields) {
-                current.reportFields.mapNotNull { name ->
-                    ReportField.entries.firstOrNull { it.name == name }
-                }.toSet()
-            }
             ListItem(
-                headlineContent = { Text(stringResource(R.string.settings_report_period)) },
-                supportingContent = { Text(stringResource(reportPeriodLabel(activePeriod))) },
-                leadingContent = { Icon(Icons.Rounded.DateRange, contentDescription = null) },
-                colors = transparentListColors(),
-                modifier = Modifier.clickable { showReportPeriod = true }
-            )
-            ListItem(
-                headlineContent = { Text(stringResource(R.string.report_fields_title)) },
+                headlineContent = { Text(stringResource(R.string.settings_withdraw_rate)) },
                 supportingContent = {
                     Text(
-                        stringResource(
-                            R.string.settings_report_fields_desc,
-                            activeFields.size,
-                            ReportField.entries.size
-                        )
+                        if (current.withdrawRate != null) {
+                            stringResource(
+                                R.string.settings_withdraw_rate_value,
+                                current.withdrawRateCurrency,
+                                current.withdrawRateText
+                            )
+                        } else {
+                            stringResource(R.string.settings_withdraw_rate_nbrb)
+                        }
                     )
                 },
-                leadingContent = { Icon(Icons.Rounded.Tune, contentDescription = null) },
+                leadingContent = {
+                    Icon(Icons.Rounded.PriceChange, contentDescription = null)
+                },
                 colors = transparentListColors(),
-                modifier = Modifier.clickable { showReportFields = true }
+                modifier = Modifier.clickable { showWithdrawRate = true }
             )
-
-            if (showReportPeriod) {
-                ReportPeriodDialog(
-                    selected = activePeriod,
-                    onConfirm = { period ->
-                        viewModel.setReportPeriod(period)
-                        showReportPeriod = false
+            if (showWithdrawRate) {
+                WithdrawRateDialog(
+                    currency = current.withdrawRateCurrency,
+                    rateText = current.withdrawRateText,
+                    onConfirm = { code, rate ->
+                        viewModel.setWithdrawRate(code, rate)
+                        showWithdrawRate = false
                     },
-                    onDismiss = { showReportPeriod = false }
-                )
-            }
-            if (showReportFields) {
-                ReportFieldsDialog(
-                    selected = activeFields,
-                    onConfirm = { fields ->
-                        viewModel.setReportFields(fields)
-                        showReportFields = false
-                    },
-                    onDismiss = { showReportFields = false }
+                    onDismiss = { showWithdrawRate = false }
                 )
             }
         }
@@ -475,7 +444,7 @@ fun SettingsScreen(
                     if (updateCheck is UpdateCheckState.Checking) {
                         stringResource(R.string.update_checking)
                     } else {
-                        versionName + " · " + stringResource(R.string.update_check_hint)
+                        versionName + " В· " + stringResource(R.string.update_check_hint)
                     }
                 )
             },
@@ -625,7 +594,7 @@ fun SettingsScreen(
 @Composable
 private fun languageLabel(language: AppLanguage): String = when (language) {
     AppLanguage.SYSTEM -> stringResource(R.string.lang_system)
-    AppLanguage.RUSSIAN -> "Русский"
+    AppLanguage.RUSSIAN -> "Р СѓСЃСЃРєРёР№"
     AppLanguage.ENGLISH -> "English"
 }
 
@@ -1361,116 +1330,6 @@ private fun UpdateResultDialog(
     )
 }
 
-private fun reportPeriodLabel(period: ReportPeriod): Int =
-    when (period) {
-        ReportPeriod.WEEK -> R.string.report_period_week
-        ReportPeriod.MONTH -> R.string.report_period_month
-        ReportPeriod.QUARTER -> R.string.report_period_quarter
-        ReportPeriod.YEAR -> R.string.report_period_year
-    }
-
-@Composable
-private fun ReportPeriodDialog(
-    selected: ReportPeriod,
-    onConfirm: (ReportPeriod) -> Unit,
-    onDismiss: () -> Unit
-) {
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = { Text(stringResource(R.string.settings_report_period)) },
-        text = {
-            Column {
-                ReportPeriod.entries.forEach { period ->
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .selectable(
-                                selected = period == selected,
-                                onClick = { onConfirm(period) }
-                            )
-                            .padding(vertical = 10.dp)
-                    ) {
-                        RadioButton(
-                            selected = period == selected,
-                            onClick = { onConfirm(period) }
-                        )
-                        Text(
-                            text = stringResource(reportPeriodLabel(period)),
-                            style = MaterialTheme.typography.bodyLarge
-                        )
-                    }
-                }
-            }
-        },
-        confirmButton = {
-            TextButton(onClick = onDismiss) { Text(stringResource(R.string.action_close)) }
-        }
-    )
-}
-
-@Composable
-private fun ReportFieldsDialog(
-    selected: Set<ReportField>,
-    onConfirm: (Set<ReportField>) -> Unit,
-    onDismiss: () -> Unit
-) {
-    var fields by remember { mutableStateOf(selected) }
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = { Text(stringResource(R.string.report_fields_title)) },
-        text = {
-            Column {
-                ReportField.entries.forEach { field ->
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .clickable {
-                                fields = if (field in fields) fields - field else fields + field
-                            }
-                            .padding(vertical = 2.dp)
-                    ) {
-                        Checkbox(
-                            checked = field in fields,
-                            onCheckedChange = { checked ->
-                                fields = if (checked) fields + field else fields - field
-                            }
-                        )
-                        Text(
-                            text = stringResource(
-                                when (field) {
-                                    ReportField.SPENT ->
-                                        R.string.report_spent
-                                    ReportField.INCOME ->
-                                        R.string.report_income
-                                    ReportField.NET ->
-                                        R.string.report_net
-                                    ReportField.AVG_DAY ->
-                                        R.string.report_avg_day
-                                    ReportField.FREE_DAYS ->
-                                        R.string.report_free_days
-                                    ReportField.TOP_CATEGORY ->
-                                        R.string.report_top_category
-                                }
-                            ),
-                            style = MaterialTheme.typography.bodyLarge
-                        )
-                    }
-                }
-            }
-        },
-        confirmButton = {
-            TextButton(onClick = { onConfirm(fields) }) {
-                Text(stringResource(R.string.action_apply))
-            }
-        },
-        dismissButton = {
-            TextButton(onClick = onDismiss) { Text(stringResource(R.string.action_cancel)) }
-        }
-    )
-}
-
 @Composable
 private fun NotificationToggle(
     titleRes: Int,
@@ -1529,7 +1388,7 @@ private fun currencyLabel(code: String): String {
         Currency.getInstance(code).getDisplayName(Locale.getDefault())
             .replaceFirstChar { it.titlecase(Locale.getDefault()) }
     }.getOrNull()
-    return if (name != null) "$code · $name" else code
+    return if (name != null) "$code В· $name" else code
 }
 
 @Composable
@@ -1610,6 +1469,79 @@ private fun CurrencyDialog(
         },
         confirmButton = {
             TextButton(onClick = onDismiss) { Text(stringResource(R.string.action_cancel)) }
+        }
+    )
+}
+
+@Composable
+private fun WithdrawRateDialog(
+    currency: String,
+    rateText: String,
+    onConfirm: (String, String) -> Unit,
+    onDismiss: () -> Unit
+) {
+    var chosen by remember { mutableStateOf(currency.ifBlank { "USD" }) }
+    var text by remember { mutableStateOf(rateText) }
+    val parsed = text.replace(',', '.').toDoubleOrNull()
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(stringResource(R.string.settings_withdraw_rate)) },
+        text = {
+            Column(Modifier.verticalScroll(rememberScrollState())) {
+                Text(
+                    text = stringResource(R.string.settings_withdraw_rate_hint),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(bottom = 8.dp)
+                )
+                OutlinedTextField(
+                    value = text,
+                    onValueChange = { text = it.take(10) },
+                    label = {
+                        Text(stringResource(R.string.settings_withdraw_rate_field, chosen))
+                    },
+                    singleLine = true,
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(bottom = 8.dp)
+                )
+                SettingsViewModel.SUPPORTED_CURRENCIES.filter { it != "BYN" }.forEach { code ->
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .selectable(
+                                selected = chosen == code,
+                                onClick = { chosen = code }
+                            )
+                            .padding(vertical = 10.dp)
+                    ) {
+                        RadioButton(selected = chosen == code, onClick = null)
+                        Text(
+                            text = currencyLabel(code),
+                            style = MaterialTheme.typography.bodyLarge,
+                            modifier = Modifier.padding(start = 12.dp)
+                        )
+                    }
+                }
+            }
+        },
+        confirmButton = {
+            TextButton(
+                enabled = parsed != null && parsed > 0.0,
+                onClick = { onConfirm(chosen, text.replace(',', '.')) }
+            ) { Text(stringResource(R.string.action_apply)) }
+        },
+        dismissButton = {
+            Row {
+                TextButton(onClick = { onConfirm("", "") }) {
+                    Text(stringResource(R.string.settings_withdraw_rate_reset))
+                }
+                TextButton(onClick = onDismiss) {
+                    Text(stringResource(R.string.action_cancel))
+                }
+            }
         }
     )
 }

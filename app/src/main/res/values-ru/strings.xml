@@ -151,32 +151,14 @@
     <string name="stats_view_charts">Графики</string>
     <string name="stats_view_calendar">Календарь</string>
     <string name="stats_empty_day">В этот день операций нет</string>
-    <string name="stats_view_report">Отчёт</string>
-    <string name="report_verdict_great">Отличный результат!</string>
-    <string name="report_verdict_ok">Неплохо, но можно лучше</string>
-    <string name="report_verdict_bad">Траты превысили доход</string>
-    <string name="report_spent">Потрачено</string>
-    <string name="report_income">Доход</string>
-    <string name="report_net">Итог</string>
-    <string name="report_avg_day">В среднем в день</string>
-    <string name="report_free_days">Дней без трат</string>
-    <string name="report_top_category">Топ-категория</string>
-    <string name="report_tips">Советы</string>
-    <string name="report_period_week">Неделя</string>
-    <string name="report_period_month">Месяц</string>
-    <string name="report_period_quarter">Квартал</string>
-    <string name="report_period_year">Год</string>
-    <string name="report_quarter_label">%1$d кв. %2$d</string>
-    <string name="report_fields_title">Показатели отчёта</string>
-    <string name="settings_report">Отчёт</string>
-    <string name="settings_report_period">Период отчёта</string>
-    <string name="settings_report_fields_desc">Показано строк: %1$d из %2$d</string>
     <string name="auto_calc">Калькулятор при добавлении</string>
-    <string name="tip_overspend">Вы потратили на %1$s больше, чем заработали. Пересмотрите регулярные платежи и самую крупную категорию.</string>
-    <string name="tip_growth">Траты выросли на %1$d%% к прошлому периоду. Проверьте, что изменилось.</string>
-    <string name="tip_top_heavy">%1$s занимает %2$d%% расходов. Попробуйте испытание с лимитом на неделю.</string>
-    <string name="tip_start_saving">Месяц в плюсе — попробуйте отложить %1$s (10%%) на цель.</string>
-    <string name="tip_keep_it_up">Траты ниже прошлого периода на %1$d%%. Так держать!</string>
+    <string name="settings_withdraw_rate">Курс снятия валюты</string>
+    <string name="settings_withdraw_rate_nbrb">По курсу НБРБ</string>
+    <string name="settings_withdraw_rate_value">1 %1$s = %2$s BYN</string>
+    <string name="settings_withdraw_rate_hint">Курс вашего банка при снятии наличных. Подставляется вместо курса НБРБ при пересчёте накоплений.</string>
+    <string name="settings_withdraw_rate_field">BYN за 1 %1$s</string>
+    <string name="settings_withdraw_rate_reset">НБРБ</string>
+    <string name="savings_rate">Курс, %2$s за 1 %1$s</string>
 
     <!-- Настройки -->
     <string name="settings_appearance">Внешний вид</string>
@@ -394,6 +376,8 @@
     <string name="debt_new">Новый долг</string>
     <string name="debt_person">Кто</string>
     <string name="debt_person_owe">Кому я должен</string>
+    <string name="editor_repay_pick">Какой долг возвращаете</string>
+    <string name="editor_repay_none">Без привязки</string>
     <string name="debt_person_owed">Кто мне должен</string>
     <string name="debt_i_owe">Я должен</string>
     <string name="debt_owed_to_me">Мне должны</string>
@@ -410,7 +394,6 @@
     <string name="wallet_empty_savings">Пока ничего не отложено</string>
     <string name="saving_edit">Изменить накопление</string>
     <string name="saving_date">Дата</string>
-    <string name="accounts_hidden">Счета никуда не делись. Включите тумблер, чтобы снова видеть балансы.</string>
     <string name="amount_hint">Сумма</string>
     <string name="editor_tap_amount">Нажмите, чтобы ввести сумму</string>
 
@@ -515,6 +498,30 @@
     <string name="badge_thousand_desc">Добавьте 1000 записей.</string>
     <string name="badge_streak365">Год в бюджете</string>
     <string name="badge_streak365_desc">Продержитесь в дневном бюджете 365 дней подряд.</string>
+    <string name="badge_night100">Лунная смена</string>
+    <string name="badge_night100_desc">Добавьте 100 операций ночью.</string>
+    <string name="badge_categories20">Полная палитра</string>
+    <string name="badge_categories20_desc">Потратьте в 20 разных категориях.</string>
+    <string name="badge_photo500">Бумажный архив</string>
+    <string name="badge_photo500_desc">Приложите 500 чеков.</string>
+    <string name="badge_debt_free">Честное слово</string>
+    <string name="badge_debt_free_desc">Закройте 10 долгов.</string>
+    <string name="badge_goal_25">Серийный мечтатель</string>
+    <string name="badge_goal_25_desc">Достигните 25 целей накоплений.</string>
+    <string name="badge_challenge_fifty">Железная воля</string>
+    <string name="badge_challenge_fifty_desc">Завершите 50 испытаний.</string>
+    <string name="badge_surplus_year">Зелёный год</string>
+    <string name="badge_surplus_year_desc">Закончите в плюсе 12 месяцев подряд.</string>
+    <string name="badge_perfect_year">Двенадцать из двенадцати</string>
+    <string name="badge_perfect_year_desc">Сделайте 12 месяцев идеальными: каждый день в бюджете.</string>
+    <string name="badge_treasury">Казна</string>
+    <string name="badge_treasury_desc">Отложите суммарно 20 000 BYN.</string>
+    <string name="badge_five_thousand">Летописец</string>
+    <string name="badge_five_thousand_desc">Запишите 5000 операций.</string>
+    <string name="badge_three_years">Длинная игра</string>
+    <string name="badge_three_years_desc">Ведите учёт 36 месяцев.</string>
+    <string name="badge_millionaire">Хранитель замка</string>
+    <string name="badge_millionaire_desc">Отложите суммарно 100 000 BYN.</string>
     <string name="award_unlocked_at">Получена %1$s</string>
     <string name="award_progress">Прогресс: %1$s</string>
     <string name="award_unlocked_title">Награда получена!</string>
@@ -552,11 +559,11 @@
     <string name="guide_group_more">ОСТАЛЬНОЕ</string>
     <string name="guide_home_lines">Общий баланс и итоги месяца.\nПлитки счетов — когда счетов больше одного.\nНедавние записи: тап открывает правку, «Все» — Историю.\nВ шапке — серия 🔥, награды 🏆 и профиль.</string>
     <string name="guide_history_lines">Все записи по дням, над каждым днём — его итог.\nПоиск по заметке и категории, фильтры и период.\nКорзинка у записи раскрывает её позиции.\nУдаление — внутри записи, сначала спросит; потом внизу ждёт «Отменить».</string>
-    <string name="guide_stats_lines">Круг по категориям, в центре итог; ниже траты по дням.\nТап по дольке называет её категорию, тап по категории раскрывает товары.\nКалендарь: чем темнее день, тем больше траты.\nОтчёт — за неделю, месяц, квартал или год.</string>
+    <string name="guide_stats_lines">Круг по категориям, в центре итог; ниже траты по дням.\nТап по дольке называет её категорию, тап по категории раскрывает товары.\nТап по столбику дня показывает его сумму.\nКалендарь: чем темнее день, тем больше траты.</string>
     <string name="guide_wallet_lines">Курсы НБРБ и счета с переводами между ними.\nПлатежи ждут подтверждения; выключенный — тусклый.\nДолги, цели и накопления: тап открывает правку.</string>
-    <string name="guide_settings_lines">Профиль, тема, язык, валюта.\nСчета, отчёт, уведомления, безопасность.\nВнизу — руководство, документы и версия.</string>
+    <string name="guide_settings_lines">Профиль, тема, язык, валюта.\nСчета, курс снятия валюты, уведомления, безопасность.\nВнизу — руководство, документы и версия.</string>
     <string name="guide_add_head">Новая запись</string>
-    <string name="guide_add_lines">Кнопка + на Главной или в Истории.\nСумма, категория, «Сохранить».\nРасход или доход — переключатель сверху либо свайп по сумме.\nЧипы рядом: дата, счёт, позиции.</string>
+    <string name="guide_add_lines">Кнопка + на Главной или в Истории.\nСумма, категория, «Сохранить».\nРасход или доход — переключатель сверху либо свайп по сумме.\nЧипы рядом: дата, счёт, позиции.\n«В накопления» и «Возврат долга» предлагают ваши цели и долги.</string>
     <string name="guide_calc_head">Калькулятор</string>
     <string name="guide_calc_lines">Для новой записи открывается сам.\nСчитает: 12,50+3,90; пока не сложили — кнопка «=».\n«Применить» переносит сумму в запись.</string>
     <string name="guide_items_head">Позиции</string>

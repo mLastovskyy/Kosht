@@ -170,6 +170,8 @@ fun WalletScreen(
                 Text(
                     text = stringResource(R.string.settings_accounts),
                     style = MaterialTheme.typography.titleMedium,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
                     modifier = Modifier.weight(1f)
                 )
                 if (state.multiAccount) {
@@ -259,10 +261,6 @@ fun WalletScreen(
                         maxLines = 1
                     )
                 }
-            }
-        } else if (state.accountsWithBalances.size > 1) {
-            item(key = "accounts-hidden") {
-                EmptyHint(stringResource(R.string.accounts_hidden))
             }
         }
 
@@ -452,6 +450,8 @@ fun WalletScreen(
             goals = state.goals.filter { !it.achieved },
             accounts = state.pickableAccounts,
             rateOf = viewModel::suggestedRate,
+            withdrawRate = state.withdrawRate,
+            withdrawRateCurrency = state.withdrawRateCurrency,
             onConfirm = { amount, currency, note, goalId, deduct, accountId ->
                 viewModel.addSaving(
                     amountMinor = amount,

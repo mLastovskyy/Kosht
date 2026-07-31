@@ -20,7 +20,6 @@ import by.mlastovsky.kosht.model.DebtDirection
 import by.mlastovsky.kosht.model.RecurringFrequency
 import by.mlastovsky.kosht.model.ThemeMode
 import by.mlastovsky.kosht.model.TransactionType
-import org.json.JSONArray
 import org.json.JSONObject
 
 data class SyncRow(
@@ -343,8 +342,8 @@ object SyncPayloads {
         .put("convertOnCurrencyChange", row.settings.convertOnCurrencyChange)
         .put("multiAccount", row.settings.multiAccount)
         .put("transferFee", row.settings.transferFee)
-        .put("reportFields", JSONArray(row.settings.reportFields.sorted()))
-        .put("reportPeriod", row.settings.reportPeriod)
+        .put("withdrawRateCurrency", row.settings.withdrawRateCurrency)
+        .put("withdrawRateText", row.settings.withdrawRateText)
         .put("autoCalculator", row.settings.autoCalculator)
         .put("syncPhotos", row.settings.syncPhotos)
         .put("profileNickname", row.profileNickname)
@@ -388,10 +387,14 @@ object SyncPayloads {
                 ),
                 multiAccount = json.optBoolean("multiAccount", defaults.multiAccount),
                 transferFee = json.optBoolean("transferFee", defaults.transferFee),
-                reportFields = json.optJSONArray("reportFields")
-                    ?.let { array -> (0 until array.length()).map { array.getString(it) }.toSet() }
-                    ?: defaults.reportFields,
-                reportPeriod = json.stringOrNull("reportPeriod") ?: defaults.reportPeriod,
+                withdrawRateCurrency = json.optString(
+                    "withdrawRateCurrency",
+                    defaults.withdrawRateCurrency
+                ),
+                withdrawRateText = json.optString(
+                    "withdrawRateText",
+                    defaults.withdrawRateText
+                ),
                 autoCalculator = json.optBoolean("autoCalculator", defaults.autoCalculator),
                 syncPhotos = json.optBoolean("syncPhotos", defaults.syncPhotos)
             ),

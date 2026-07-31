@@ -46,6 +46,10 @@ object AwardRules {
 
     const val FORTUNE_TARGET_MINOR = 500_000L
 
+    const val TREASURY_TARGET_MINOR = 2_000_000L
+
+    const val MILLIONAIRE_TARGET_MINOR = 10_000_000L
+
     fun evaluate(stats: AwardStats): List<AwardProgress> = with(stats) {
         listOf(
 
@@ -99,7 +103,38 @@ object AwardRules {
             award("goal_ten", goalsAchieved >= 10, goalsAchieved.toLong(), 10),
             award("challenge_twenty", challengesDone >= 20, challengesDone.toLong(), 20),
             award("thousand", txCount >= 1000, txCount.toLong(), 1000),
-            award("streak365", streakDays >= 365, streakDays.toLong(), 365)
+            award("streak365", streakDays >= 365, streakDays.toLong(), 365),
+
+            award("night100", nightCount >= 100, nightCount.toLong(), 100),
+            award(
+                "categories20",
+                expenseCategoriesUsed >= 20,
+                expenseCategoriesUsed.toLong(),
+                20
+            ),
+            award("photo500", photoCount >= 500, photoCount.toLong(), 500),
+            award("debt_free", debtsClosed >= 10, debtsClosed.toLong(), 10),
+            award("goal_25", goalsAchieved >= 25, goalsAchieved.toLong(), 25),
+            award("challenge_fifty", challengesDone >= 50, challengesDone.toLong(), 50),
+
+            award("surplus_year", surplusMonthsInRow >= 12, surplusMonthsInRow.toLong(), 12),
+            award("perfect_year", perfectMonths >= 12, perfectMonths.toLong(), 12),
+            award(
+                "treasury",
+                savedBynMinor >= TREASURY_TARGET_MINOR,
+                savedBynMinor,
+                TREASURY_TARGET_MINOR,
+                money = true
+            ),
+            award("five_thousand", txCount >= 5000, txCount.toLong(), 5000),
+            award("three_years", monthsTracked >= 36, monthsTracked.toLong(), 36),
+            award(
+                "millionaire",
+                savedBynMinor >= MILLIONAIRE_TARGET_MINOR,
+                savedBynMinor,
+                MILLIONAIRE_TARGET_MINOR,
+                money = true
+            )
         )
     }
 

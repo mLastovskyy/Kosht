@@ -149,32 +149,14 @@
     <string name="stats_view_charts">Charts</string>
     <string name="stats_view_calendar">Calendar</string>
     <string name="stats_empty_day">No transactions this day</string>
-    <string name="stats_view_report">Report</string>
-    <string name="report_verdict_great">Great result!</string>
-    <string name="report_verdict_ok">Not bad, but could be better</string>
-    <string name="report_verdict_bad">Spending exceeded income</string>
-    <string name="report_spent">Spent</string>
-    <string name="report_income">Income</string>
-    <string name="report_net">Result</string>
-    <string name="report_avg_day">Average per day</string>
-    <string name="report_free_days">Days without spending</string>
-    <string name="report_top_category">Top category</string>
-    <string name="report_tips">Tips</string>
-    <string name="report_period_week">Week</string>
-    <string name="report_period_month">Month</string>
-    <string name="report_period_quarter">Quarter</string>
-    <string name="report_period_year">Year</string>
-    <string name="report_quarter_label">Q%1$d %2$d</string>
-    <string name="report_fields_title">Report metrics</string>
-    <string name="settings_report">Report</string>
-    <string name="settings_report_period">Report period</string>
-    <string name="settings_report_fields_desc">%1$d of %2$d rows shown</string>
     <string name="auto_calc">Calculator on add</string>
-    <string name="tip_overspend">You spent %1$s more than you earned. Review recurring payments and the biggest category.</string>
-    <string name="tip_growth">Spending grew %1$d%% vs the previous period. Check what changed.</string>
-    <string name="tip_top_heavy">%1$s takes %2$d%% of expenses. A weekly limit challenge could help.</string>
-    <string name="tip_start_saving">The month is in the black — try setting aside %1$s (10%%) toward a goal.</string>
-    <string name="tip_keep_it_up">Spending is down %1$d%% vs the previous period. Keep it up!</string>
+    <string name="settings_withdraw_rate">Cash withdrawal rate</string>
+    <string name="settings_withdraw_rate_nbrb">NBRB rate</string>
+    <string name="settings_withdraw_rate_value">1 %1$s = %2$s BYN</string>
+    <string name="settings_withdraw_rate_hint">Your bank\'s rate for taking cash out. It replaces the NBRB rate when savings are converted.</string>
+    <string name="settings_withdraw_rate_field">BYN per 1 %1$s</string>
+    <string name="settings_withdraw_rate_reset">NBRB</string>
+    <string name="savings_rate">Rate, %2$s per 1 %1$s</string>
 
     <!-- Settings -->
     <string name="settings_appearance">Appearance</string>
@@ -390,6 +372,8 @@
     <string name="debt_new">New debt</string>
     <string name="debt_person">Who</string>
     <string name="debt_person_owe">Who I owe</string>
+    <string name="editor_repay_pick">Repaying which debt</string>
+    <string name="editor_repay_none">Not linked</string>
     <string name="debt_person_owed">Who owes me</string>
     <string name="debt_i_owe">I owe</string>
     <string name="debt_owed_to_me">Owed to me</string>
@@ -406,7 +390,6 @@
     <string name="wallet_empty_savings">Nothing set aside yet</string>
     <string name="saving_edit">Edit saving</string>
     <string name="saving_date">Date</string>
-    <string name="accounts_hidden">Your accounts are kept. Turn them back on to see their balances.</string>
     <string name="amount_hint">Amount</string>
     <string name="editor_tap_amount">Tap to enter the amount</string>
 
@@ -511,6 +494,30 @@
     <string name="badge_thousand_desc">Add 1000 records.</string>
     <string name="badge_streak365">Year under budget</string>
     <string name="badge_streak365_desc">Stay within the daily budget 365 days in a row.</string>
+    <string name="badge_night100">Moon shift</string>
+    <string name="badge_night100_desc">Add 100 transactions at night.</string>
+    <string name="badge_categories20">Full palette</string>
+    <string name="badge_categories20_desc">Spend in 20 different categories.</string>
+    <string name="badge_photo500">Paper archive</string>
+    <string name="badge_photo500_desc">Attach 500 receipts.</string>
+    <string name="badge_debt_free">Word of honor</string>
+    <string name="badge_debt_free_desc">Close 10 debts.</string>
+    <string name="badge_goal_25">Serial dreamer</string>
+    <string name="badge_goal_25_desc">Reach 25 saving goals.</string>
+    <string name="badge_challenge_fifty">Iron will</string>
+    <string name="badge_challenge_fifty_desc">Complete 50 challenges.</string>
+    <string name="badge_surplus_year">Green year</string>
+    <string name="badge_surplus_year_desc">Finish 12 months in a row in the black.</string>
+    <string name="badge_perfect_year">Twelve of twelve</string>
+    <string name="badge_perfect_year_desc">Make 12 months perfect: every day within the budget.</string>
+    <string name="badge_treasury">Treasury</string>
+    <string name="badge_treasury_desc">Set aside 20 000 BYN in total.</string>
+    <string name="badge_five_thousand">Chronicler</string>
+    <string name="badge_five_thousand_desc">Record 5000 transactions.</string>
+    <string name="badge_three_years">Long game</string>
+    <string name="badge_three_years_desc">Keep records for 36 months.</string>
+    <string name="badge_millionaire">Castle keeper</string>
+    <string name="badge_millionaire_desc">Set aside 100 000 BYN in total.</string>
     <string name="award_unlocked_at">Earned %1$s</string>
     <string name="award_progress">Progress: %1$s</string>
     <string name="award_unlocked_title">Award earned!</string>
@@ -548,11 +555,11 @@
     <string name="guide_group_more">EVERYTHING ELSE</string>
     <string name="guide_home_lines">The total balance and the totals for this month.\nAccount tiles once you keep more than one.\nRecent records: tap to edit, "See all" for History.\nUp top: the streak, the awards and your profile.</string>
     <string name="guide_history_lines">Every record by day, with the total for the day above it.\nSearch by note and category, filters and a period.\nA basket on a record opens what it was made of.\nDeleting lives inside the record, asks first; "Undo" waits below.</string>
-    <string name="guide_stats_lines">A category donut with the total inside; days below it.\nTap a slice to name its category, tap a category to open the items.\nCalendar: the darker the day, the more it cost.\nReport: a week, a month, a quarter or a year.</string>
+    <string name="guide_stats_lines">A category donut with the total inside; days below it.\nTap a slice to name its category, tap a category to open the items.\nTap a bar in the daily chart to see that day\'s total.\nCalendar: the darker the day, the more it cost.</string>
     <string name="guide_wallet_lines">Bank rates, accounts and transfers between them.\nPayments wait for your confirmation; a switched-off one goes dim.\nDebts, goals and savings: a tap opens one for editing.</string>
-    <string name="guide_settings_lines">Profile, theme, language, currency.\nAccounts, report, notifications, security.\nAt the bottom: the manual, the documents and the version.</string>
+    <string name="guide_settings_lines">Profile, theme, language, currency.\nAccounts, cash withdrawal rate, notifications, security.\nAt the bottom: the manual, the documents and the version.</string>
     <string name="guide_add_head">A new record</string>
-    <string name="guide_add_lines">The + button on Home or in History.\nSum, category, Save.\nExpense or income — the switch, or a swipe across the sum.\nChips beside it: date, account, items.</string>
+    <string name="guide_add_lines">The + button on Home or in History.\nSum, category, Save.\nExpense or income — the switch, or a swipe across the sum.\nChips beside it: date, account, items.\nTo savings or Debt repayment offer your goals and debts.</string>
     <string name="guide_calc_head">Calculator</string>
     <string name="guide_calc_lines">It opens by itself for a new record.\nIt counts: 12.50+3.90; the button shows "=" until it is done.\nApply writes the sum into the record.</string>
     <string name="guide_items_head">Items</string>

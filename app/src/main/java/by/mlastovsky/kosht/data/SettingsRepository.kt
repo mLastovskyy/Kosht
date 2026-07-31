@@ -8,10 +8,8 @@ import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.longPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
-import androidx.datastore.preferences.core.stringSetPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
 import by.mlastovsky.kosht.model.AppLanguage
-import by.mlastovsky.kosht.model.ReportField
 import by.mlastovsky.kosht.model.ThemeMode
 import by.mlastovsky.kosht.ui.components.EMOJI_AVATAR_PREFIX
 import by.mlastovsky.kosht.util.LocaleHelper
@@ -45,14 +43,19 @@ data class AppSettings(
 
     val transferFee: Boolean,
 
-    val reportFields: Set<String>,
+    val withdrawRateCurrency: String,
 
-    val reportPeriod: String,
+    val withdrawRateText: String,
 
     val autoCalculator: Boolean,
 
     val syncPhotos: Boolean
-)
+) {
+
+    val withdrawRate: Double?
+        get() = withdrawRateText.replace(',', '.').toDoubleOrNull()
+            ?.takeIf { it > 0.0 && withdrawRateCurrency.isNotBlank() }
+}
 
 data class SyncedSettings(
 
@@ -116,8 +119,8 @@ class SettingsRepository(private val context: Context) {
         val multiAccount = booleanPreferencesKey("multi_account")
         val transferFee = booleanPreferencesKey("transfer_fee")
         val policyVersionSeen = stringPreferencesKey("policy_version_seen")
-        val reportFields = stringSetPreferencesKey("report_fields")
-        val reportPeriod = stringPreferencesKey("report_period")
+        val withdrawRateCurrency = stringPreferencesKey("withdraw_rate_currency")
+        val withdrawRateText = stringPreferencesKey("withdraw_rate_text")
         val autoCalculator = booleanPreferencesKey("auto_calculator")
         val syncPhotos = booleanPreferencesKey("sync_photos")
 
@@ -131,12 +134,11 @@ class SettingsRepository(private val context: Context) {
         }
     }
 
-    suspend fun setReportFields(fields: Set<String>) {
-        bumped { it[Keys.reportFields] = fields }
-    }
-
-    suspend fun setReportPeriod(period: String) {
-        bumped { it[Keys.reportPeriod] = period }
+    suspend fun setWithdrawRate(currencyCode: String, rateText: String) {
+        bumped {
+            it[Keys.withdrawRateCurrency] = currencyCode
+            it[Keys.withdrawRateText] = rateText
+        }
     }
 
     suspend fun setAutoCalculator(value: Boolean) {
@@ -223,10 +225,8 @@ class SettingsRepository(private val context: Context) {
             convertOnCurrencyChange = prefs[Keys.convertOnCurrencyChange] ?: true,
             multiAccount = prefs[Keys.multiAccount] ?: false,
             transferFee = prefs[Keys.transferFee] ?: false,
-
-            reportFields = prefs[Keys.reportFields]
-                ?: ReportField.entries.map { it.name }.toSet(),
-            reportPeriod = prefs[Keys.reportPeriod] ?: DEFAULT_REPORT_PERIOD,
+            withdrawRateCurrency = prefs[Keys.withdrawRateCurrency].orEmpty(),
+            withdrawRateText = prefs[Keys.withdrawRateText].orEmpty(),
             autoCalculator = prefs[Keys.autoCalculator] ?: true,
             syncPhotos = prefs[Keys.syncPhotos] ?: false
         )
@@ -300,8 +300,8 @@ class SettingsRepository(private val context: Context) {
             prefs[Keys.convertOnCurrencyChange] = incoming.convertOnCurrencyChange
             prefs[Keys.multiAccount] = incoming.multiAccount
             prefs[Keys.transferFee] = incoming.transferFee
-            prefs[Keys.reportFields] = incoming.reportFields
-            prefs[Keys.reportPeriod] = incoming.reportPeriod
+            prefs[Keys.withdrawRateCurrency] = incoming.withdrawRateCurrency
+            prefs[Keys.withdrawRateText] = incoming.withdrawRateText
             prefs[Keys.autoCalculator] = incoming.autoCalculator
             prefs[Keys.syncPhotos] = incoming.syncPhotos
             prefs[Keys.profileNickname] = remote.profileNickname
@@ -319,6 +319,5 @@ class SettingsRepository(private val context: Context) {
 
     companion object {
         const val DEFAULT_CURRENCY = "BYN"
-        const val DEFAULT_REPORT_PERIOD = "MONTH"
     }
 }
