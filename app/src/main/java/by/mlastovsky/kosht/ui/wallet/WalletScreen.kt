@@ -20,6 +20,7 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Add
+import androidx.compose.material.icons.rounded.Check
 import androidx.compose.material.icons.rounded.DeleteOutline
 import androidx.compose.material.icons.rounded.EmojiEvents
 import androidx.compose.material.icons.rounded.Refresh
@@ -31,6 +32,7 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.FilledIconButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
@@ -829,9 +831,9 @@ private fun DueCard(
         shape = MaterialTheme.shapes.large
     ) {
         Row(
-            modifier = Modifier.padding(12.dp),
+            modifier = Modifier.padding(start = 12.dp, top = 8.dp, end = 8.dp, bottom = 8.dp),
             verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(12.dp)
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
         ) {
             CategoryBadge(
                 iconKey = item.category.iconKey,
@@ -850,14 +852,23 @@ private fun DueCard(
                 Text(
                     text = signedAmount(item),
                     style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onPrimaryContainer
+                    color = MaterialTheme.colorScheme.onPrimaryContainer,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
                 )
             }
-            TextButton(onClick = onSkip) {
-                Text(stringResource(R.string.recurring_skip), maxLines = 1)
+            IconButton(onClick = onSkip) {
+                Icon(
+                    imageVector = Icons.Rounded.SkipNext,
+                    contentDescription = stringResource(R.string.recurring_skip),
+                    tint = MaterialTheme.colorScheme.onPrimaryContainer
+                )
             }
-            Button(onClick = onConfirm) {
-                Text(stringResource(R.string.action_confirm), maxLines = 1)
+            FilledIconButton(onClick = onConfirm) {
+                Icon(
+                    imageVector = Icons.Rounded.Check,
+                    contentDescription = stringResource(R.string.action_confirm)
+                )
             }
         }
     }
@@ -897,8 +908,8 @@ private fun RecurringRow(
             )
             Text(
                 text = relativeDate(item.recurring.nextDueDate) +
-                    " · " + frequencyLabel(item.recurring.frequency) +
-                    " · " + signedAmount(item),
+                    ", " + frequencyLabel(item.recurring.frequency) +
+                    ", " + signedAmount(item),
                 style = MaterialTheme.typography.bodyMedium,
                 color = if (item.recurring.type == TransactionType.INCOME) {
                     KoshtTheme.colors.income.copy(alpha = fade)
@@ -993,7 +1004,7 @@ private fun DebtRow(
                     } else {
                         R.string.debt_owed_to_me
                     }
-                ) + debt.note.takeIf { it.isNotBlank() }?.let { " · $it" }.orEmpty(),
+                ) + debt.note.takeIf { it.isNotBlank() }?.let { ", $it" }.orEmpty(),
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 maxLines = 1,
@@ -1112,7 +1123,7 @@ private fun SavingsSummary(
         )
         if (perCurrency.size > 1) {
             Text(
-                text = perCurrency.joinToString(" · "),
+                text = perCurrency.joinToString(", "),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 maxLines = 1,

@@ -223,7 +223,7 @@ private fun ListedSummary(
             else -> stringResource(
                 R.string.items_summary_of,
                 counted,
-                Money.format(listedMinor, currencyCode),
+                Money.amount(listedMinor, currencyCode),
                 Money.format(recordAmountMinor, currencyCode)
             )
         },

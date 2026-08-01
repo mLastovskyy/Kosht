@@ -10,19 +10,23 @@ object Money {
 
     fun format(amountMinor: Long, currencyCode: String, withSign: Boolean = false): String {
         val currency = runCatching { Currency.getInstance(currencyCode) }.getOrNull()
-        val fractionDigits = currency?.defaultFractionDigits?.takeIf { it >= 0 } ?: 2
+        val symbol = currency?.getSymbol(Locale.getDefault()) ?: currencyCode
+        return amount(amountMinor, currencyCode, withSign) + " " + symbol
+    }
+
+    fun amount(
+        amountMinor: Long,
+        currencyCode: String,
+        withSign: Boolean = false
+    ): String {
+        val fractionDigits = fractionDigits(currencyCode)
         val value = BigDecimal(amountMinor).movePointLeft(fractionDigits)
         val format = NumberFormat.getNumberInstance(Locale.getDefault()).apply {
             minimumFractionDigits = fractionDigits
             maximumFractionDigits = fractionDigits
         }
-        val symbol = currency?.getSymbol(Locale.getDefault()) ?: currencyCode
-        val sign = if (withSign && amountMinor != 0L) {
-            if (value.signum() >= 0) "+" else ""
-        } else {
-            ""
-        }
-        return "$sign${format.format(value)} $symbol"
+        val sign = if (withSign && amountMinor != 0L && value.signum() >= 0) "+" else ""
+        return sign + format.format(value)
     }
 
     fun editableText(amountMinor: Long, currencyCode: String): String {

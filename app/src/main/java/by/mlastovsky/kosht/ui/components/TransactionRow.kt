@@ -127,14 +127,16 @@ private fun ItemLine(
 ) {
     Column(modifier = Modifier.fillMaxWidth()) {
         Row(
+            modifier = Modifier.fillMaxWidth(),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-            TruncatedText(
-                text = item.name,
-                style = MaterialTheme.typography.bodyMedium,
-                modifier = Modifier.weight(1f)
-            )
+            Box(modifier = Modifier.weight(1f)) {
+                TruncatedText(
+                    text = item.name,
+                    style = MaterialTheme.typography.bodyMedium
+                )
+            }
             Text(
                 text = sumText,
                 style = sumStyle,

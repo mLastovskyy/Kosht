@@ -349,8 +349,7 @@ fun EditorScreen(
                                 text = if (state.items.isEmpty()) {
                                     stringResource(R.string.items_add)
                                 } else {
-                                    stringResource(R.string.items_add) +
-                                        " · " + state.items.size
+                                    stringResource(R.string.items_add_count, state.items.size)
                                 },
                                 maxLines = 1
                             )
@@ -405,7 +404,7 @@ fun EditorScreen(
                     noneLabel = stringResource(R.string.editor_repay_none),
                     options = state.debts.map {
                         it.id to
-                            "${it.personName} · ${Money.format(it.amountMinor, it.currencyCode)}"
+                            "${it.personName}, ${Money.format(it.amountMinor, it.currencyCode)}"
                     },
                     selectedId = state.repayDebtId,
                     onSelect = viewModel::selectRepayDebt
@@ -955,7 +954,7 @@ private fun ScanReviewDialog(
                             stringResource(
                                 R.string.scan_review_items_partial,
                                 pending.items.size,
-                                Money.format(listed, currencyCode),
+                                Money.amount(listed, currencyCode),
                                 Money.format(total, currencyCode)
                             )
                         } else {
@@ -964,7 +963,7 @@ private fun ScanReviewDialog(
                         style = MaterialTheme.typography.bodyMedium
                     )
                     Text(
-                        text = pending.items.take(4).joinToString(" · ") { it.name },
+                        text = pending.items.take(4).joinToString(", ") { it.name },
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         maxLines = 2,
