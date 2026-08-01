@@ -236,8 +236,7 @@ class SyncPayloadsTest {
         convertOnCurrencyChange = true,
         multiAccount = false,
         transferFee = false,
-        withdrawRateCurrency = "",
-        withdrawRateText = "",
+        ownRate = false,
         autoCalculator = true,
         syncPhotos = false
     )
@@ -261,8 +260,7 @@ class SyncPayloadsTest {
                 dailyBudgetMinor = 4500,
                 showGreeting = false,
                 multiAccount = true,
-                withdrawRateCurrency = "USD",
-                withdrawRateText = "3.25",
+                ownRate = true,
                 autoCalculator = false,
                 syncPhotos = true
             ),

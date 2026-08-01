@@ -219,8 +219,8 @@ class SettingsViewModel(
         viewModelScope.launch { settingsRepository.setTransferFee(value) }
     }
 
-    fun setWithdrawRate(currencyCode: String, rateText: String) {
-        viewModelScope.launch { settingsRepository.setWithdrawRate(currencyCode, rateText) }
+    fun setOwnRate(value: Boolean) {
+        viewModelScope.launch { settingsRepository.setOwnRate(value) }
     }
 
     companion object {

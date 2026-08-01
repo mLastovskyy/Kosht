@@ -53,8 +53,7 @@ data class GoalUi(
 data class WalletUiState(
     val loaded: Boolean = false,
     val currencyCode: String = SettingsRepository.DEFAULT_CURRENCY,
-    val withdrawRate: Double? = null,
-    val withdrawRateCurrency: String = "",
+    val ownRate: Boolean = false,
     val rates: Map<String, RateEntity> = emptyMap(),
     val ratesUpdatedAt: Long? = null,
     val refreshingRates: Boolean = false,
@@ -196,8 +195,7 @@ class WalletViewModel(
             accountsWithBalances = accountsWithBalances,
             loaded = true,
             currencyCode = settings.currencyCode,
-            withdrawRate = settings.withdrawRate,
-            withdrawRateCurrency = settings.withdrawRateCurrency,
+            ownRate = settings.ownRate,
             rates = rates,
             ratesUpdatedAt = rates.values.maxOfOrNull { it.updatedAt },
             refreshingRates = refreshing,
@@ -284,18 +282,8 @@ class WalletViewModel(
     private fun inAppCurrency(amountMinor: Long, from: String): Long? {
         val to = uiState.value.currencyCode
         if (from == to) return amountMinor
-        val rate = withdrawRateFor(from, to) ?: suggestedRate(from, to) ?: return null
+        val rate = suggestedRate(from, to) ?: return null
         return Math.round(amountMinor * rate)
-    }
-
-    private fun withdrawRateFor(from: String, to: String): Double? {
-        val state = uiState.value
-        val rate = state.withdrawRate ?: return null
-        return when {
-            from == state.withdrawRateCurrency && to == "BYN" -> rate
-            from == "BYN" && to == state.withdrawRateCurrency -> 1.0 / rate
-            else -> null
-        }
     }
 
     fun deleteDebt(debt: DebtEntity) {
@@ -375,7 +363,9 @@ class WalletViewModel(
         note: String,
         goalId: Long? = null,
         deductNote: String? = null,
-        accountId: Long? = null
+        accountId: Long? = null,
+
+        deductMinor: Long? = null
     ) {
         if (amountMinor == 0L) return
         viewModelScope.launch {
@@ -384,7 +374,7 @@ class WalletViewModel(
                 currencyCode,
                 note,
                 goalId,
-                savingEntry(amountMinor, currencyCode, deductNote, accountId)
+                savingEntry(amountMinor, currencyCode, deductNote, accountId, deductMinor)
             )
         }
     }
@@ -393,11 +383,14 @@ class WalletViewModel(
         amountMinor: Long,
         currencyCode: String,
         note: String?,
-        accountId: Long?
+        accountId: Long?,
+        deductMinor: Long?
     ): LedgerEntry? {
         if (note == null || amountMinor == 0L) return null
         val state = uiState.value
-        val converted = inAppCurrency(Math.abs(amountMinor), currencyCode) ?: return null
+        val converted = deductMinor?.takeIf { it > 0 }
+            ?: inAppCurrency(Math.abs(amountMinor), currencyCode)
+            ?: return null
         val withdrawal = amountMinor < 0
         return LedgerEntry(
             categoryKey = if (withdrawal) {
@@ -574,6 +567,10 @@ class WalletViewModel(
             val byn = RatesRepository.toBynMinor(chargedMinor, state.currencyCode, state.rates)
             walletRepository.confirmRecurring(item.recurring, chargedMinor, byn, accountId)
         }
+    }
+
+    fun skipRecurring(item: RecurringWithCategory) {
+        viewModelScope.launch { walletRepository.skipRecurring(item.recurring) }
     }
 
     fun suggestedRate(from: String, to: String): Double? {

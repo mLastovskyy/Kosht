@@ -81,6 +81,10 @@ data class EditorUiState(
     val debts: List<DebtEntity> = emptyList(),
     val repayDebtId: Long? = null,
 
+    val ownRate: Boolean = false,
+    val rateInput: String = "",
+    val rateTargetCurrency: String? = null,
+
     val isTransfer: Boolean = false,
 
     val autoCalculator: Boolean = true,
@@ -109,6 +113,12 @@ data class EditorUiState(
     val itemsOverSum: Boolean
         get() = items.isNotEmpty() &&
             itemsTotalMinor > (Expr.evaluateToMinor(amountInput, currencyCode) ?: 0L)
+
+    val typedRate: Double?
+        get() = rateInput.replace(',', '.').toDoubleOrNull()?.takeIf { ownRate && it > 0.0 }
+
+    val rateAsked: Boolean
+        get() = ownRate && rateTargetCurrency != null && rateTargetCurrency != currencyCode
 }
 
 data class PendingScan(
@@ -162,6 +172,8 @@ class EditorViewModel(
         val savingGoalId: Long? = null,
 
         val repayDebtId: Long? = null,
+
+        val rateInput: String = "",
 
         val original: TransactionEntity? = null
     )
@@ -277,6 +289,15 @@ class EditorViewModel(
             debtRepayCategory = d.original == null && selectedKey == CategorySeed.DEBT_EXPENSE,
             debts = options.debts,
             repayDebtId = d.repayDebtId?.takeIf { id -> options.debts.any { it.id == id } },
+            ownRate = settings.ownRate,
+            rateInput = d.rateInput,
+            rateTargetCurrency = when (selectedKey) {
+                CategorySeed.SAVINGS_EXPENSE ->
+                    options.goals.firstOrNull { it.id == d.savingGoalId }?.currencyCode
+                CategorySeed.DEBT_EXPENSE ->
+                    options.debts.firstOrNull { it.id == d.repayDebtId }?.currencyCode
+                else -> null
+            },
             autoCalculator = settings.autoCalculator,
             calcInput = extras.calcInput
         )
@@ -571,11 +592,15 @@ class EditorViewModel(
     }
 
     fun selectSavingGoal(id: Long?) {
-        draft.update { it.copy(savingGoalId = id) }
+        draft.update { it.copy(savingGoalId = id, rateInput = "") }
     }
 
     fun selectRepayDebt(id: Long?) {
-        draft.update { it.copy(repayDebtId = id) }
+        draft.update { it.copy(repayDebtId = id, rateInput = "") }
+    }
+
+    fun setRate(text: String) {
+        draft.update { it.copy(rateInput = text.take(10)) }
     }
 
     fun save(onDone: () -> Unit) {
@@ -628,7 +653,8 @@ class EditorViewModel(
                     val repaidTotal = convertMinor(
                         amountMinor,
                         state.currencyCode,
-                        repayTarget.currencyCode
+                        repayTarget.currencyCode,
+                        state.typedRate
                     )
                     if (repaidTotal != null && repaidTotal > 0) {
                         val repaid = repaidTotal.coerceAtMost(repayTarget.amountMinor)
@@ -642,7 +668,7 @@ class EditorViewModel(
                         amountMinor = amountMinor,
                         type = state.type,
                         categoryId = categoryId,
-                        note = state.note.trim(),
+                        note = noteWithRate(state),
                         timestamp = timestamp,
                         createdAt = System.currentTimeMillis(),
                         photoPath = draft.value.photoPath,
@@ -659,12 +685,17 @@ class EditorViewModel(
                 if (state.savingsCategory) {
                     val goal = state.goals.firstOrNull { it.id == state.savingGoalId }
                     val savedCurrency = goal?.currencyCode ?: state.currencyCode
-                    val savedMinor = convertMinor(amountMinor, state.currencyCode, savedCurrency)
+                    val savedMinor = convertMinor(
+                        amountMinor,
+                        state.currencyCode,
+                        savedCurrency,
+                        state.typedRate
+                    )
                     if (savedMinor != null && savedMinor > 0) {
                         walletRepository.addSaving(
                             amountMinor = savedMinor,
                             currencyCode = savedCurrency,
-                            note = state.note.trim(),
+                            note = noteWithRate(state),
                             goalId = goal?.id
                         )
                     }
@@ -674,18 +705,23 @@ class EditorViewModel(
         }
     }
 
-    private suspend fun convertMinor(amountMinor: Long, from: String, to: String): Long? {
+    private fun noteWithRate(state: EditorUiState): String {
+        val rate = state.typedRate ?: return state.note.trim()
+        val target = state.rateTargetCurrency ?: return state.note.trim()
+        val stamp = "1 ${state.currencyCode} = ${Money.rateText(rate)} $target"
+        return listOfNotNull(state.note.trim().takeIf { it.isNotEmpty() }, stamp)
+            .joinToString(" · ")
+            .take(Notes.MAX_LENGTH)
+    }
+
+    private suspend fun convertMinor(
+        amountMinor: Long,
+        from: String,
+        to: String,
+        typedRate: Double?
+    ): Long? {
         if (from == to) return amountMinor
-        val settings = settingsRepository.settings.first()
-        val withdrawRate = settings.withdrawRate
-        if (withdrawRate != null) {
-            if (from == settings.withdrawRateCurrency && to == "BYN") {
-                return Math.round(amountMinor * withdrawRate)
-            }
-            if (from == "BYN" && to == settings.withdrawRateCurrency) {
-                return Math.round(amountMinor / withdrawRate)
-            }
-        }
+        if (typedRate != null && typedRate > 0.0) return Math.round(amountMinor * typedRate)
         val rates = ratesRepository.rates.first()
         return RatesRepository.convertMinor(amountMinor, from, to, rates)
     }

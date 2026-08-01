@@ -291,6 +291,10 @@ class WalletRepository(
         recurringDao.update(recurring.copy(enabled = enabled))
     }
 
+    suspend fun skipRecurring(recurring: RecurringEntity) {
+        recurringDao.update(recurring.advanced())
+    }
+
     suspend fun confirmRecurring(
         recurring: RecurringEntity,
         chargeAmountMinor: Long,

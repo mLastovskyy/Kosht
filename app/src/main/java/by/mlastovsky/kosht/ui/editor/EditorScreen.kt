@@ -412,6 +412,30 @@ fun EditorScreen(
                 )
             }
 
+            AnimatedVisibility(visible = state.rateAsked) {
+                OutlinedTextField(
+                    value = state.rateInput,
+                    onValueChange = viewModel::setRate,
+                    label = {
+                        Text(
+                            stringResource(
+                                R.string.savings_rate,
+                                state.currencyCode,
+                                state.rateTargetCurrency.orEmpty()
+                            )
+                        )
+                    },
+                    placeholder = { Text(stringResource(R.string.rate_placeholder_nbrb)) },
+                    singleLine = true,
+                    shape = MaterialTheme.shapes.medium,
+                    textStyle = MaterialTheme.typography.bodyMedium,
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp, vertical = 6.dp)
+                )
+            }
+
             Row(
                 modifier = Modifier
                     .fillMaxWidth()

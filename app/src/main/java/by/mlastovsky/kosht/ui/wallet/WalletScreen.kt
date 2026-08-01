@@ -24,7 +24,9 @@ import androidx.compose.material.icons.rounded.DeleteOutline
 import androidx.compose.material.icons.rounded.EmojiEvents
 import androidx.compose.material.icons.rounded.Refresh
 import androidx.compose.material.icons.rounded.Remove
+import androidx.compose.material.icons.rounded.SkipNext
 import androidx.compose.material.icons.rounded.SwapHoriz
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -36,6 +38,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -77,6 +80,9 @@ import by.mlastovsky.kosht.ui.theme.KoshtTheme
 import by.mlastovsky.kosht.ui.transfer.TransferDialog
 import by.mlastovsky.kosht.util.Dates
 import by.mlastovsky.kosht.util.Money
+import java.time.LocalDate
+import java.time.format.DateTimeFormatter
+import java.util.Locale
 
 @Composable
 fun WalletScreen(
@@ -98,6 +104,7 @@ fun WalletScreen(
     var debtToEdit by remember { mutableStateOf<DebtEntity?>(null) }
     var goalInAction by remember { mutableStateOf<GoalUi?>(null) }
     var recurringToConfirm by remember { mutableStateOf<RecurringWithCategory?>(null) }
+    var recurringToSkip by remember { mutableStateOf<RecurringWithCategory?>(null) }
     var recurringToEdit by remember { mutableStateOf<RecurringWithCategory?>(null) }
     var recurringToDelete by remember { mutableStateOf<RecurringWithCategory?>(null) }
     var savingToEdit by remember { mutableStateOf<SavingEntity?>(null) }
@@ -273,6 +280,7 @@ fun WalletScreen(
                 DueCard(
                     item = item,
                     onConfirm = { recurringToConfirm = item },
+                    onSkip = { recurringToSkip = item },
                     modifier = Modifier.animateItem()
                 )
             }
@@ -450,9 +458,8 @@ fun WalletScreen(
             goals = state.goals.filter { !it.achieved },
             accounts = state.pickableAccounts,
             rateOf = viewModel::suggestedRate,
-            withdrawRate = state.withdrawRate,
-            withdrawRateCurrency = state.withdrawRateCurrency,
-            onConfirm = { amount, currency, note, goalId, deduct, accountId ->
+            ownRate = state.ownRate,
+            onConfirm = { amount, currency, note, goalId, deduct, accountId, deductMinor ->
                 viewModel.addSaving(
                     amountMinor = amount,
                     currencyCode = currency,
@@ -460,7 +467,8 @@ fun WalletScreen(
                     goalId = goalId,
 
                     deductNote = if (deduct) note.ifBlank { savingsNote } else null,
-                    accountId = accountId
+                    accountId = accountId,
+                    deductMinor = deductMinor
                 )
                 savingDialogWithdraw = null
             },
@@ -624,7 +632,41 @@ fun WalletScreen(
             onDismiss = { recurringToConfirm = null }
         )
     }
+
+    recurringToSkip?.let { item ->
+        AlertDialog(
+            onDismissRequest = { recurringToSkip = null },
+            icon = { Icon(Icons.Rounded.SkipNext, contentDescription = null) },
+            title = { Text(stringResource(R.string.recurring_skip)) },
+            text = {
+                Text(
+                    stringResource(
+                        R.string.recurring_skip_text,
+                        item.recurring.title,
+                        nextDueLabel(item)
+                    )
+                )
+            },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        viewModel.skipRecurring(item)
+                        recurringToSkip = null
+                    }
+                ) { Text(stringResource(R.string.recurring_skip)) }
+            },
+            dismissButton = {
+                TextButton(onClick = { recurringToSkip = null }) {
+                    Text(stringResource(R.string.action_cancel))
+                }
+            }
+        )
+    }
 }
+
+private fun nextDueLabel(item: RecurringWithCategory): String =
+    LocalDate.ofEpochDay(item.recurring.advanced().nextDueEpochDay)
+        .format(DateTimeFormatter.ofPattern("d MMMM", Locale.getDefault()))
 
 @Composable
 private fun RatesCard(
@@ -774,6 +816,7 @@ private fun signedAmount(item: RecurringWithCategory): String {
 private fun DueCard(
     item: RecurringWithCategory,
     onConfirm: () -> Unit,
+    onSkip: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     Card(
@@ -810,8 +853,11 @@ private fun DueCard(
                     color = MaterialTheme.colorScheme.onPrimaryContainer
                 )
             }
+            TextButton(onClick = onSkip) {
+                Text(stringResource(R.string.recurring_skip), maxLines = 1)
+            }
             Button(onClick = onConfirm) {
-                Text(stringResource(R.string.action_confirm))
+                Text(stringResource(R.string.action_confirm), maxLines = 1)
             }
         }
     }

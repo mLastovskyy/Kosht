@@ -50,4 +50,11 @@ object Money {
         val currency = runCatching { Currency.getInstance(currencyCode) }.getOrNull()
         return currency?.defaultFractionDigits?.takeIf { it >= 0 } ?: 2
     }
+
+    fun rateText(rate: Double): String =
+        BigDecimal(rate).setScale(RATE_DIGITS, RoundingMode.HALF_UP)
+            .stripTrailingZeros()
+            .toPlainString()
+
+    private const val RATE_DIGITS = 4
 }

@@ -325,15 +325,15 @@ fun AddSavingDialog(
     goals: List<GoalUi>,
     accounts: List<AccountEntity>,
     rateOf: (from: String, to: String) -> Double?,
-    withdrawRate: Double?,
-    withdrawRateCurrency: String,
+    ownRate: Boolean,
     onConfirm: (
         amountMinor: Long,
         currency: String,
         note: String,
         goalId: Long?,
         deduct: Boolean,
-        accountId: Long?
+        accountId: Long?,
+        deductMinor: Long?
     ) -> Unit,
     onDismiss: () -> Unit
 ) {
@@ -352,19 +352,10 @@ fun AddSavingDialog(
     var rateText by remember { mutableStateOf("") }
     var convertedText by remember { mutableStateOf("") }
 
+    val officialRate = if (converting) rateOf(currency, savedIn) else null
+
     LaunchedEffect(currency, savedIn) {
-        rateText = if (!converting) {
-            ""
-        } else {
-            val preferred = when {
-                withdrawRate != null && currency == withdrawRateCurrency && savedIn == "BYN" ->
-                    withdrawRate
-                withdrawRate != null && currency == "BYN" && savedIn == withdrawRateCurrency ->
-                    1.0 / withdrawRate
-                else -> rateOf(currency, savedIn)
-            }
-            preferred?.let { rateLabel(it) }.orEmpty()
-        }
+        rateText = officialRate?.let { rateLabel(it) }.orEmpty()
     }
     LaunchedEffect(typedMinor, rateText, currency, savedIn) {
         val rate = rateText.replace(',', '.').toDoubleOrNull()
@@ -378,6 +369,11 @@ fun AddSavingDialog(
         Money.parseToMinor(convertedText, savedIn) ?: 0L
     } else {
         typedMinor
+    }
+    val deductMinor = when {
+        currency == defaultCurrency -> typedMinor
+        savedIn == defaultCurrency -> amountMinor
+        else -> null
     }
 
     AlertDialog(
@@ -417,16 +413,25 @@ fun AddSavingDialog(
                 CurrencyChips(currency) { currency = it }
 
                 if (converting) {
-                    OutlinedTextField(
-                        value = rateText,
-                        onValueChange = { rateText = it.take(10) },
-                        label = {
-                            Text(stringResource(R.string.savings_rate, currency, savedIn))
-                        },
-                        singleLine = true,
-                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
-                        modifier = Modifier.fillMaxWidth()
-                    )
+                    if (ownRate) {
+                        OutlinedTextField(
+                            value = rateText,
+                            onValueChange = { rateText = it.take(10) },
+                            label = {
+                                Text(stringResource(R.string.savings_rate, currency, savedIn))
+                            },
+                            supportingText = {
+                                officialRate?.let {
+                                    Text(stringResource(R.string.rate_hint_nbrb, rateLabel(it)))
+                                }
+                            },
+                            singleLine = true,
+                            keyboardOptions = KeyboardOptions(
+                                keyboardType = KeyboardType.Decimal
+                            ),
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                    }
                     OutlinedTextField(
                         value = convertedText,
                         onValueChange = { convertedText = it.take(12) },
@@ -470,8 +475,9 @@ fun AddSavingDialog(
             TextButton(
                 enabled = amountMinor > 0,
                 onClick = {
-                    val rateNote = if (converting && rateText.isNotBlank()) {
-                        "1 $currency = ${rateText.replace(',', '.')} $savedIn"
+                    val typedRate = rateText.replace(',', '.').toDoubleOrNull()
+                    val rateNote = if (ownRate && converting && typedRate != null) {
+                        "1 $currency = ${rateLabel(typedRate)} $savedIn"
                     } else {
                         null
                     }
@@ -482,7 +488,8 @@ fun AddSavingDialog(
                             .joinToString(" · "),
                         if (withdraw) null else goalId,
                         deduct,
-                        accountId
+                        accountId,
+                        deductMinor
                     )
                 }
             ) { Text(stringResource(R.string.action_add)) }
@@ -493,8 +500,7 @@ fun AddSavingDialog(
     )
 }
 
-private fun rateLabel(rate: Double): String =
-    String.format(Locale.US, "%.4f", rate).trimEnd('0').trimEnd('.')
+private fun rateLabel(rate: Double): String = Money.rateText(rate)
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable

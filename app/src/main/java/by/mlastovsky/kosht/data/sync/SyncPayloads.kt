@@ -342,8 +342,7 @@ object SyncPayloads {
         .put("convertOnCurrencyChange", row.settings.convertOnCurrencyChange)
         .put("multiAccount", row.settings.multiAccount)
         .put("transferFee", row.settings.transferFee)
-        .put("withdrawRateCurrency", row.settings.withdrawRateCurrency)
-        .put("withdrawRateText", row.settings.withdrawRateText)
+        .put("ownRate", row.settings.ownRate)
         .put("autoCalculator", row.settings.autoCalculator)
         .put("syncPhotos", row.settings.syncPhotos)
         .put("profileNickname", row.profileNickname)
@@ -387,14 +386,7 @@ object SyncPayloads {
                 ),
                 multiAccount = json.optBoolean("multiAccount", defaults.multiAccount),
                 transferFee = json.optBoolean("transferFee", defaults.transferFee),
-                withdrawRateCurrency = json.optString(
-                    "withdrawRateCurrency",
-                    defaults.withdrawRateCurrency
-                ),
-                withdrawRateText = json.optString(
-                    "withdrawRateText",
-                    defaults.withdrawRateText
-                ),
+                ownRate = json.optBoolean("ownRate", defaults.ownRate),
                 autoCalculator = json.optBoolean("autoCalculator", defaults.autoCalculator),
                 syncPhotos = json.optBoolean("syncPhotos", defaults.syncPhotos)
             ),
