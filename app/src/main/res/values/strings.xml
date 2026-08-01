@@ -566,7 +566,7 @@
     <string name="guide_items_head">Items</string>
     <string name="guide_items_lines">What a record is made of: goods, or parts of a payment.\nAn empty sum is taken from the items.\nIf the items come to more, saving asks first.\nIn statistics they break the category down.</string>
     <string name="guide_scan_head">Receipt scanning</string>
-    <string name="guide_scan_lines">Photograph the slip or pick a photo from the gallery.\nThe sum, shop, date and items fill themselves in.\nA QR code leads to the electronic receipt — exact figures.\nIt all runs on the phone; the photo stays here.</string>
+    <string name="guide_scan_lines">Photograph the slip or pick a photo from the gallery.\nThe sum, shop, date and items fill themselves in.\nA QR code, or the УИ identifier Belarusian tills print, leads to the electronic receipt — exact figures.\nIt all runs on the phone; the photo stays here.</string>
     <string name="guide_streak_head">Streak and awards</string>
     <string name="guide_streak_lines">The streak counts days inside your daily budget.\nChallenges are yours to set — a chip or dates of your own.\nA saving one carries its currency and a goal in the Wallet.\nAwards arrive by themselves once earned.</string>
     <string name="guide_lock_head">App lock</string>

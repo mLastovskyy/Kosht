@@ -10,6 +10,8 @@ sealed interface QrPayload {
     data class Link(val url: String) : QrPayload
 
     data class Fields(val values: Map<String, String>) : QrPayload
+
+    data class Uid(val value: String) : QrPayload
 }
 
 object ReceiptQr {
@@ -20,14 +22,32 @@ object ReceiptQr {
 
     private val fiscalTime = DateTimeFormatter.ofPattern("yyyyMMdd")
 
+    private val uidOnly = Regex("""^[0-9A-Fa-f]{24}$""")
+
+    internal val uidInText = Regex("""(?:^|\s)[Уу]\s?[ИиIi]\s*[:.]?\s*([0-9A-Fa-f]{24})(?:\s|$)""")
+
+    private val eplusLink = Regex(
+        """^https://r\.eplus\.by/((?:[0-9A-Fa-f]{6}-)?[0-9A-Fa-f]{8}(?:-[0-9A-Fa-f]{4}){3}-[0-9A-Fa-f]{12})/?$""",
+        RegexOption.IGNORE_CASE
+    )
+
+    private val ikassaLink = Regex(
+        """^https://receipts\.cloud\.ikassa\.by/render/([0-9A-Fa-f]{24})/?$""",
+        RegexOption.IGNORE_CASE
+    )
+
     fun classify(raw: String): QrPayload? {
         val text = raw.trim()
         if (text.isEmpty()) return null
         if (ignoredSchemes.any { text.startsWith(it, ignoreCase = true) }) return null
+        if (isPaymentRequest(text)) return null
 
         if (text.startsWith("http://", true) || text.startsWith("https://", true)) {
+            ikassaLink.find(text)?.let { return QrPayload.Uid(it.groupValues[1]) }
             return QrPayload.Link(text)
         }
+
+        if (uidOnly.matches(text)) return QrPayload.Uid(text)
 
         val values = text.split('&')
             .mapNotNull { pair ->
@@ -43,6 +63,15 @@ object ReceiptQr {
             null
         }
     }
+
+    private fun isPaymentRequest(text: String): Boolean = text.startsWith("000201") &&
+        (text.contains("by.raschet", true) || text.contains("rtpraschet", true))
+
+    fun uidIn(text: String): String? = uidInText.find(text)?.groupValues?.get(1)
+
+    fun ikassaUrl(uid: String): String = "https://receipts.cloud.ikassa.by/render/$uid"
+
+    fun eplusReceiptId(url: String): String? = eplusLink.find(url.trim())?.groupValues?.get(1)
 
     fun fromFields(values: Map<String, String>): ParsedReceipt? {
         val amount = values["s"]?.let(::toMinor) ?: return null

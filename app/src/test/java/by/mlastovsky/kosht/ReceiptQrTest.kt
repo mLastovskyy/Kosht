@@ -131,6 +131,63 @@ class ReceiptQrTest {
     }
 
     @Test
+    fun `the belarusian receipt code is the identifier on its own`() {
+        val uid = ReceiptQr.classify("7A432503221F74760718A477")
+        assertEquals(QrPayload.Uid("7A432503221F74760718A477"), uid)
+
+        val lowercase = ReceiptQr.classify("499e48aa5b14a77411e30d13")
+        assertEquals(QrPayload.Uid("499e48aa5b14a77411e30d13"), lowercase)
+
+        assertNull(ReceiptQr.classify("7A432503221F74760718A4"))
+        assertNull(ReceiptQr.classify("7A432503221F74760718A477F1"))
+    }
+
+    @Test
+    fun `an ikassa link carries the same identifier`() {
+        val payload = ReceiptQr.classify(
+            "https://receipts.cloud.ikassa.by/render/E5C884B7F8AD050107183F8D"
+        )
+        assertEquals(QrPayload.Uid("E5C884B7F8AD050107183F8D"), payload)
+        assertEquals(
+            "https://receipts.cloud.ikassa.by/render/99B216F017DB9D760718ADDE",
+            ReceiptQr.ikassaUrl("99B216F017DB9D760718ADDE")
+        )
+    }
+
+    @Test
+    fun `the eplus receipt keeps the prefix in front of its identifier`() {
+        assertEquals(
+            "84480B-0328F8F7-37A8-4E96-868C-FDC8A74863ED",
+            ReceiptQr.eplusReceiptId("https://r.eplus.by/84480B-0328F8F7-37A8-4E96-868C-FDC8A74863ED")
+        )
+        assertEquals(
+            "0328F8F7-37A8-4E96-868C-FDC8A74863ED",
+            ReceiptQr.eplusReceiptId("https://r.eplus.by/0328F8F7-37A8-4E96-868C-FDC8A74863ED")
+        )
+        assertNull(ReceiptQr.eplusReceiptId("https://r.eplus.by/promo"))
+    }
+
+    @Test
+    fun `a payment request is not a receipt`() {
+        val erip = "00020132430010by.raschet0106381861100929667703012021153039335405" +
+            "10.0564210002en0102A10205Minsk6304C8AE"
+        assertNull(ReceiptQr.classify(erip))
+    }
+
+    @Test
+    fun `the identifier is picked up from a printed line`() {
+        assertEquals(
+            "814EFF3C1D63D7C307190A91",
+            ReceiptQr.uidIn("УИ 814EFF3C1D63D7C307190A91")
+        )
+        assertEquals(
+            "499e48aa5b14a77411e30d13",
+            ReceiptQr.uidIn("уи 499e48aa5b14a77411e30d13")
+        )
+        assertNull(ReceiptQr.uidIn("ИТОГО К ОПЛАТЕ 24.17"))
+    }
+
+    @Test
     fun `a fetched receipt page is flattened into parseable lines`() {
         val html = """
             <html><head><style>b{color:red}</style></head>

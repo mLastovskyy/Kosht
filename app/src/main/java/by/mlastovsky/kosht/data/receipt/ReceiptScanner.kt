@@ -3,7 +3,9 @@ package by.mlastovsky.kosht.data.receipt
 import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
+import android.graphics.pdf.PdfRenderer
 import android.net.Uri
+import android.os.ParcelFileDescriptor
 import by.mlastovsky.kosht.data.receipt.ml.LineModel
 import com.googlecode.tesseract.android.TessBaseAPI
 import java.io.File
@@ -38,10 +40,22 @@ class ReceiptScanner(
             )
         }
 
+        val fromDocument = electronic?.documentPath
+            ?.let(::firstPage)
+            ?.let(::readPaper)
+        val withDocument = ReceiptParser.combined(electronic?.parsed, fromDocument)
+        if (withDocument != null && withDocument.tellsEverything) {
+            return@withContext ScannedReceipt(
+                parsed = withDocument,
+                sourceUrl = electronic?.sourceUrl,
+                documentPath = electronic?.documentPath
+            )
+        }
+
         val paper = readPaper(bitmap)
-        val parsed = ReceiptParser.combined(electronic?.parsed, paper)
+        val parsed = ReceiptParser.combined(withDocument ?: electronic?.parsed, paper)
         parsed
-            ?.takeIf { it.amountMinor != null || electronic?.sourceUrl != null }
+            ?.takeIf { it.amountMinor != null }
             ?.let {
                 ScannedReceipt(
                     parsed = it,
@@ -50,6 +64,27 @@ class ReceiptScanner(
                 )
             }
     }
+
+    private fun firstPage(documentPath: String): Bitmap? = runCatching {
+        val file = File(documentPath)
+        if (!file.name.endsWith(".pdf", ignoreCase = true) || !file.exists()) return null
+        ParcelFileDescriptor.open(file, ParcelFileDescriptor.MODE_READ_ONLY).use { descriptor ->
+            PdfRenderer(descriptor).use { renderer ->
+                if (renderer.pageCount == 0) return null
+                renderer.openPage(0).use { page ->
+                    val scale = (PDF_WIDTH.toFloat() / page.width).coerceAtMost(PDF_MAX_SCALE)
+                    val bitmap = Bitmap.createBitmap(
+                        (page.width * scale).toInt().coerceAtLeast(1),
+                        (page.height * scale).toInt().coerceAtLeast(1),
+                        Bitmap.Config.ARGB_8888
+                    )
+                    bitmap.eraseColor(android.graphics.Color.WHITE)
+                    page.render(bitmap, null, null, PdfRenderer.Page.RENDER_MODE_FOR_DISPLAY)
+                    bitmap
+                }
+            }
+        }
+    }.getOrNull()
 
     private fun readPaper(bitmap: Bitmap): ParsedReceipt {
         val quick = ReceiptParser.parse(bestReading(bitmap, Engine.QUICK), model)
@@ -185,6 +220,9 @@ class ReceiptScanner(
     private companion object {
         const val LANGUAGE = "rus"
         const val MAX_DIMENSION = 2600
+
+        const val PDF_WIDTH = 1600
+        const val PDF_MAX_SCALE = 4f
 
         val AMOUNT = Regex("(?<!\\d)\\d{1,9}[.,]\\d{2}(?!\\d)")
 

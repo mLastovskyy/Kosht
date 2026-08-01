@@ -7,6 +7,7 @@ import java.net.HttpURLConnection
 import java.net.URL
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import org.json.JSONObject
 
 data class EReceipt(
     val parsed: ParsedReceipt,
@@ -26,9 +27,43 @@ class EReceiptFetcher(private val context: Context) {
                 is QrPayload.Fields -> ReceiptQr.fromFields(payload.values)
                     ?.let { EReceipt(it, sourceUrl = null, documentPath = null) }
 
-                is QrPayload.Link -> fetchLink(payload.url, model)
+                is QrPayload.Uid -> fetchLink(ReceiptQr.ikassaUrl(payload.value), model)
+
+                is QrPayload.Link -> eplusReceipt(payload.url) ?: fetchLink(payload.url, model)
             }
         }
+
+    private fun eplusReceipt(url: String): EReceipt? {
+        val group = ReceiptQr.eplusReceiptId(url) ?: return null
+        val page = download(url)
+        val service = page?.text?.let(::serviceNumberIn) ?: EPLUS_SERVICE
+        page?.savedPath?.let { File(it).delete() }
+        val document = postJson(EPLUS_API, eplusRequest(group, service)) ?: return null
+        if (!document.looksBinary) {
+            document.savedPath?.let { File(it).delete() }
+            return null
+        }
+        return EReceipt(
+            parsed = ParsedReceipt(amountMinor = null, date = null, merchant = EPLUS_MERCHANT),
+            sourceUrl = url,
+            documentPath = document.savedPath
+        )
+    }
+
+    private fun eplusRequest(group: String, service: String): String = JSONObject()
+        .put("CRC", "")
+        .put(
+            "Packet",
+            JSONObject()
+                .put("JWT", "")
+                .put("MethodName", "DiscountClub.GetVirtualReceipt")
+                .put("ServiceNumber", service)
+                .put("Data", JSONObject().put("CreditGroupGUID", group))
+        )
+        .toString()
+
+    private fun serviceNumberIn(html: String): String? =
+        SERVICE_NUMBER.find(html)?.groupValues?.get(1)
 
     private suspend fun fetchLink(url: String, model: LineModel?): EReceipt? {
         val page = download(url) ?: return null
@@ -132,6 +167,37 @@ class EReceiptFetcher(private val context: Context) {
         }
     }.getOrNull()
 
+    private fun postJson(url: String, body: String): Document? = runCatching {
+        val connection = (URL(url).openConnection() as HttpURLConnection).apply {
+            connectTimeout = 12_000
+            readTimeout = 20_000
+            requestMethod = "POST"
+            doOutput = true
+            setRequestProperty("User-Agent", PageRender.BROWSER_AGENT)
+            setRequestProperty("Content-Type", "application/json")
+            setRequestProperty("Accept", "application/pdf,application/json;q=0.9")
+        }
+        try {
+            connection.outputStream.use { it.write(body.toByteArray()) }
+            if (connection.responseCode !in 200..299) return null
+            val contentType = connection.contentType.orEmpty()
+            val bytes = connection.inputStream.use { it.readAtMost(MAX_BYTES) }
+            if (bytes.isEmpty()) return null
+            Document(
+                text = if (contentType.contains("pdf", true)) {
+                    ""
+                } else {
+                    bytes.toString(charsetOf(contentType))
+                },
+                contentType = contentType,
+                savedPath = save(bytes, contentType),
+                looksBinary = contentType.contains("pdf", true)
+            )
+        } finally {
+            connection.disconnect()
+        }
+    }.getOrNull()
+
     private fun save(bytes: ByteArray, contentType: String): String? = runCatching {
         val extension = when {
             contentType.contains("pdf", true) -> "pdf"
@@ -165,5 +231,13 @@ class EReceiptFetcher(private val context: Context) {
     private companion object {
         const val MAX_BYTES = 2 * 1024 * 1024
         val HREF = Regex("""href\s*=\s*["']([^"']+)["']""", RegexOption.IGNORE_CASE)
+
+        const val EPLUS_API = "https://rest.eurotorg.by/10101/Json"
+        const val EPLUS_SERVICE = "04FA4558-EF8A-4783-A112-036204888532"
+        const val EPLUS_MERCHANT = "Евроопт"
+        val SERVICE_NUMBER = Regex(
+            """"ServiceNumber"\s*:\s*"([0-9A-Fa-f]{8}(?:-[0-9A-Fa-f]{4}){3}-[0-9A-Fa-f]{12})"""",
+            RegexOption.IGNORE_CASE
+        )
     }
 }
