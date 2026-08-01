@@ -150,13 +150,19 @@
     <string name="stats_view_calendar">Calendar</string>
     <string name="stats_empty_day">No transactions this day</string>
     <string name="auto_calc">Calculator on add</string>
-    <string name="settings_withdraw_rate">Cash withdrawal rate</string>
-    <string name="settings_withdraw_rate_nbrb">NBRB rate</string>
-    <string name="settings_withdraw_rate_value">1 %1$s = %2$s BYN</string>
-    <string name="settings_withdraw_rate_hint">Your bank\'s rate for taking cash out. It replaces the NBRB rate when savings are converted.</string>
-    <string name="settings_withdraw_rate_field">BYN per 1 %1$s</string>
-    <string name="settings_withdraw_rate_reset">NBRB</string>
+    <string name="recurring_skip">Skip</string>
+    <string name="recurring_skip_text">Nothing will be recorded for %1$s this time. The payment will wait for you again on %2$s.</string>
+    <string name="settings_premium">Kosht Premium</string>
+    <string name="premium_title">Kosht Premium</string>
+    <string name="premium_pitch">Removes the banner and supports the app.</string>
+    <string name="premium_active">Thank you — the banner is off.</string>
+    <string name="premium_soon">Soon</string>
+    <string name="premium_not_yet">Buying it arrives with the store release; nothing is charged yet.</string>
+    <string name="settings_own_rate">My own rate</string>
+    <string name="settings_own_rate_desc">Ask for the rate whenever an amount is converted — the one your bank gave you, not the NBRB one</string>
     <string name="savings_rate">Rate, %2$s per 1 %1$s</string>
+    <string name="rate_hint_nbrb">NBRB: %1$s</string>
+    <string name="rate_placeholder_nbrb">Empty — the NBRB rate</string>
 
     <!-- Settings -->
     <string name="settings_appearance">Appearance</string>
@@ -556,7 +562,7 @@
     <string name="guide_home_lines">The total balance and the totals for this month.\nAccount tiles once you keep more than one.\nRecent records: tap to edit, "See all" for History.\nUp top: the streak, the awards and your profile.</string>
     <string name="guide_history_lines">Every record by day, with the total for the day above it.\nSearch by note and category, filters and a period.\nA basket on a record opens what it was made of.\nDeleting lives inside the record, asks first; "Undo" waits below.</string>
     <string name="guide_stats_lines">A category donut with the total inside; days below it.\nTap a slice to name its category, tap a category to open the items.\nTap a bar in the daily chart to see that day\'s total.\nCalendar: the darker the day, the more it cost.</string>
-    <string name="guide_wallet_lines">Bank rates, accounts and transfers between them.\nPayments wait for your confirmation; a switched-off one goes dim.\nDebts, goals and savings: a tap opens one for editing.</string>
+    <string name="guide_wallet_lines">Bank rates, accounts and transfers between them.\nPayments wait for confirmation; Skip moves one on without a record.\nDebts, goals and savings: a tap opens one for editing.</string>
     <string name="guide_settings_lines">Profile, theme, language, currency.\nAccounts, cash withdrawal rate, notifications, security.\nAt the bottom: the manual, the documents and the version.</string>
     <string name="guide_add_head">A new record</string>
     <string name="guide_add_lines">The + button on Home or in History.\nSum, category, Save.\nExpense or income — the switch, or a swipe across the sum.\nChips beside it: date, account, items.\nTo savings or Debt repayment offer your goals and debts.</string>

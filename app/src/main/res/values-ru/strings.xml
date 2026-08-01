@@ -152,13 +152,19 @@
     <string name="stats_view_calendar">Календарь</string>
     <string name="stats_empty_day">В этот день операций нет</string>
     <string name="auto_calc">Калькулятор при добавлении</string>
-    <string name="settings_withdraw_rate">Курс снятия валюты</string>
-    <string name="settings_withdraw_rate_nbrb">По курсу НБРБ</string>
-    <string name="settings_withdraw_rate_value">1 %1$s = %2$s BYN</string>
-    <string name="settings_withdraw_rate_hint">Курс вашего банка при снятии наличных. Подставляется вместо курса НБРБ при пересчёте накоплений.</string>
-    <string name="settings_withdraw_rate_field">BYN за 1 %1$s</string>
-    <string name="settings_withdraw_rate_reset">НБРБ</string>
+    <string name="recurring_skip">Пропустить</string>
+    <string name="recurring_skip_text">В этот раз по «%1$s» ничего не запишется. Платёж снова будет ждать вас %2$s.</string>
+    <string name="settings_premium">Kosht Premium</string>
+    <string name="premium_title">Kosht Premium</string>
+    <string name="premium_pitch">Убирает баннер и поддерживает приложение.</string>
+    <string name="premium_active">Спасибо — баннер выключен.</string>
+    <string name="premium_soon">Скоро</string>
+    <string name="premium_not_yet">Покупка появится вместе с публикацией в магазине; пока ничего не списывается.</string>
+    <string name="settings_own_rate">Свой курс</string>
+    <string name="settings_own_rate_desc">Спрашивать курс при каждом пересчёте — тот, по которому вы сняли, а не курс НБРБ</string>
     <string name="savings_rate">Курс, %2$s за 1 %1$s</string>
+    <string name="rate_hint_nbrb">НБРБ: %1$s</string>
+    <string name="rate_placeholder_nbrb">Пусто — курс НБРБ</string>
 
     <!-- Настройки -->
     <string name="settings_appearance">Внешний вид</string>
@@ -560,7 +566,7 @@
     <string name="guide_home_lines">Общий баланс и итоги месяца.\nПлитки счетов — когда счетов больше одного.\nНедавние записи: тап открывает правку, «Все» — Историю.\nВ шапке — серия 🔥, награды 🏆 и профиль.</string>
     <string name="guide_history_lines">Все записи по дням, над каждым днём — его итог.\nПоиск по заметке и категории, фильтры и период.\nКорзинка у записи раскрывает её позиции.\nУдаление — внутри записи, сначала спросит; потом внизу ждёт «Отменить».</string>
     <string name="guide_stats_lines">Круг по категориям, в центре итог; ниже траты по дням.\nТап по дольке называет её категорию, тап по категории раскрывает товары.\nТап по столбику дня показывает его сумму.\nКалендарь: чем темнее день, тем больше траты.</string>
-    <string name="guide_wallet_lines">Курсы НБРБ и счета с переводами между ними.\nПлатежи ждут подтверждения; выключенный — тусклый.\nДолги, цели и накопления: тап открывает правку.</string>
+    <string name="guide_wallet_lines">Курсы НБРБ и счета с переводами между ними.\nПлатежи ждут подтверждения; «Пропустить» сдвигает срок без записи.\nДолги, цели и накопления: тап открывает правку.</string>
     <string name="guide_settings_lines">Профиль, тема, язык, валюта.\nСчета, курс снятия валюты, уведомления, безопасность.\nВнизу — руководство, документы и версия.</string>
     <string name="guide_add_head">Новая запись</string>
     <string name="guide_add_lines">Кнопка + на Главной или в Истории.\nСумма, категория, «Сохранить».\nРасход или доход — переключатель сверху либо свайп по сумме.\nЧипы рядом: дата, счёт, позиции.\n«В накопления» и «Возврат долга» предлагают ваши цели и долги.</string>

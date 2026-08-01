@@ -131,7 +131,8 @@ checks, downloads and installs the update in place — no browser, nothing left 
 - **Savings and goals.** Set aside in any currency; change a goal's name, target or currency later and what is already saved moves across at the official rate. A saving opens for editing on a tap: the amount, set aside or withdrawn, the currency, the note, the date it happened and the goal it counts towards.
 - **Planned payments — outgoing or incoming.** Nothing is ever charged silently: a due payment waits for your confirmation, with the amount and the rate editable. A payment switched off goes dim — name and icon both — so a paused one reads at a glance.
 - **Switch the app currency** and everything follows at the live rate — records, budget, savings, goals, debts, plans — while frozen historical equivalents stay untouched.
-- **The rate you actually get.** Banks rarely hand over the NBRB figure, so *Settings → Cash withdrawal rate* takes yours; converted savings then use it, and every dialog that converts still shows the rate as an editable field with the note keeping what you agreed to.
+- **The rate you actually get.** Banks rarely hand over the NBRB figure, so *Settings → My own rate* makes every conversion ask: the field opens on the official rate and takes yours instead, the note keeps what you agreed to (`1 USD = 3,25 BYN`), and the record deducted from the account follows the same number. Leave the switch off and conversions stay silent and official.
+- **A payment you did not make.** A due payment waits with *Confirm* and *Skip* side by side: skipping records nothing and simply moves the payment to its next date, which the app names before you agree.
 - **Challenges** you set yourself: a spending limit, a no-spend stretch, or a savings target. The window is a chip or dates of your own, and a savings challenge opens a matching goal in the Wallet, so what you put aside fills both bars at once.
 
 </details>
@@ -143,6 +144,7 @@ checks, downloads and installs the update in place — no browser, nothing left 
 - **Receipt photos are a separate switch** — off by default, kept in your own private bucket when on, deleted there when off.
 - **The app lock** is a code of your own, never stored in the clear, with fingerprint entry, waits that grow after wrong guesses, and no preview in the task switcher.
 - **Consent is an append-only ledger**, advertising consent is separate and never a condition, and *Delete account and data* is at the foot of the Account block. [Privacy policy](https://mlastovskyy.github.io/Kosht/legal/privacy-policy.html) · [Terms](https://mlastovskyy.github.io/Kosht/legal/terms.html)
+- **One banner, and a way out of it.** An adaptive AdMob banner sits above the tab bar; *Kosht Premium* turns it off. The entitlement lives in its own store and never syncs — an unlocked banner belongs to the receipt, not to a preference another phone could copy. Without `ADMOB_APP_ID` / `ADMOB_BANNER_UNIT_ID` in `.env` the build serves Google's test ads, so a checkout can never bill the real account.
 
 </details>
 
