@@ -15,6 +15,7 @@ import by.mlastovsky.kosht.ui.editor.EditorViewModel
 import by.mlastovsky.kosht.ui.history.HistoryViewModel
 import by.mlastovsky.kosht.ui.home.HomeViewModel
 import by.mlastovsky.kosht.ui.lock.AppLockViewModel
+import by.mlastovsky.kosht.ui.premium.PremiumViewModel
 import by.mlastovsky.kosht.ui.profile.ProfileViewModel
 import by.mlastovsky.kosht.ui.settings.SettingsViewModel
 import by.mlastovsky.kosht.ui.stats.StatsViewModel
@@ -80,6 +81,9 @@ object AppViewModelProvider {
         }
         initializer {
             AwardsViewModel(app().container.awardTracker)
+        }
+        initializer {
+            PremiumViewModel(app().container.premiumRepository)
         }
         initializer {
             AppLockViewModel(
