@@ -21,6 +21,7 @@ import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.text.TextAutoSize
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.CalendarMonth
 import androidx.compose.material.icons.rounded.DonutLarge
@@ -58,6 +59,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import by.mlastovsky.kosht.R
@@ -499,9 +501,15 @@ private fun DonutChart(
                 maxLines = 2,
                 overflow = TextOverflow.Ellipsis
             )
-            AnimatedAmountText(
+            Text(
                 text = revealed?.let { Money.format(it.totalMinor, currencyCode) } ?: totalText,
-                style = MaterialTheme.typography.headlineSmall
+                style = MaterialTheme.typography.headlineSmall,
+                textAlign = TextAlign.Center,
+                maxLines = 1,
+                autoSize = TextAutoSize.StepBased(
+                    minFontSize = DONUT_AMOUNT_MIN,
+                    maxFontSize = MaterialTheme.typography.headlineSmall.fontSize
+                )
             )
             if (revealed != null) {
                 Text(
@@ -514,7 +522,9 @@ private fun DonutChart(
     }
 }
 
-private val DONUT_LABEL_MAX_WIDTH = 132.dp
+private val DONUT_LABEL_MAX_WIDTH = 148.dp
+
+private val DONUT_AMOUNT_MIN = 13.sp
 
 private fun sliceAt(
     at: Offset,
