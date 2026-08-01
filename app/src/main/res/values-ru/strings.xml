@@ -470,7 +470,7 @@
     <string name="badge_photo10_desc">Прикрепите 10 фото чеков.</string>
     <string name="badge_hundred_desc">Добавьте 100 записей.</string>
     <string name="badge_streak30_desc">Продержитесь в дневном бюджете 30 дней подряд.</string>
-    <string name="badge_big_saver_desc">Накопите в сумме 1000 BYN.</string>
+    <string name="badge_big_saver_desc">Накопите в сумме 1000 ₽.</string>
     <string name="badge_goal_three_desc">Достигните трёх целей накоплений.</string>
     <string name="badge_challenge_five_desc">Пройдите 5 испытаний.</string>
     <string name="badge_five_hundred_desc">Добавьте 500 записей.</string>
@@ -488,7 +488,7 @@
     <string name="badge_photo100">Полный архив</string>
     <string name="badge_photo100_desc">Прикрепите 100 фото чеков.</string>
     <string name="badge_fortune">Состояние</string>
-    <string name="badge_fortune_desc">Накопите в сумме 5000 BYN.</string>
+    <string name="badge_fortune_desc">Накопите в сумме 5000 ₽.</string>
     <string name="badge_year_tracked">Год учёта</string>
     <string name="badge_year_tracked_desc">Сделайте записи в 12 разных месяцах.</string>
     <string name="badge_goal_ten">Коллекционер целей</string>
@@ -516,13 +516,13 @@
     <string name="badge_perfect_year">Двенадцать из двенадцати</string>
     <string name="badge_perfect_year_desc">Сделайте 12 месяцев идеальными: каждый день в бюджете.</string>
     <string name="badge_treasury">Казна</string>
-    <string name="badge_treasury_desc">Отложите суммарно 20 000 BYN.</string>
+    <string name="badge_treasury_desc">Отложите суммарно 20 000 ₽.</string>
     <string name="badge_five_thousand">Летописец</string>
     <string name="badge_five_thousand_desc">Запишите 5000 операций.</string>
     <string name="badge_three_years">Длинная игра</string>
     <string name="badge_three_years_desc">Ведите учёт 36 месяцев.</string>
     <string name="badge_millionaire">Хранитель замка</string>
-    <string name="badge_millionaire_desc">Отложите суммарно 100 000 BYN.</string>
+    <string name="badge_millionaire_desc">Отложите суммарно 100 000 ₽.</string>
     <string name="award_unlocked_at">Получена %1$s</string>
     <string name="award_progress">Прогресс: %1$s</string>
     <string name="award_unlocked_title">Награда получена!</string>

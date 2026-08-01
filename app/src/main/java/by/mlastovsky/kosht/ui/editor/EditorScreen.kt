@@ -122,8 +122,6 @@ import by.mlastovsky.kosht.util.Notes
 import java.io.File
 import java.time.Instant
 import java.time.ZoneOffset
-import java.util.Currency
-import java.util.Locale
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -419,8 +417,8 @@ fun EditorScreen(
                         Text(
                             stringResource(
                                 R.string.savings_rate,
-                                state.currencyCode,
-                                state.rateTargetCurrency.orEmpty()
+                                Money.symbol(state.currencyCode),
+                                state.rateTargetCurrency?.let(Money::symbol).orEmpty()
                             )
                         )
                     },
@@ -1053,10 +1051,7 @@ private fun AmountCard(
     modifier: Modifier = Modifier
 ) {
     val displayValue = amountInput.ifEmpty { "0" }.replace('.', ',')
-    val symbol = remember(currencyCode) {
-        runCatching { Currency.getInstance(currencyCode).getSymbol(Locale.getDefault()) }
-            .getOrNull() ?: currencyCode
-    }
+    val symbol = remember(currencyCode) { Money.symbol(currencyCode) }
     val color by animateColorAsState(
         targetValue = when {
             amountInput.isEmpty() -> MaterialTheme.colorScheme.onSurfaceVariant
@@ -1146,11 +1141,7 @@ private fun CalculatorSheet(
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
             val displayValue = calcInput.ifEmpty { "0" }.replace('.', ',')
-            val symbol = remember(currencyCode) {
-                runCatching {
-                    Currency.getInstance(currencyCode).getSymbol(Locale.getDefault())
-                }.getOrNull() ?: currencyCode
-            }
+            val symbol = remember(currencyCode) { Money.symbol(currencyCode) }
             val fontSize = when {
                 displayValue.length > 12 -> 28.sp
                 displayValue.length > 8 -> 34.sp

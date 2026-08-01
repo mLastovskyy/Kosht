@@ -44,6 +44,7 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import by.mlastovsky.kosht.ui.CategoryVisuals
 import by.mlastovsky.kosht.ui.settings.SettingsViewModel
+import by.mlastovsky.kosht.util.Money
 
 @Composable
 fun CategoryBadge(
@@ -117,7 +118,7 @@ fun CurrencyChips(
             FilterChip(
                 selected = code == selected,
                 onClick = { onSelect(code) },
-                label = { Text(code) }
+                label = { Text(Money.symbol(code)) }
             )
         }
     }

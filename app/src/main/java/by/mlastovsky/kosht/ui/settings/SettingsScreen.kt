@@ -1358,11 +1358,12 @@ private fun themeLabel(mode: ThemeMode): String = stringResource(
 )
 
 private fun currencyLabel(code: String): String {
+    val symbol = Money.symbol(code)
     val name = runCatching {
         Currency.getInstance(code).getDisplayName(Locale.getDefault())
             .replaceFirstChar { it.titlecase(Locale.getDefault()) }
     }.getOrNull()
-    return if (name != null) "$code, $name" else code
+    return if (name != null) "$symbol, $name" else symbol
 }
 
 @Composable

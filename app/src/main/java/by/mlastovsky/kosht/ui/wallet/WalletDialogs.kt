@@ -418,7 +418,13 @@ fun AddSavingDialog(
                             value = rateText,
                             onValueChange = { rateText = it.take(10) },
                             label = {
-                                Text(stringResource(R.string.savings_rate, currency, savedIn))
+                                Text(
+                                    stringResource(
+                                        R.string.savings_rate,
+                                        Money.symbol(currency),
+                                        Money.symbol(savedIn)
+                                    )
+                                )
                             },
                             supportingText = {
                                 officialRate?.let {
@@ -435,7 +441,9 @@ fun AddSavingDialog(
                     OutlinedTextField(
                         value = convertedText,
                         onValueChange = { convertedText = it.take(12) },
-                        label = { Text(stringResource(R.string.savings_in_currency, savedIn)) },
+                        label = {
+                            Text(stringResource(R.string.savings_in_currency, Money.symbol(savedIn)))
+                        },
                         singleLine = true,
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                         modifier = Modifier.fillMaxWidth()
@@ -477,7 +485,7 @@ fun AddSavingDialog(
                 onClick = {
                     val typedRate = rateText.replace(',', '.').toDoubleOrNull()
                     val rateNote = if (ownRate && converting && typedRate != null) {
-                        "1 $currency = ${rateLabel(typedRate)} $savedIn"
+                        "1 ${Money.symbol(currency)} = ${rateLabel(typedRate)} ${Money.symbol(savedIn)}"
                     } else {
                         null
                     }
@@ -560,7 +568,7 @@ fun EditSavingDialog(
                     CurrencyChips(currency) { currency = it }
                 } else {
                     Text(
-                        text = stringResource(R.string.savings_in_currency, savedIn),
+                        text = stringResource(R.string.savings_in_currency, Money.symbol(savedIn)),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -1482,7 +1490,7 @@ fun ConfirmRecurringDialog(
                     onValueChange = { amountText = it.take(12) },
                     label = {
                         Text(
-                            stringResource(recurringAmountRes(income)) + " ($currencyCode)"
+                            stringResource(recurringAmountRes(income)) + " (${Money.symbol(currencyCode)})"
                         )
                     },
                     singleLine = true,

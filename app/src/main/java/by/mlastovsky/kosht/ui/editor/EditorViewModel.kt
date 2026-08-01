@@ -708,7 +708,7 @@ class EditorViewModel(
     private fun noteWithRate(state: EditorUiState): String {
         val rate = state.typedRate ?: return state.note.trim()
         val target = state.rateTargetCurrency ?: return state.note.trim()
-        val stamp = "1 ${state.currencyCode} = ${Money.rateText(rate)} $target"
+        val stamp = "1 ${Money.symbol(state.currencyCode)} = ${Money.rateText(rate)} ${Money.symbol(target)}"
         return listOfNotNull(state.note.trim().takeIf { it.isNotEmpty() }, stamp)
             .joinToString(", ")
             .take(Notes.MAX_LENGTH)

@@ -59,7 +59,7 @@
     </g>
     <g opacity="0">
       <rect x="392" y="148" width="112" height="34" rx="17" fill="#176B4E" fill-opacity="0.16" stroke="#176B4E" stroke-opacity="0.45"/>
-      <text x="410" y="170" font-size="15" fill="#2FA97B">12,45 BYN</text>
+      <text x="410" y="170" font-size="15" fill="#2FA97B">12,45 ₽</text>
       <animate attributeName="opacity" values="0;0;1;1;0" keyTimes="0;0.54;0.64;0.9;1" dur="6s" repeatCount="indefinite"/>
     </g>
     <text x="536" y="170" font-size="12" fill="#7d8c85" opacity="0"><animate attributeName="opacity" values="0;0;0.9;0.9;0" keyTimes="0;0.64;0.72;0.9;1" dur="6s" repeatCount="indefinite"/>no cloud, no keys</text>
@@ -71,7 +71,7 @@
     <path d="M740 125 l6 6 l11 -13" fill="none" stroke="#ffffff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
     <g font-family="Segoe UI, Roboto, sans-serif">
       <text x="778" y="120" font-size="15" fill="#2FA97B">Groceries</text>
-      <text x="778" y="140" font-size="13" fill="#7d8c85">−12,45 BYN</text>
+      <text x="778" y="140" font-size="13" fill="#7d8c85">−12,45 ₽</text>
     </g>
     <animate attributeName="opacity" values="0;0;1;1;0" keyTimes="0;0.72;0.8;0.94;1" dur="6s" repeatCount="indefinite"/>
   </g>

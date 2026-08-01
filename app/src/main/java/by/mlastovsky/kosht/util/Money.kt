@@ -8,11 +8,15 @@ import java.util.Locale
 
 object Money {
 
-    fun format(amountMinor: Long, currencyCode: String, withSign: Boolean = false): String {
-        val currency = runCatching { Currency.getInstance(currencyCode) }.getOrNull()
-        val symbol = currency?.getSymbol(Locale.getDefault()) ?: currencyCode
-        return amount(amountMinor, currencyCode, withSign) + " " + symbol
-    }
+    fun format(amountMinor: Long, currencyCode: String, withSign: Boolean = false): String =
+        amount(amountMinor, currencyCode, withSign) + " " + symbol(currencyCode)
+
+    fun symbol(currencyCode: String): String =
+        SYMBOLS[currencyCode]
+            ?: runCatching {
+                Currency.getInstance(currencyCode).getSymbol(Locale.getDefault())
+            }.getOrNull()
+            ?: currencyCode
 
     fun amount(
         amountMinor: Long,
@@ -61,4 +65,15 @@ object Money {
             .toPlainString()
 
     private const val RATE_DIGITS = 4
+
+    private val SYMBOLS = mapOf(
+        "BYN" to "₽",
+        "USD" to "$",
+        "EUR" to "€",
+        "PLN" to "zł",
+        "UAH" to "₴",
+        "RUB" to "RUB",
+        "GBP" to "£",
+        "KZT" to "₸"
+    )
 }

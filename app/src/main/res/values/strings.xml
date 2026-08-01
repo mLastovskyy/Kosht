@@ -466,7 +466,7 @@
     <string name="badge_photo10_desc">Attach 10 receipt photos.</string>
     <string name="badge_hundred_desc">Add 100 records.</string>
     <string name="badge_streak30_desc">Stay within the daily budget 30 days in a row.</string>
-    <string name="badge_big_saver_desc">Save up a total of 1000 BYN.</string>
+    <string name="badge_big_saver_desc">Save up a total of 1000 ₽.</string>
     <string name="badge_goal_three_desc">Reach 3 savings goals.</string>
     <string name="badge_challenge_five_desc">Complete 5 challenges.</string>
     <string name="badge_five_hundred_desc">Add 500 records.</string>
@@ -484,7 +484,7 @@
     <string name="badge_photo100">Full archive</string>
     <string name="badge_photo100_desc">Attach 100 receipt photos.</string>
     <string name="badge_fortune">Fortune</string>
-    <string name="badge_fortune_desc">Save up a total of 5000 BYN.</string>
+    <string name="badge_fortune_desc">Save up a total of 5000 ₽.</string>
     <string name="badge_year_tracked">A year of records</string>
     <string name="badge_year_tracked_desc">Record something in 12 different months.</string>
     <string name="badge_goal_ten">Goal collector</string>
@@ -512,13 +512,13 @@
     <string name="badge_perfect_year">Twelve of twelve</string>
     <string name="badge_perfect_year_desc">Make 12 months perfect: every day within the budget.</string>
     <string name="badge_treasury">Treasury</string>
-    <string name="badge_treasury_desc">Set aside 20 000 BYN in total.</string>
+    <string name="badge_treasury_desc">Set aside 20 000 ₽ in total.</string>
     <string name="badge_five_thousand">Chronicler</string>
     <string name="badge_five_thousand_desc">Record 5000 transactions.</string>
     <string name="badge_three_years">Long game</string>
     <string name="badge_three_years_desc">Keep records for 36 months.</string>
     <string name="badge_millionaire">Castle keeper</string>
-    <string name="badge_millionaire_desc">Set aside 100 000 BYN in total.</string>
+    <string name="badge_millionaire_desc">Set aside 100 000 ₽ in total.</string>
     <string name="award_unlocked_at">Earned %1$s</string>
     <string name="award_progress">Progress: %1$s</string>
     <string name="award_unlocked_title">Award earned!</string>
