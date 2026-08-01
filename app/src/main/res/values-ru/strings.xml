@@ -80,17 +80,18 @@
     <string name="scan_review_date">Дата: %1$s</string>
     <string name="scanned_mark">Скан чека</string>
     <string name="scan_review_items">Позиций: %1$d</string>
-    <string name="scan_review_items_partial">Позиций: %1$d · %2$s из %3$s</string>
+    <string name="scan_review_items_partial">Позиций: %1$d, %2$s из %3$s</string>
 
     <!-- Из чего состоит запись -->
     <string name="items_title">Позиции</string>
     <string name="items_add">Позиции</string>
+    <string name="items_add_count">Позиции (%1$d)</string>
     <string name="items_hint">Из чего состоит запись: товары или части платежа.</string>
     <string name="items_name">Позиция</string>
     <string name="items_price">Цена</string>
     <string name="items_quantity">Кол-во</string>
-    <string name="items_summary">%1$s · %2$s</string>
-    <string name="items_summary_of">%1$s · %2$s из %3$s</string>
+    <string name="items_summary">%1$s, %2$s</string>
+    <string name="items_summary_of">%1$s, %2$s из %3$s</string>
     <string name="items_over_title">Позиции больше суммы</string>
     <string name="items_over_text">Позиции: %1$s, сумма записи: %2$s.</string>
     <plurals name="items_count">
@@ -154,12 +155,6 @@
     <string name="auto_calc">Калькулятор при добавлении</string>
     <string name="recurring_skip">Пропустить</string>
     <string name="recurring_skip_text">В этот раз по «%1$s» ничего не запишется. Платёж снова будет ждать вас %2$s.</string>
-    <string name="settings_premium">Kosht Premium</string>
-    <string name="premium_title">Kosht Premium</string>
-    <string name="premium_pitch">Убирает баннер и поддерживает приложение.</string>
-    <string name="premium_active">Спасибо — баннер выключен.</string>
-    <string name="premium_soon">Скоро</string>
-    <string name="premium_not_yet">Покупка появится вместе с публикацией в магазине; пока ничего не списывается.</string>
     <string name="settings_own_rate">Свой курс</string>
     <string name="settings_own_rate_desc">Спрашивать курс при каждом пересчёте — тот, по которому вы сняли, а не курс НБРБ</string>
     <string name="savings_rate">Курс, %2$s за 1 %1$s</string>

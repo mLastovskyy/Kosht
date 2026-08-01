@@ -485,7 +485,7 @@ fun AddSavingDialog(
                         if (withdraw) -amountMinor else amountMinor,
                         savedIn,
                         listOfNotNull(note.trim().takeIf { it.isNotEmpty() }, rateNote)
-                            .joinToString(" · "),
+                            .joinToString(", "),
                         if (withdraw) null else goalId,
                         deduct,
                         accountId,

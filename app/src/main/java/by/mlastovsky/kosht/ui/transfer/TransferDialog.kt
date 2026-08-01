@@ -310,7 +310,7 @@ fun transferDetails(
 ): String {
     val date = relativeDate(Dates.toLocalDate(transfer.timestamp))
     if (transfer.transferFeeMinor <= 0) return date
-    return date + " · " + stringResource(
+    return date + ", " + stringResource(
         R.string.transfer_fee_short,
         Money.format(transfer.transferFeeMinor, currencyCode)
     )

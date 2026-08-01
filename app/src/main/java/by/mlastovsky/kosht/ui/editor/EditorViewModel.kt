@@ -710,7 +710,7 @@ class EditorViewModel(
         val target = state.rateTargetCurrency ?: return state.note.trim()
         val stamp = "1 ${state.currencyCode} = ${Money.rateText(rate)} $target"
         return listOfNotNull(state.note.trim().takeIf { it.isNotEmpty() }, stamp)
-            .joinToString(" · ")
+            .joinToString(", ")
             .take(Notes.MAX_LENGTH)
     }
 

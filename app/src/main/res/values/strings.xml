@@ -80,17 +80,18 @@
     <string name="scan_review_date">Date: %1$s</string>
     <string name="scanned_mark">Scanned</string>
     <string name="scan_review_items">%1$d items</string>
-    <string name="scan_review_items_partial">%1$d items · %2$s of %3$s</string>
+    <string name="scan_review_items_partial">%1$d items, %2$s of %3$s</string>
 
     <!-- What a record was for, line by line -->
     <string name="items_title">Items</string>
     <string name="items_add">Items</string>
+    <string name="items_add_count">Items (%1$d)</string>
     <string name="items_hint">What the record is made of: goods, or parts of a payment.</string>
     <string name="items_name">Item</string>
     <string name="items_price">Price</string>
     <string name="items_quantity">Qty</string>
-    <string name="items_summary">%1$s · %2$s</string>
-    <string name="items_summary_of">%1$s · %2$s of %3$s</string>
+    <string name="items_summary">%1$s, %2$s</string>
+    <string name="items_summary_of">%1$s, %2$s of %3$s</string>
     <string name="items_over_title">Items add up to more</string>
     <string name="items_over_text">Items: %1$s, record sum: %2$s.</string>
     <plurals name="items_count">
@@ -152,12 +153,6 @@
     <string name="auto_calc">Calculator on add</string>
     <string name="recurring_skip">Skip</string>
     <string name="recurring_skip_text">Nothing will be recorded for %1$s this time. The payment will wait for you again on %2$s.</string>
-    <string name="settings_premium">Kosht Premium</string>
-    <string name="premium_title">Kosht Premium</string>
-    <string name="premium_pitch">Removes the banner and supports the app.</string>
-    <string name="premium_active">Thank you — the banner is off.</string>
-    <string name="premium_soon">Soon</string>
-    <string name="premium_not_yet">Buying it arrives with the store release; nothing is charged yet.</string>
     <string name="settings_own_rate">My own rate</string>
     <string name="settings_own_rate_desc">Ask for the rate whenever an amount is converted — the one your bank gave you, not the NBRB one</string>
     <string name="savings_rate">Rate, %2$s per 1 %1$s</string>

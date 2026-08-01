@@ -71,7 +71,7 @@ object Notifications {
             title = context.getString(R.string.award_unlocked_title),
             text = context.getString(
                 AwardVisuals.titleRes(key)
-            ) + " · " + context.getString(
+            ) + ", " + context.getString(
                 AwardVisuals.descRes(key)
             )
         )
