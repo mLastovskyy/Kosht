@@ -6,7 +6,6 @@ import by.mlastovsky.kosht.data.AccountRepository
 import by.mlastovsky.kosht.data.CurrencyChanger
 import by.mlastovsky.kosht.data.Housekeeping
 import by.mlastovsky.kosht.data.PhotoStore
-import by.mlastovsky.kosht.data.PremiumRepository
 import by.mlastovsky.kosht.data.RatesRepository
 import by.mlastovsky.kosht.data.SettingsRepository
 import by.mlastovsky.kosht.data.TransactionRepository
@@ -121,8 +120,6 @@ class AppContainer(
     }
 
     val settingsRepository: SettingsRepository = SettingsRepository(context)
-
-    val premiumRepository: PremiumRepository by lazy { PremiumRepository(appContext) }
 
     private val supabaseApi: SupabaseApi by lazy {
         SupabaseApi(

@@ -144,7 +144,6 @@ checks, downloads and installs the update in place — no browser, nothing left 
 - **Receipt photos are a separate switch** — off by default, kept in your own private bucket when on, deleted there when off.
 - **The app lock** is a code of your own, never stored in the clear, with fingerprint entry, waits that grow after wrong guesses, and no preview in the task switcher.
 - **Consent is an append-only ledger**, advertising consent is separate and never a condition, and *Delete account and data* is at the foot of the Account block. [Privacy policy](https://mlastovskyy.github.io/Kosht/legal/privacy-policy.html) · [Terms](https://mlastovskyy.github.io/Kosht/legal/terms.html)
-- **One banner, and a way out of it.** An adaptive AdMob banner sits above the tab bar; *Kosht Premium* turns it off. The entitlement lives in its own store and never syncs — an unlocked banner belongs to the receipt, not to a preference another phone could copy. Without `ADMOB_APP_ID` / `ADMOB_BANNER_UNIT_ID` in `.env` the build serves Google's test ads, so a checkout can never bill the real account.
 
 </details>
 

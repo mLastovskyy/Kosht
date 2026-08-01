@@ -1,4 +1,4 @@
-﻿package by.mlastovsky.kosht.ui.settings
+package by.mlastovsky.kosht.ui.settings
 
 import android.Manifest
 import android.os.Build
@@ -62,7 +62,6 @@ import androidx.compose.material.icons.rounded.SwapHoriz
 import androidx.compose.material.icons.rounded.Sync
 import androidx.compose.material.icons.rounded.Timer
 import androidx.compose.material.icons.rounded.WavingHand
-import androidx.compose.material.icons.rounded.WorkspacePremium
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.HorizontalDivider
@@ -117,7 +116,6 @@ import by.mlastovsky.kosht.ui.components.TextInput
 import by.mlastovsky.kosht.ui.components.rememberDocumentOpener
 import by.mlastovsky.kosht.ui.lock.AppLockViewModel
 import by.mlastovsky.kosht.ui.lock.PinSetupSheet
-import by.mlastovsky.kosht.ui.premium.PremiumViewModel
 import by.mlastovsky.kosht.ui.profile.ProfileDialog
 import by.mlastovsky.kosht.util.Money
 import java.util.Currency
@@ -128,17 +126,14 @@ fun SettingsScreen(
     onOpenGuide: () -> Unit,
     viewModel: SettingsViewModel = viewModel(factory = AppViewModelProvider.Factory),
     accountViewModel: AccountViewModel =
-        viewModel(factory = AppViewModelProvider.Factory),
-    premiumViewModel: PremiumViewModel = viewModel(factory = AppViewModelProvider.Factory)
+        viewModel(factory = AppViewModelProvider.Factory)
 ) {
     val settings by viewModel.settings.collectAsStateWithLifecycle()
     val language by viewModel.language.collectAsStateWithLifecycle()
-    val premium by premiumViewModel.premium.collectAsStateWithLifecycle()
     val current = settings ?: return
     var showThemeDialog by remember { mutableStateOf(false) }
     var showCurrencyDialog by remember { mutableStateOf(false) }
     var showLanguageDialog by remember { mutableStateOf(false) }
-    var showPremium by remember { mutableStateOf(false) }
     val context = LocalContext.current
     val activity = LocalActivity.current
 
@@ -209,34 +204,6 @@ fun SettingsScreen(
                 }
             )
         }
-        }
-
-        SectionHeader(stringResource(R.string.settings_premium))
-
-        SettingsCard {
-            ListItem(
-                headlineContent = { Text(stringResource(R.string.premium_title)) },
-                supportingContent = {
-                    Text(
-                        stringResource(
-                            if (premium) R.string.premium_active else R.string.premium_pitch
-                        )
-                    )
-                },
-                leadingContent = {
-                    Icon(Icons.Rounded.WorkspacePremium, contentDescription = null)
-                },
-                trailingContent = if (premium) {
-                    null
-                } else {
-                    { Text(stringResource(R.string.premium_soon)) }
-                },
-                colors = transparentListColors(),
-                modifier = Modifier.clickable { showPremium = true }
-            )
-        }
-        if (showPremium) {
-            PremiumDialog(premium = premium, onDismiss = { showPremium = false })
         }
 
         SectionHeader(stringResource(R.string.settings_general))
@@ -451,7 +418,7 @@ fun SettingsScreen(
                     if (updateCheck is UpdateCheckState.Checking) {
                         stringResource(R.string.update_checking)
                     } else {
-                        versionName + " В· " + stringResource(R.string.update_check_hint)
+                        versionName
                     }
                 )
             },
@@ -601,7 +568,7 @@ fun SettingsScreen(
 @Composable
 private fun languageLabel(language: AppLanguage): String = when (language) {
     AppLanguage.SYSTEM -> stringResource(R.string.lang_system)
-    AppLanguage.RUSSIAN -> "Р СѓСЃСЃРєРёР№"
+    AppLanguage.RUSSIAN -> "Русский"
     AppLanguage.ENGLISH -> "English"
 }
 
@@ -1338,36 +1305,6 @@ private fun UpdateResultDialog(
 }
 
 @Composable
-private fun PremiumDialog(premium: Boolean, onDismiss: () -> Unit) {
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        icon = { Icon(Icons.Rounded.WorkspacePremium, contentDescription = null) },
-        title = { Text(stringResource(R.string.premium_title)) },
-        text = {
-            Column {
-                Text(
-                    text = stringResource(
-                        if (premium) R.string.premium_active else R.string.premium_pitch
-                    ),
-                    style = MaterialTheme.typography.bodyMedium
-                )
-                if (!premium) {
-                    Text(
-                        text = stringResource(R.string.premium_not_yet),
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.padding(top = 8.dp)
-                    )
-                }
-            }
-        },
-        confirmButton = {
-            TextButton(onClick = onDismiss) { Text(stringResource(R.string.action_close)) }
-        }
-    )
-}
-
-@Composable
 private fun NotificationToggle(
     titleRes: Int,
     descRes: Int? = null,
@@ -1425,7 +1362,7 @@ private fun currencyLabel(code: String): String {
         Currency.getInstance(code).getDisplayName(Locale.getDefault())
             .replaceFirstChar { it.titlecase(Locale.getDefault()) }
     }.getOrNull()
-    return if (name != null) "$code В· $name" else code
+    return if (name != null) "$code, $name" else code
 }
 
 @Composable

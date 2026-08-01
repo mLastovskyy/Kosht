@@ -1,4 +1,4 @@
-﻿package by.mlastovsky.kosht.ui.stats
+package by.mlastovsky.kosht.ui.stats
 
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.FastOutSlowInEasing

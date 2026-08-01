@@ -12,7 +12,6 @@ import androidx.compose.animation.scaleIn
 import androidx.compose.animation.scaleOut
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
-import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
@@ -56,10 +55,8 @@ import by.mlastovsky.kosht.ui.guide.GuideScreen
 import by.mlastovsky.kosht.ui.history.HistoryScreen
 import by.mlastovsky.kosht.ui.home.HomeScreen
 import by.mlastovsky.kosht.ui.legal.PolicyUpdateDialog
-import by.mlastovsky.kosht.ui.ads.BannerAd
 import by.mlastovsky.kosht.ui.navigation.MainTabs
 import by.mlastovsky.kosht.ui.navigation.Routes
-import by.mlastovsky.kosht.ui.premium.PremiumViewModel
 import by.mlastovsky.kosht.ui.settings.SettingsScreen
 import by.mlastovsky.kosht.ui.stats.StatsScreen
 import by.mlastovsky.kosht.ui.tour.TourScreen
@@ -69,11 +66,9 @@ import kotlinx.coroutines.launch
 
 @Composable
 fun KoshtRoot(
-    accountViewModel: AccountViewModel = viewModel(factory = AppViewModelProvider.Factory),
-    premiumViewModel: PremiumViewModel = viewModel(factory = AppViewModelProvider.Factory)
+    accountViewModel: AccountViewModel = viewModel(factory = AppViewModelProvider.Factory)
 ) {
     val account by accountViewModel.account.collectAsStateWithLifecycle()
-    val premium by premiumViewModel.premium.collectAsStateWithLifecycle()
 
     val state = account ?: return
     if (!state.onboarded && accountViewModel.isConfigured) {
@@ -118,15 +113,12 @@ fun KoshtRoot(
                 enter = slideInVertically(tween(250)) { it } + fadeIn(tween(250)),
                 exit = slideOutVertically(tween(200)) { it } + fadeOut(tween(200))
             ) {
-                Column {
-                    BannerAd(visible = !premium)
-                    KoshtNavigationBar(
-                        selectedPage = pagerState.currentPage,
-                        onSelect = { page ->
-                            scope.launch { pagerState.animateScrollToPage(page) }
-                        }
-                    )
-                }
+                KoshtNavigationBar(
+                    selectedPage = pagerState.currentPage,
+                    onSelect = { page ->
+                        scope.launch { pagerState.animateScrollToPage(page) }
+                    }
+                )
             }
         },
         floatingActionButton = {

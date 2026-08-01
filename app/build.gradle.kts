@@ -48,15 +48,6 @@ val signingEnv: Map<String, String> = listOf(
  * its own — row level security on `sync_rows` is what protects the data. The
  * service-role key and the database password stay in .env, out of the build.
  */
-/**
- * AdMob identifiers. The fallbacks are Google's own test IDs: they serve test
- * ads to any build, so a checkout without .env never touches the real account
- * (and never risks an invalid-traffic strike). Put the live IDs in .env or CI
- * secrets as ADMOB_APP_ID and ADMOB_BANNER_UNIT_ID before publishing.
- */
-val admobAppId = config("ADMOB_APP_ID", "ca-app-pub-3940256099942544~3347511713")
-val admobBannerUnitId = config("ADMOB_BANNER_UNIT_ID", "ca-app-pub-3940256099942544/9214589741")
-
 val supabaseUrl = config("SUPABASE_URL", "https://sqwueufwjgunbarfbnpx.supabase.co")
 val supabaseAnonKey = config(
     "SUPABASE_ANON_KEY",
@@ -91,9 +82,6 @@ android {
 
         buildConfigField("String", "SUPABASE_URL", "\"$supabaseUrl\"")
         buildConfigField("String", "SUPABASE_ANON_KEY", "\"$supabaseAnonKey\"")
-        buildConfigField("String", "ADMOB_BANNER_UNIT_ID", "\"$admobBannerUnitId\"")
-
-        manifestPlaceholders["admobAppId"] = admobAppId
     }
 
     // APK artifacts are named kosht-<version>-<variant>.apk
@@ -160,7 +148,6 @@ dependencies {
     implementation(libs.tesseract4android)
     implementation(libs.zxing.core)
     implementation(libs.androidx.work.runtime)
-    implementation(libs.play.services.ads)
 
     testImplementation(libs.junit)
     testImplementation(libs.json)
